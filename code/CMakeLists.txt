@@ -151,6 +151,14 @@ SET( 3DS_SRCS
 )
 SOURCE_GROUP(3DS FILES ${3DS_SRCS})
 
+SET( 3DXML_SRCS
+	3DXMLLoader.cpp
+	3DXMLLoader.h
+	3DXMLParser.cpp
+	3DXMLParser.h
+)
+SOURCE_GROUP(3DXML FILES ${3DXML_SRCS})
+
 SET( AC_SRCS
 	ACLoader.cpp
 	ACLoader.h
@@ -624,6 +632,7 @@ SET( assimp_src
 
 	# Model Support
 	${3DS_SRCS}
+	${3DXML_SRCS}
 	${AC_SRCS}
 	${ASE_SRCS}
 	${B3D_SRCS}
