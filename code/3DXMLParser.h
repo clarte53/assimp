@@ -45,9 +45,54 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef AI_3DXMLPARSER_H_INC
 #define AI_3DXMLPARSER_H_INC
 
+#include "irrXMLWrapper.h"
+
 namespace Assimp {
 
+	class _3DXMLParser {
 
+	public:
+
+		/** Constructor from XML file */
+		_3DXMLParser(const std::string& pFile);
+
+		virtual ~_3DXMLParser();
+
+	protected:
+
+		/** Aborts the file reading with an exception */
+		void ThrowException(const std::string& pError) const;
+
+		/** Compares the current xml element name to the given string and returns true if equal */
+		bool IsElement(const char* pName) const;
+
+		/** Reads the text contents of an element, returns NULL if not given.
+		    Skips leading whitespace. */
+		const char* TestTextContent(std::string* pElementName = NULL);
+
+		/** Reads the text contents of an element, throws an exception if not given. 
+		    Skips leading whitespace. */
+		const char* GetTextContent();
+
+		void getMainFile(std::string& pFile) throw();
+
+	protected:
+
+		/** Filename, for a verbose error message */
+		std::string mFileName;
+
+		/** XML reader, member for everyday use */
+		irr::io::IrrXMLReader* mReader;
+
+	}; // end of class _3DXMLParser
+
+	// ------------------------------------------------------------------------------------------------
+	// Check for element match
+	inline bool _3DXMLParser::IsElement(const char* pName) const {
+		ai_assert(mReader->getNodeType() == irr::io::EXN_ELEMENT);
+
+		return std::strcmp(mReader->getNodeName(), pName) == 0; 
+	}
 
 } // end of namespace Assimp
 

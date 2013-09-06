@@ -152,8 +152,8 @@ SET( 3DS_SRCS
 SOURCE_GROUP(3DS FILES ${3DS_SRCS})
 
 SET( 3DXML_SRCS
-	3DXMLLoader.cpp
-	3DXMLLoader.h
+	3DXMLImporter.cpp
+	3DXMLImporter.h
 	3DXMLParser.cpp
 	3DXMLParser.h
 )

@@ -38,11 +38,37 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ----------------------------------------------------------------------
 */
 
-/** @file 3DXMLLoader.cpp
- *  @brief Implementation of the 3DXML loader
+/** @file 3DXMLImporter.h
+ *  @brief Defines the 3DXML loader 
  */
 
-#include "ColladaLoader.h"
-#include "ColladaParser.h"
+#ifndef AI_3DXMLIMPORTER_H_INC
+#define AI_3DXMLIMPORTER_H_INC
 
-using namespace Assimp;
+#include "BaseImporter.h"
+
+namespace Assimp {
+
+	class _3DXMLImporter : public BaseImporter {
+
+	public:
+
+		_3DXMLImporter();
+
+		virtual ~_3DXMLImporter();
+
+		/// @brief	Returns whether the class can handle the format of the given file. 
+		/// @remark	See BaseImporter::CanRead() for details.
+		bool CanRead(const std::string& pFile, IOSystem* pIOHandler, bool checkSig) const;
+		
+	protected:
+
+		const aiImporterDesc* GetInfo () const;
+
+		void InternReadFile(const std::string& pFile, aiScene* pScene, IOSystem* pIOHandler);
+
+	}; // end of class _3DXMLImporter
+
+} // end of namespace Assimp
+
+#endif // AI_3DXMLIMPORTER_H_INC

@@ -44,4 +44,124 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "3DXMLParser.h"
 
-using namespace Assimp;
+#ifndef ASSIMP_BUILD_NO_Q3BSP_IMPORTER
+
+#include "ParsingUtils.h"
+#include "Q3BSPZipArchive.h"
+
+namespace Assimp {
+
+	// Constructor to be privately used by Importer
+	_3DXMLParser::_3DXMLParser(const std::string& pFile) : mFileName(pFile), mReader(NULL) {
+		// Load the compressed archive
+		Q3BSP::Q3BSPZipArchive Archive(pFile);
+		if (! Archive.isOpen()) {
+			throw DeadlyImportError( "Failed to open file " + pFile + "." );
+		}
+
+		// Open the manifest files
+		IOStream* stream(Archive.Open("Manifest.xml"));
+		if(stream == NULL) {
+			ThrowException("Manifest.xml not found.");
+		}
+
+		// generate a XML reader for it
+		boost::scoped_ptr<CIrrXML_IOStreamReader> IOWrapper(new CIrrXML_IOStreamReader(stream));
+		mReader = irr::io::createIrrXMLReader(IOWrapper.get());
+		if(mReader == NULL) {
+			// we have to do some minimal manual cleanning, the rest is already taken care of
+			Archive.Close(stream);
+
+			ThrowException( "Unable to create XML reader for Manifest.xml.");
+		}
+
+		// Read the name of the main XML file in the manifest
+		std::string mainFile = "";
+		getMainFile(mainFile);
+		if(mainFile == "") {
+			// we have to do some minimal manual cleanning, the rest is already taken care of
+			Archive.Close(stream);
+
+			ThrowException( "Unable to find the name of the main XML file in Manifest.xml.");
+		}
+
+		delete mReader;
+		mReader = NULL;
+
+		Archive.Close(stream);
+	}
+
+	_3DXMLParser::~_3DXMLParser() {
+		if(mReader != NULL) {
+			delete mReader;
+		}
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	// Aborts the file reading with an exception
+	void _3DXMLParser::ThrowException(const std::string& pError) const {
+		throw DeadlyImportError(boost::str(boost::format("3DXML: %s - %s") % mFileName % pError));
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	// Reads the text contents of an element, returns NULL if not given. Skips leading whitespace.
+	const char* _3DXMLParser::TestTextContent(std::string* pElementName) {
+		// present node should be the beginning of an element
+		if(mReader->getNodeType() != irr::io::EXN_ELEMENT) {
+			return NULL;
+		}
+
+		*pElementName = mReader->getNodeName();
+
+		// present node should not be empty
+		if(mReader->isEmptyElement()) {
+			return NULL;
+		}
+
+		// read contents of the element
+		if(! mReader->read() || mReader->getNodeType() != irr::io::EXN_TEXT) {
+			return NULL;
+		}
+
+		// skip leading whitespace
+		const char* text = mReader->getNodeData();
+		SkipSpacesAndLineEnd(&text);
+
+		return text;
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	// Reads the text contents of an element, throws an exception if not given. Skips leading whitespace.
+	const char* _3DXMLParser::GetTextContent() {
+		std::string elementName;
+		const char* text = TestTextContent(&elementName);
+
+		if(! text) {
+			ThrowException("Invalid contents in element \"" + elementName + "\".");
+		}
+
+		return text;
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	// Read the name of the main XML file in the Manifest
+	void _3DXMLParser::getMainFile(std::string& pFile) throw() {
+		bool found = false;
+
+		while(! found && mReader->read()) {
+			// handle the root element "Manifest"
+			if(mReader->getNodeType() == irr::io::EXN_ELEMENT && IsElement("Manifest")) {
+				while(! found && mReader->read()) {
+					// Read the Root element
+					if(mReader->getNodeType() == irr::io::EXN_ELEMENT && IsElement("Root")) {
+						pFile = GetTextContent();
+						found = true;
+					}
+				}
+			}
+		}
+	}
+
+} // Namespace Assimp
+
+#endif // ASSIMP_BUILD_NO_Q3BSP_IMPORTER

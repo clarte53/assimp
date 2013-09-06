@@ -38,18 +38,65 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ----------------------------------------------------------------------
 */
 
-/** @file 3DXMLLoader.h
- *  @brief Defines the 3DXML loader 
+/** @file 3DXMLImporter.cpp
+ *  @brief Implementation of the 3DXML loader
  */
 
-#ifndef AI_3DXMLLOADER_H_INC
-#define AI_3DXMLLOADER_H_INC
+#include "3DXMLImporter.h"
 
-#include "BaseImporter.h"
+#ifndef ASSIMP_BUILD_NO_Q3BSP_IMPORTER
+
 #include "3DXMLParser.h"
+
+static const aiImporterDesc desc = {
+	"3DXML Importer",
+	"Leo Terziman",
+	"",
+	"http://3ds.com/3dxml",
+	aiImporterFlags_SupportCompressedFlavour | aiImporterFlags_LimitedSupport | aiImporterFlags_Experimental,
+	0,
+	0,
+	0,
+	0,
+	"3dxml"
+};
 
 namespace Assimp {
 
+	_3DXMLImporter::_3DXMLImporter() {
+
+	}
+
+	_3DXMLImporter::~_3DXMLImporter() {
+
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	//	Returns true, if the loader can read this.
+	bool _3DXMLImporter::CanRead(const std::string& pFile, IOSystem* /*pIOHandler*/, bool checkSig) const {
+		bool canRead = false;
+		
+		if(! checkSig) {
+			canRead = SimpleExtensionCheck(pFile, "3dxml");
+		}
+
+		return canRead;
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	//	Adds extensions.
+	const aiImporterDesc* _3DXMLImporter::GetInfo () const {
+		return &desc;
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	//	Import method.
+	void _3DXMLImporter::InternReadFile(const std::string& pFile, aiScene* pScene, IOSystem* /*pIOHandler*/) {
+		_3DXMLParser fileParser(pFile);
+
+		// TODO
+	}
+
 } // end of namespace Assimp
 
-#endif // AI_3DXMLLOADER_H_INC
+#endif // ASSIMP_BUILD_NO_Q3BSP_IMPORTER
