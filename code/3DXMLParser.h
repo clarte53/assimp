@@ -74,7 +74,7 @@ namespace Assimp {
 		    Skips leading whitespace. */
 		const char* GetTextContent();
 
-		void getMainFile(std::string& pFile) throw();
+		void getMainFile(std::string& pFile);
 
 	protected:
 

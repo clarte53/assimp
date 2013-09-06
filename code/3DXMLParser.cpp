@@ -62,32 +62,28 @@ namespace Assimp {
 		// Open the manifest files
 		IOStream* stream(Archive.Open("Manifest.xml"));
 		if(stream == NULL) {
+			// because Q3BSPZipArchive (now) correctly close all open files automatically on destruction,
+			// we do not have to worry about closing the stream explicitly on exceptions
+
 			ThrowException("Manifest.xml not found.");
 		}
 
 		// generate a XML reader for it
+		// the pointer is automatically deleted at the end of the function, even if some exceptions are raised
 		boost::scoped_ptr<CIrrXML_IOStreamReader> IOWrapper(new CIrrXML_IOStreamReader(stream));
 		mReader = irr::io::createIrrXMLReader(IOWrapper.get());
 		if(mReader == NULL) {
-			// we have to do some minimal manual cleanning, the rest is already taken care of
-			Archive.Close(stream);
-
 			ThrowException( "Unable to create XML reader for Manifest.xml.");
 		}
 
 		// Read the name of the main XML file in the manifest
 		std::string mainFile = "";
 		getMainFile(mainFile);
-		if(mainFile == "") {
-			// we have to do some minimal manual cleanning, the rest is already taken care of
-			Archive.Close(stream);
-
-			ThrowException( "Unable to find the name of the main XML file in Manifest.xml.");
-		}
 
 		delete mReader;
 		mReader = NULL;
 
+		// Cleanning up
 		Archive.Close(stream);
 	}
 
@@ -145,7 +141,7 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Read the name of the main XML file in the Manifest
-	void _3DXMLParser::getMainFile(std::string& pFile) throw() {
+	void _3DXMLParser::getMainFile(std::string& pFile) {
 		bool found = false;
 
 		while(! found && mReader->read()) {
@@ -159,6 +155,10 @@ namespace Assimp {
 					}
 				}
 			}
+		}
+
+		if(! found) {
+			ThrowException("Unable to find the name of the main XML file in Manifest.xml.");
 		}
 	}
 
