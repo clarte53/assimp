@@ -52,7 +52,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLParser::XMLReader::XMLReader(Q3BSP::Q3BSPZipArchive* pArchive, const std::string& pFile) : mArchive(pArchive), mStream(NULL), mReader(NULL) {
+	_3DXMLParser::XMLReader::XMLReader(Q3BSP::Q3BSPZipArchive* pArchive, const std::string& pFile) : mFileName(pFile), mArchive(pArchive), mStream(NULL), mReader(NULL) {
 		Open(pFile);
 	}
 
@@ -64,13 +64,15 @@ namespace Assimp {
 	// ------------------------------------------------------------------------------------------------
 	void _3DXMLParser::XMLReader::Open(const std::string& pFile) {
 		if(mStream == NULL && mReader == NULL) {
+			mFileName = pFile;
+
 			// Open the manifest files
-			mStream = mArchive->Open(pFile.c_str());
+			mStream = mArchive->Open(mFileName.c_str());
 			if(mStream == NULL) {
 				// because Q3BSPZipArchive (now) correctly close all open files automatically on destruction,
 				// we do not have to worry about closing the stream explicitly on exceptions
 
-				throw DeadlyImportError("3DXML: " + pFile + " not found.");
+				ThrowException(mFileName + " not found.");
 			}
 
 			// generate a XML reader for it
@@ -78,7 +80,7 @@ namespace Assimp {
 			boost::scoped_ptr<CIrrXML_IOStreamReader> IOWrapper(new CIrrXML_IOStreamReader(mStream));
 			mReader = irr::io::createIrrXMLReader(IOWrapper.get());
 			if(mReader == NULL) {
-				throw DeadlyImportError("3DXML: Unable to create XML reader for file \"" + pFile + "\".");
+				ThrowException("Unable to create XML reader for file \"" + mFileName + "\".");
 			}
 		}
 	}
@@ -99,17 +101,17 @@ namespace Assimp {
 	std::string _3DXMLParser::XMLReader::GetTextContent() {
 		// present node should be the beginning of an element
 		if(mReader->getNodeType() != irr::io::EXN_ELEMENT) {
-			throw DeadlyImportError("3DXML: the current node is not an xml element.");
+			ThrowException("the current node is not an xml element.");
 		}
 
 		// present node should not be empty
 		if(mReader->isEmptyElement()) {
-			throw DeadlyImportError("3DXML: Can not get content of the empty element \"" + std::string(mReader->getNodeName()) + "\".");
+			ThrowException("Can not get content of the empty element \"" + std::string(mReader->getNodeName()) + "\".");
 		}
 
 		// read contents of the element
 		if(! mReader->read() || mReader->getNodeType() != irr::io::EXN_TEXT) {
-			throw DeadlyImportError("3DXML: The content of the element \"" + std::string(mReader->getNodeName()) + "\" is not composed of text.");
+			ThrowException("The content of the element \"" + std::string(mReader->getNodeName()) + "\" is not composed of text.");
 		}
 
 		// skip leading whitespace
@@ -117,10 +119,16 @@ namespace Assimp {
 		SkipSpacesAndLineEnd(&text);
 
 		if(text == NULL) {
-			throw DeadlyImportError("3DXML: Invalid content in element \"" + std::string(mReader->getNodeName()) + "\".");
+			ThrowException("Invalid content in element \"" + std::string(mReader->getNodeName()) + "\".");
 		}
 
 		return text;
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	// Aborts the file reading with an exception
+	void _3DXMLParser::XMLReader::ThrowException(const std::string& pError) {
+		throw DeadlyImportError(boost::str(boost::format("3DXML XML parser: %s - %s") % mFileName % pError));
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -129,7 +137,7 @@ namespace Assimp {
 		// Load the compressed archive
 		Q3BSP::Q3BSPZipArchive Archive(pFile);
 		if (! Archive.isOpen()) {
-			throw DeadlyImportError( "Failed to open file " + pFile + "." );
+			ThrowException("Failed to open file " + pFile + "." );
 		}
 
 		XMLReader Manifest(&Archive, "Manifest.xml");
@@ -174,6 +182,12 @@ namespace Assimp {
 		if(! found) {
 			ThrowException("Unable to find the name of the main XML file in the manifest.");
 		}
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	// Read the product structure
+	void _3DXMLParser::ReadProductStructure(XMLReader& pReader) {
+
 	}
 
 } // Namespace Assimp

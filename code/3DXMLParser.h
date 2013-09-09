@@ -92,7 +92,13 @@ namespace Assimp {
 					  Skips leading whitespace. */
 				std::string GetTextContent();
 
+				/** Aborts the file reading with an exception */
+				void ThrowException(const std::string& pError);
+
 			protected:
+
+				/** Filename, for a verbose error message */
+				std::string mFileName;
 
 				/** Zip archive containing the data */
 				Q3BSP::Q3BSPZipArchive* mArchive;
@@ -114,10 +120,12 @@ namespace Assimp {
 
 	protected:
 
-		void ReadManifest(XMLReader& pReader);
-		
 		/** Aborts the file reading with an exception */
 		void ThrowException(const std::string& pError);
+
+		void ReadManifest(XMLReader& pReader);
+
+		void ReadProductStructure(XMLReader& pReader);
 
 	protected:
 
@@ -153,7 +161,7 @@ namespace Assimp {
 		std::string ValueString = mReader->getAttributeValueSafe(pName);
 
 		if(pMandatory && ValueString == "") {
-			throw DeadlyImportError("3DXML: Attribute \"" + pName + "\" not found.");
+			ThrowException("Attribute \"" + pName + "\" not found.");
 		}
 
 		std::istringstream Stream(ValueString);
@@ -162,7 +170,7 @@ namespace Assimp {
 		Stream >> Value;
 
 		if(Stream.fail()) {
-			throw DeadlyImportError("3DXML: Attribute \"" + pName + "\" can not be converted into the requested type.");
+			ThrowException("Attribute \"" + pName + "\" can not be converted into the requested type.");
 		}
 
 		return Value;
