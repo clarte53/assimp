@@ -80,6 +80,8 @@ namespace Assimp {
 		std::string mainFile = "";
 		getMainFile(mainFile);
 
+		std::cerr << "3DXML main file: " << mainFile << std::endl;
+
 		delete mReader;
 		mReader = NULL;
 
