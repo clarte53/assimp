@@ -5,8 +5,8 @@ Open Asset Import Library (assimp)
 Copyright (c) 2006-2013, assimp team
 All rights reserved.
 
-Redistribution and use of this software in source and binary forms, 
-with or without modification, are permitted provided that the 
+Redistribution and use of this software in source and binary forms,
+with or without modification, are permitted provided that the
 following conditions are met:
 
 * Redistributions of source code must retain the above
@@ -23,16 +23,16 @@ contributors may be used to endorse or promote products
 derived from this software without specific prior
 written permission of the assimp team.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT 
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
 OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
 LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY 
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ----------------------------------------------------------------------
@@ -51,59 +51,57 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace Assimp {
 
-	// Constructor to be privately used by Importer
-	_3DXMLParser::_3DXMLParser(const std::string& pFile) : mFileName(pFile), mReader(NULL) {
-		// Load the compressed archive
-		Q3BSP::Q3BSPZipArchive Archive(pFile);
-		if (! Archive.isOpen()) {
-			throw DeadlyImportError( "Failed to open file " + pFile + "." );
-		}
-
-		// Open the manifest files
-		IOStream* stream(Archive.Open("Manifest.xml"));
-		if(stream == NULL) {
-			// because Q3BSPZipArchive (now) correctly close all open files automatically on destruction,
-			// we do not have to worry about closing the stream explicitly on exceptions
-
-			ThrowException("Manifest.xml not found.");
-		}
-
-		// generate a XML reader for it
-		// the pointer is automatically deleted at the end of the function, even if some exceptions are raised
-		boost::scoped_ptr<CIrrXML_IOStreamReader> IOWrapper(new CIrrXML_IOStreamReader(stream));
-		mReader = irr::io::createIrrXMLReader(IOWrapper.get());
-		if(mReader == NULL) {
-			ThrowException( "Unable to create XML reader for Manifest.xml.");
-		}
-
-		// Read the name of the main XML file in the manifest
-		std::string mainFile = "";
-		getMainFile(mainFile);
-
-		std::cerr << "3DXML main file: " << mainFile << std::endl;
-
-		delete mReader;
-		mReader = NULL;
-
-		// Cleanning up
-		Archive.Close(stream);
+	// ------------------------------------------------------------------------------------------------
+	_3DXMLParser::XMLReader::XMLReader(Q3BSP::Q3BSPZipArchive* pArchive, const std::string& pFile) : mArchive(pArchive), mStream(NULL), mReader(NULL) {
+		open(pFile);
 	}
 
-	_3DXMLParser::~_3DXMLParser() {
-		if(mReader != NULL) {
-			delete mReader;
+	// ------------------------------------------------------------------------------------------------
+	_3DXMLParser::XMLReader::~XMLReader() {
+		close();
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	irr::io::IrrXMLReader* _3DXMLParser::XMLReader::operator->() const {
+		return mReader;
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	void _3DXMLParser::XMLReader::open(const std::string& pFile) {
+		if(mStream == NULL && mReader == NULL) {
+			// Open the manifest files
+			mStream = mArchive->Open(pFile.c_str());
+			if(mStream == NULL) {
+				// because Q3BSPZipArchive (now) correctly close all open files automatically on destruction,
+				// we do not have to worry about closing the stream explicitly on exceptions
+
+				throw DeadlyImportError("3DXML: " + pFile + " not found.");
+			}
+
+			// generate a XML reader for it
+			// the pointer is automatically deleted at the end of the function, even if some exceptions are raised
+			boost::scoped_ptr<CIrrXML_IOStreamReader> IOWrapper(new CIrrXML_IOStreamReader(mStream));
+			mReader = irr::io::createIrrXMLReader(IOWrapper.get());
+			if(mReader == NULL) {
+				throw DeadlyImportError("3DXML: Unable to create XML reader for file \"" + pFile + "\".");
+			}
 		}
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	// Aborts the file reading with an exception
-	void _3DXMLParser::ThrowException(const std::string& pError) const {
-		throw DeadlyImportError(boost::str(boost::format("3DXML: %s - %s") % mFileName % pError));
+	void _3DXMLParser::XMLReader::close() {
+		if(mStream != NULL && mReader != NULL) {
+			delete mReader;
+			mReader = NULL;
+
+			mArchive->Close(mStream);
+			mStream = NULL;
+		}
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	// Reads the text contents of an element, returns NULL if not given. Skips leading whitespace.
-	const char* _3DXMLParser::TestTextContent(std::string* pElementName) {
+	const char* _3DXMLParser::XMLReader::TestTextContent(std::string* pElementName) {
 		// present node should be the beginning of an element
 		if(mReader->getNodeType() != irr::io::EXN_ELEMENT) {
 			return NULL;
@@ -130,29 +128,59 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Reads the text contents of an element, throws an exception if not given. Skips leading whitespace.
-	const char* _3DXMLParser::GetTextContent() {
+	const char* _3DXMLParser::XMLReader::GetTextContent() {
 		std::string elementName;
 		const char* text = TestTextContent(&elementName);
 
 		if(! text) {
-			ThrowException("Invalid contents in element \"" + elementName + "\".");
+			throw DeadlyImportError("3DXML: Invalid contents in element \"" + elementName + "\".");
 		}
 
 		return text;
 	}
 
 	// ------------------------------------------------------------------------------------------------
+	// Constructor to be privately used by Importer
+	_3DXMLParser::_3DXMLParser(const std::string& pFile) : mFileName(pFile), mRootFileName("") {
+		// Load the compressed archive
+		Q3BSP::Q3BSPZipArchive Archive(pFile);
+		if (! Archive.isOpen()) {
+			throw DeadlyImportError( "Failed to open file " + pFile + "." );
+		}
+
+		XMLReader Manifest(&Archive, "Manifest.xml");
+
+		// Read the name of the main XML file in the manifest
+		ReadManifest(Manifest);
+
+		std::cerr << "3DXML main file: " << mRootFileName << std::endl;
+
+		// Cleanning up
+		Manifest.close();
+	}
+
+	_3DXMLParser::~_3DXMLParser() {
+
+	}
+	
+	// ------------------------------------------------------------------------------------------------
+	// Aborts the file reading with an exception
+	void _3DXMLParser::ThrowException(const std::string& pError) {
+		throw DeadlyImportError(boost::str(boost::format("3DXML: %s - %s") % mFileName % pError));
+	}
+
+	// ------------------------------------------------------------------------------------------------
 	// Read the name of the main XML file in the Manifest
-	void _3DXMLParser::getMainFile(std::string& pFile) {
+	void _3DXMLParser::ReadManifest(XMLReader& pReader) {
 		bool found = false;
 
-		while(! found && mReader->read()) {
+		while(! found && pReader->read()) {
 			// handle the root element "Manifest"
-			if(mReader->getNodeType() == irr::io::EXN_ELEMENT && IsElement("Manifest")) {
-				while(! found && mReader->read()) {
+			if(pReader->getNodeType() == irr::io::EXN_ELEMENT && pReader.IsElement("Manifest")) {
+				while(! found && pReader->read()) {
 					// Read the Root element
-					if(mReader->getNodeType() == irr::io::EXN_ELEMENT && IsElement("Root")) {
-						pFile = GetTextContent();
+					if(pReader->getNodeType() == irr::io::EXN_ELEMENT && pReader.IsElement("Root")) {
+						mRootFileName = pReader.GetTextContent();
 						found = true;
 					}
 				}
@@ -160,7 +188,7 @@ namespace Assimp {
 		}
 
 		if(! found) {
-			ThrowException("Unable to find the name of the main XML file in Manifest.xml.");
+			ThrowException("Unable to find the name of the main XML file in the manifest.");
 		}
 	}
 
