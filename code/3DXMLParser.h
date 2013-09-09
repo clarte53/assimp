@@ -47,6 +47,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "irrXMLWrapper.h"
 
+#include <functional>
+
 namespace Assimp {
 
 	namespace Q3BSP {
@@ -72,10 +74,16 @@ namespace Assimp {
 				void Close();
 
 				/** Go to the next element */
-				bool Next(); 
+				bool Next();
+
+				/** Test if the current xml element is an element */
+				bool IsElement() const;
 
 				/** Compares the current xml element name to the given string and returns true if equal */
 				bool IsElement(const std::string& pName) const;
+				
+				/** Return the name of a node */
+				std::string GetNodeName() const;
 
 				/** Return the value of the attribute at a given index. Throw an exception
 				    if the attribute is mandatory but not found */
@@ -125,7 +133,17 @@ namespace Assimp {
 
 		void ReadManifest(XMLReader& pReader);
 
+		void ReadModel(XMLReader& pReader);
+
+		void ReadHeader(XMLReader& pReader);
+
 		void ReadProductStructure(XMLReader& pReader);
+
+		void ReadDefaultView(XMLReader& pReader);
+
+		void ReadCATMaterial(XMLReader& pReader);
+
+		void ReadCATMaterialRef(XMLReader& pReader);
 
 	protected:
 
@@ -134,6 +152,10 @@ namespace Assimp {
 
 		/** Name of the root 3dxml file inside the archive */
 		std::string mRootFileName;
+
+		/** Mapping between the element names and the parsing functions */
+		typedef std::map<std::string, std::function<void(XMLReader& pReader)> > FunctionMapType;
+		FunctionMapType mFunctionMap;
 
 	}; // end of class _3DXMLParser
 
@@ -144,9 +166,21 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
+	// Test if the current element is an element
+	inline bool _3DXMLParser::XMLReader::IsElement() const {
+		return mReader->getNodeType() == irr::io::EXN_ELEMENT;
+	}
+
+	// ------------------------------------------------------------------------------------------------
 	// Check for element match
 	inline bool _3DXMLParser::XMLReader::IsElement(const std::string& pName) const {
-		return mReader->getNodeType() == irr::io::EXN_ELEMENT && pName.compare(mReader->getNodeName()) == 0;
+		return IsElement() && pName.compare(mReader->getNodeName()) == 0;
+	}
+	
+	// ------------------------------------------------------------------------------------------------
+	// Return the name of a node
+	inline std::string  _3DXMLParser::XMLReader::GetNodeName() const {
+		return mReader->getNodeName();
 	}
 
 	// ------------------------------------------------------------------------------------------------

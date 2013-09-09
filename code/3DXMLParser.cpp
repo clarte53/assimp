@@ -133,22 +133,33 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Constructor to be privately used by Importer
-	_3DXMLParser::_3DXMLParser(const std::string& pFile) : mFileName(pFile), mRootFileName("") {
+	_3DXMLParser::_3DXMLParser(const std::string& pFile) : mFileName(pFile), mRootFileName(""), mFunctionMap() {
+		// Saving the mapping between element names and parsing functions
+		mFunctionMap.insert(std::make_pair("Header",           std::bind(&_3DXMLParser::ReadHeader, this, std::placeholders::_1)));
+		mFunctionMap.insert(std::make_pair("ProductStructure", std::bind(&_3DXMLParser::ReadProductStructure, this, std::placeholders::_1)));
+		mFunctionMap.insert(std::make_pair("DefaultView",      std::bind(&_3DXMLParser::ReadDefaultView, this, std::placeholders::_1)));
+		mFunctionMap.insert(std::make_pair("CATMaterial",      std::bind(&_3DXMLParser::ReadCATMaterial, this, std::placeholders::_1)));
+		mFunctionMap.insert(std::make_pair("CATMaterialRef",   std::bind(&_3DXMLParser::ReadCATMaterialRef, this, std::placeholders::_1)));
+
 		// Load the compressed archive
 		Q3BSP::Q3BSPZipArchive Archive(pFile);
 		if (! Archive.isOpen()) {
 			ThrowException("Failed to open file " + pFile + "." );
 		}
 
+		// Create a xml parser for the manifest
 		XMLReader Manifest(&Archive, "Manifest.xml");
 
 		// Read the name of the main XML file in the manifest
 		ReadManifest(Manifest);
 
-		std::cerr << "3DXML main file: " << mRootFileName << std::endl;
-
 		// Cleanning up
 		Manifest.Close();
+
+		// Create a xml parser for the root file
+		XMLReader RootFile(&Archive, mRootFileName);
+
+		ReadModel(RootFile);
 	}
 
 	_3DXMLParser::~_3DXMLParser() {
@@ -185,9 +196,52 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	// Read the product structure
-	void _3DXMLParser::ReadProductStructure(XMLReader& pReader) {
+	// Read 3DXML file
+	void _3DXMLParser::ReadModel(XMLReader& pReader) {
+		while(pReader.Next()) {
+			if(pReader.IsElement("Model_3dxml")) {
+				while(pReader.Next()) {
+					if(pReader.IsElement()) {
+						FunctionMapType::iterator it = mFunctionMap.find(pReader.GetNodeName());
+						FunctionMapType::iterator end = mFunctionMap.end();
 
+						if(it != end) {
+							(it->second)(pReader);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	// Read the header section
+	void _3DXMLParser::ReadHeader(XMLReader& pReader) {
+		//TODO
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	// Read the product structure section
+	void _3DXMLParser::ReadProductStructure(XMLReader& pReader) {
+		
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	// Read the default view section
+	void _3DXMLParser::ReadDefaultView(XMLReader& pReader) {
+		//TODO
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	// Read the CATMaterial section
+	void _3DXMLParser::ReadCATMaterial(XMLReader& pReader) {
+		//TODO
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	// Read the CATMaterialRef section
+	void _3DXMLParser::ReadCATMaterialRef(XMLReader& pReader) {
+		//TODO
 	}
 
 } // Namespace Assimp
