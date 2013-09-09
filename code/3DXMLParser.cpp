@@ -53,21 +53,16 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	_3DXMLParser::XMLReader::XMLReader(Q3BSP::Q3BSPZipArchive* pArchive, const std::string& pFile) : mArchive(pArchive), mStream(NULL), mReader(NULL) {
-		open(pFile);
+		Open(pFile);
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	_3DXMLParser::XMLReader::~XMLReader() {
-		close();
+		Close();
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	irr::io::IrrXMLReader* _3DXMLParser::XMLReader::operator->() const {
-		return mReader;
-	}
-
-	// ------------------------------------------------------------------------------------------------
-	void _3DXMLParser::XMLReader::open(const std::string& pFile) {
+	void _3DXMLParser::XMLReader::Open(const std::string& pFile) {
 		if(mStream == NULL && mReader == NULL) {
 			// Open the manifest files
 			mStream = mArchive->Open(pFile.c_str());
@@ -89,7 +84,7 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLParser::XMLReader::close() {
+	void _3DXMLParser::XMLReader::Close() {
 		if(mStream != NULL && mReader != NULL) {
 			delete mReader;
 			mReader = NULL;
@@ -100,40 +95,29 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	// Reads the text contents of an element, returns NULL if not given. Skips leading whitespace.
-	const char* _3DXMLParser::XMLReader::TestTextContent(std::string* pElementName) {
+	// Reads the text contents of an element, throws an exception if not given. Skips leading whitespace.
+	std::string _3DXMLParser::XMLReader::GetTextContent() {
 		// present node should be the beginning of an element
 		if(mReader->getNodeType() != irr::io::EXN_ELEMENT) {
-			return NULL;
+			throw DeadlyImportError("3DXML: the current node is not an xml element.");
 		}
-
-		*pElementName = mReader->getNodeName();
 
 		// present node should not be empty
 		if(mReader->isEmptyElement()) {
-			return NULL;
+			throw DeadlyImportError("3DXML: Can not get content of the empty element \"" + std::string(mReader->getNodeName()) + "\".");
 		}
 
 		// read contents of the element
 		if(! mReader->read() || mReader->getNodeType() != irr::io::EXN_TEXT) {
-			return NULL;
+			throw DeadlyImportError("3DXML: The content of the element \"" + std::string(mReader->getNodeName()) + "\" is not composed of text.");
 		}
 
 		// skip leading whitespace
 		const char* text = mReader->getNodeData();
 		SkipSpacesAndLineEnd(&text);
 
-		return text;
-	}
-
-	// ------------------------------------------------------------------------------------------------
-	// Reads the text contents of an element, throws an exception if not given. Skips leading whitespace.
-	const char* _3DXMLParser::XMLReader::GetTextContent() {
-		std::string elementName;
-		const char* text = TestTextContent(&elementName);
-
-		if(! text) {
-			throw DeadlyImportError("3DXML: Invalid contents in element \"" + elementName + "\".");
+		if(text == NULL) {
+			throw DeadlyImportError("3DXML: Invalid content in element \"" + std::string(mReader->getNodeName()) + "\".");
 		}
 
 		return text;
@@ -156,7 +140,7 @@ namespace Assimp {
 		std::cerr << "3DXML main file: " << mRootFileName << std::endl;
 
 		// Cleanning up
-		Manifest.close();
+		Manifest.Close();
 	}
 
 	_3DXMLParser::~_3DXMLParser() {
@@ -174,12 +158,12 @@ namespace Assimp {
 	void _3DXMLParser::ReadManifest(XMLReader& pReader) {
 		bool found = false;
 
-		while(! found && pReader->read()) {
+		while(! found && pReader.Next()) {
 			// handle the root element "Manifest"
-			if(pReader->getNodeType() == irr::io::EXN_ELEMENT && pReader.IsElement("Manifest")) {
-				while(! found && pReader->read()) {
+			if(pReader.IsElement("Manifest")) {
+				while(! found && pReader.Next()) {
 					// Read the Root element
-					if(pReader->getNodeType() == irr::io::EXN_ELEMENT && pReader.IsElement("Root")) {
+					if(pReader.IsElement("Root")) {
 						mRootFileName = pReader.GetTextContent();
 						found = true;
 					}

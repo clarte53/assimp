@@ -67,22 +67,30 @@ namespace Assimp {
 
 				virtual ~XMLReader();
 
-				irr::io::IrrXMLReader* operator->() const;
+				void Open(const std::string& pFile);
 
-				void open(const std::string& pFile);
+				void Close();
 
-				void close();
+				/** Go to the next element */
+				bool Next(); 
 
 				/** Compares the current xml element name to the given string and returns true if equal */
-				bool IsElement(const char* pName) const;
+				bool IsElement(const std::string& pName) const;
 
-				/** Reads the text contents of an element, returns NULL if not given.
-					Skips leading whitespace. */
-				const char* TestTextContent(std::string* pElementName = NULL);
+				/** Return the value of the attribute at a given index. Throw an exception
+				    if the attribute is mandatory but not found */
+				template <typename T>
+				T GetAttribute(int pIndex, bool pMandatory = false) const;
+
+				/** Return the value of the attribute with a given name. Throw an exception
+				    if the attribute is mandatory but not found or if the value can not be
+						converted into the appropriate type. */
+				template <typename T>
+				T GetAttribute(const std::string& pName, bool pMandatory = false) const;
 
 				/** Reads the text contents of an element, throws an exception if not given.
-					Skips leading whitespace. */
-				const char* GetTextContent();
+					  Skips leading whitespace. */
+				std::string GetTextContent();
 
 			protected:
 
@@ -122,11 +130,42 @@ namespace Assimp {
 	}; // end of class _3DXMLParser
 
 	// ------------------------------------------------------------------------------------------------
-	// Check for element match
-	inline bool _3DXMLParser::XMLReader::IsElement(const char* pName) const {
-		ai_assert(mReader->getNodeType() == irr::io::EXN_ELEMENT);
+	// Go to the next element
+	inline bool _3DXMLParser::XMLReader::Next() {
+		return mReader->read();
+	}
 
-		return std::strcmp(mReader->getNodeName(), pName) == 0;
+	// ------------------------------------------------------------------------------------------------
+	// Check for element match
+	inline bool _3DXMLParser::XMLReader::IsElement(const std::string& pName) const {
+		return mReader->getNodeType() == irr::io::EXN_ELEMENT && pName.compare(mReader->getNodeName()) == 0;
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	template <typename T>
+	T _3DXMLParser::XMLReader::GetAttribute(int pIndex, bool pMandatory) const {
+		return GetAttribute<T>(mReader->getAttributeName(pIndex) , pMandatory);
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	template <typename T>
+	T _3DXMLParser::XMLReader::GetAttribute(const std::string& pName, bool pMandatory) const {
+		std::string ValueString = mReader->getAttributeValueSafe(pName);
+
+		if(pMandatory && ValueString == "") {
+			throw DeadlyImportError("3DXML: Attribute \"" + pName + "\" not found.");
+		}
+
+		std::istringstream Stream(ValueString);
+		T Value;
+
+		Stream >> Value;
+
+		if(Stream.fail()) {
+			throw DeadlyImportError("3DXML: Attribute \"" + pName + "\" can not be converted into the requested type.");
+		}
+
+		return Value;
 	}
 
 } // end of namespace Assimp
