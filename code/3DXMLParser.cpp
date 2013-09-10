@@ -44,6 +44,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "3DXMLParser.h"
 
+#ifndef ASSIMP_BUILD_NO_3DXML_IMPORTER
 #ifndef ASSIMP_BUILD_NO_Q3BSP_IMPORTER
 
 #include "ParsingUtils.h"
@@ -247,3 +248,4 @@ namespace Assimp {
 } // Namespace Assimp
 
 #endif // ASSIMP_BUILD_NO_Q3BSP_IMPORTER
+#endif // ASSIMP_BUILD_NO_3DXML_IMPORTER

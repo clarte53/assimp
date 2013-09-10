@@ -167,7 +167,9 @@ corresponding preprocessor flag to selectively disable formats.
 #   include "FBXImporter.h"
 #endif 
 #ifndef ASSIMP_BUILD_NO_3DXML_IMPORTER
+#ifndef ASSIMP_BUILD_NO_Q3BSP_IMPORTER
 #   include "3DXMLImporter.h"
+#endif
 #endif 
 
 namespace Assimp {
@@ -294,7 +296,7 @@ void GetImporterInstanceList(std::vector< BaseImporter* >& out)
 #if ( !defined ASSIMP_BUILD_NO_FBX_IMPORTER )
 	out.push_back( new FBXImporter() );
 #endif
-#if ( !defined ASSIMP_BUILD_NO_3DXML_IMPORTER )
+#if ( !defined ASSIMP_BUILD_NO_3DXML_IMPORTER && !defined ASSIMP_BUILD_NO_Q3BSP_IMPORTER )
 	out.push_back( new _3DXMLImporter() );
 #endif
 }
