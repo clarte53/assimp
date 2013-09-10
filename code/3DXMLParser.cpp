@@ -42,10 +42,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *  @brief Implementation of the 3DXML parser helper
  */
 
-#include "3DXMLParser.h"
+#include "AssimpPCH.h"
 
 #ifndef ASSIMP_BUILD_NO_3DXML_IMPORTER
 #ifndef ASSIMP_BUILD_NO_Q3BSP_IMPORTER
+
+#include "3DXMLParser.h"
 
 #include "ParsingUtils.h"
 #include "Q3BSPZipArchive.h"
