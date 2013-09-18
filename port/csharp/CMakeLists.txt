@@ -11,6 +11,7 @@ INCLUDE_DIRECTORIES(
 LINK_DIRECTORIES(
 	${Assimp_BINARY_DIR}
 	${Assimp_BINARY_DIR}/lib
+	${Assimp_BINARY_DIR}/code/
 )
 
 SET(CMAKE_SWIG_OUTDIR "./generated")
