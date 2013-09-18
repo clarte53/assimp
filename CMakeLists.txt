@@ -163,6 +163,17 @@ IF ( ASSIMP_BUILD_ASSIMP_TOOLS )
 	ADD_SUBDIRECTORY( tools/assimp_cmd/ )
 ENDIF ( ASSIMP_BUILD_ASSIMP_TOOLS )
 
+SET ( ASSIMP_BUILD_ASSIMP_PORTAGES OFF CACHE BOOL
+	"If the supplementary portages for Assimp are built in addition to the library. Needs static lib."
+)
+IF ( ASSIMP_BUILD_ASSIMP_PORTAGES )
+	SET ( ASSIMP_BUILD_STATIC_LIB ON CACHE BOOL
+		"Build a static (.a) version of the library"
+		FORCE
+	)
+	ADD_SUBDIRECTORY ( port/csharp/ )
+ENDIF ( ASSIMP_BUILD_ASSIMP_PORTAGES )
+
 SET ( ASSIMP_BUILD_SAMPLES OFF CACHE BOOL
 	"If the official samples are built as well (needs Glut)."
 )
