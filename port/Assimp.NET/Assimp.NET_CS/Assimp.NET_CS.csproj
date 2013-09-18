@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="3.5" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -10,13 +10,10 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Assimp</RootNamespace>
     <AssemblyName>Assimp.Interop</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <FileUpgradeFlags>
-    </FileUpgradeFlags>
-    <UpgradeBackupLocation>
-    </UpgradeBackupLocation>
-    <OldToolsVersion>3.5</OldToolsVersion>
+    <TargetFrameworkSubset>
+    </TargetFrameworkSubset>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -67,7 +64,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Assimp.NET\Assimp.NET.vcxproj">
+    <ProjectReference Include="..\Assimp.NET\Assimp.NET.vcproj">
       <Project>{A86A8AF2-3B4D-4381-BB01-9CA2AE88450E}</Project>
       <Name>Assimp_NET</Name>
     </ProjectReference>
@@ -106,7 +103,6 @@
     <Compile Include="aiMeshKey.cs" />
     <Compile Include="aiMeshKeyVector.cs" />
     <Compile Include="aiMeshVector.cs" />
-    <Compile Include="aiMetadata.cs" />
     <Compile Include="aiNode.cs" />
     <Compile Include="aiNodeAnim.cs" />
     <Compile Include="aiNodeAnimVector.cs" />
@@ -149,7 +145,6 @@
     <Compile Include="SWIGTYPE_p_aiImporterDesc.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="SWIGTYPE_p_aiMetadata.cs" />
     <Compile Include="SWIGTYPE_p_Assimp__BaseImporter.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -159,7 +154,6 @@
     <Compile Include="SWIGTYPE_p_float.cs">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="SWIGTYPE_p_p_aiString.cs" />
     <Compile Include="SWIGTYPE_p_std__string.cs">
       <SubType>Code</SubType>
     </Compile>
