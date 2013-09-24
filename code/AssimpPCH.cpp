@@ -84,6 +84,12 @@ ASSIMP_API aiScene::aiScene()
 	, mLights()
 	, mNumCameras()
 	, mCameras()
+	, Meshes(&mMeshes, &mNumMeshes)
+	, Materials(&mMaterials, &mNumMaterials)
+	, Animations(&mAnimations, &mNumAnimations)
+	, Textures(&mTextures, &mNumTextures)
+	, Lights(&mLights, &mNumLights)
+	, Cameras(&mCameras, &mNumCameras)
 	, mPrivate(new Assimp::ScenePrivateData())
 	{
 	}

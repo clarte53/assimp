@@ -55,6 +55,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "metadata.h"
 
 #ifdef __cplusplus
+#include "Array.hpp"
+
 extern "C" {
 #endif
 
@@ -120,6 +122,11 @@ struct aiNode
 	C_STRUCT aiMetadata* mMetaData;
 
 #ifdef __cplusplus
+
+	Array<aiNode*> Children;
+	
+	Array<unsigned int> Meshes;
+
 	/** Constructor */
 	aiNode() 
 		// set all members to zero by default
@@ -130,6 +137,8 @@ struct aiNode
 		, mNumMeshes()
 		, mMeshes()
 		, mMetaData()
+		, Children(&mChildren, &mNumChildren)
+		, Meshes(&mMeshes, &mNumMeshes)
 	{
 	}
 	
@@ -144,6 +153,8 @@ struct aiNode
 		, mNumMeshes()
 		, mMeshes()
 		, mMetaData()
+		, Children(&mChildren, &mNumChildren)
+		, Meshes(&mMeshes, &mNumMeshes)
 	{
 	}
 
@@ -376,6 +387,18 @@ struct aiScene
 	C_STRUCT aiCamera** mCameras;
 
 #ifdef __cplusplus
+
+	Array<aiMesh*> Meshes;
+	
+	Array<aiMaterial*> Materials;
+	
+	Array<aiAnimation*> Animations;
+	
+	Array<aiTexture*> Textures;
+	
+	Array<aiLight*> Lights;
+	
+	Array<aiCamera*> Cameras;
 
 	//! Default constructor - set everything to 0/NULL
 	ASSIMP_API aiScene();

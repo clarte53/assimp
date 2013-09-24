@@ -54,6 +54,7 @@ SET( PUBLIC_HEADERS
 	${HEADER_PATH}/NullLogger.hpp
 	${HEADER_PATH}/cexport.h
 	${HEADER_PATH}/Exporter.hpp
+	${HEADER_PATH}/Array.hpp
 )
 
 SET( Core_SRCS

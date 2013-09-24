@@ -49,6 +49,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "types.h"
 
 #ifdef __cplusplus
+#include "Array.hpp"
+
 extern "C" {
 #endif
 
@@ -133,10 +135,13 @@ struct aiFace
 
 #ifdef __cplusplus
 
+	Array<unsigned int> Indices;
+
 	//! Default constructor
 	aiFace()
       : mNumIndices( 0 )
       , mIndices( NULL )
+	  , Indices(&mIndices, &mNumIndices)
 	{
 	}
 
@@ -148,7 +153,9 @@ struct aiFace
 
 	//! Copy constructor. Copy the index array
 	aiFace( const aiFace& o)
-      : mIndices( NULL )
+      : mNumIndices( 0 )
+	  , mIndices( NULL )
+	  , Indices(&mIndices, &mNumIndices)
 	{
 		*this = o;
 	}
@@ -168,6 +175,9 @@ struct aiFace
 		else {
 			mIndices = NULL;
 		}
+		
+		Indices.Reset(&mIndices, &mNumIndices);
+		
 		return *this;
 	}
 
@@ -247,10 +257,13 @@ struct aiBone
 
 #ifdef __cplusplus
 
+	Array<aiVertexWeight> Weights;
+
 	//! Default constructor
 	aiBone()
       : mNumWeights( 0 )
       , mWeights( NULL )
+	  , Weights(&mWeights, &mNumWeights)
 	{
 	}
 
@@ -259,6 +272,7 @@ struct aiBone
       : mName( other.mName )
       , mNumWeights( other.mNumWeights )
       , mOffsetMatrix( other.mOffsetMatrix )
+	  , Weights(&mWeights, &mNumWeights)
 	{
 		if (other.mWeights && other.mNumWeights)
 		{
