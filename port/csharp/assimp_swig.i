@@ -40,8 +40,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 %module assimp_swig
 
-%include "carrays.i"
 %include "typemaps.i"
+$typemap(cstype, unsigned int);
+
+%include "std_string.i"
+
 %{
 #include "..\..\include\assimp\defs.h"
 #include "..\..\include\assimp\config.h"
@@ -64,12 +67,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "..\..\include\assimp\scene.h"
 #include "..\..\include\assimp\texture.h"
 #include "..\..\include\assimp\Importer.hpp"
+#include "..\..\include\assimp\Exporter.hpp"
+#include "..\..\include\assimp\cexport.h"
 #include "..\..\include\assimp\IOSystem.hpp"
 #include "..\..\include\assimp\IOStream.hpp"
 #include "..\..\include\assimp\Logger.hpp"
 #include "..\..\include\assimp\LogStream.hpp"
 #include "..\..\include\assimp\NullLogger.hpp"
 #include "..\..\include\assimp\ProgressHandler.hpp"
+#include "..\..\include\assimp\Array.hpp"
 %}
 
 #define C_STRUCT
@@ -93,7 +99,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %rename(__greater__) operator>;
 %rename(__smaller__) operator<;
 
-
 %rename(opNew) operator new;
 %rename(opNewArray) operator new[];
 
@@ -101,14 +106,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %rename(opDeleteArray) operator delete[];
 
 
-%include "std_string.i"
 %include "std_vector.i"
-
-
-// PACK_STRUCT is a no-op for SWIG – it does not matter for the generated
-// bindings how the underlying C++ code manages its memory.
-#define PACK_STRUCT
-
 
 // Helper macros for wrapping the pointer-and-length arrays used in the
 // Assimp API.
@@ -243,10 +241,8 @@ ASSIMP_POINTER_ARRAY(aiBone,aiVertexWeight,mWeights,$self->mNumWeights);
 // OK
 
 /////// aiFace 
-ASSIMP_ARRAY(aiFace,unsigned int,mIndices,$self->mNumIndices);
-%typemap(cscode) aiFace %{
-  public UintVector mIndices { get { return GetmIndices(); } }
-%}
+%ignore aiFace::mNumIndices;
+%ignore aiFace::mIndices;
 
 /////// TODO: aiFile 
 %ignore aiFile;
@@ -378,12 +374,10 @@ ASSIMP_POINTER_ARRAY(aiMeshAnim,aiMeshKey,mKeys,$self->mNumKeys);
 // Done
 
 /////// aiNode 
-ASSIMP_POINTER_POINTER(aiNode,aiNode,mChildren,$self->mNumChildren);
-ASSIMP_ARRAY(aiNode,unsigned int,mMeshes,$self->mNumMeshes);
-%typemap(cscode) aiNode %{
-  public aiNodeVector mChildren { get { return GetmChildren(); } }
-  public UintVector mMeshes { get { return GetmMeshes(); } }
-%}
+%ignore aiNode::mNumChildren;
+%ignore aiNode::mChildren;
+%ignore aiNode::mNumMeshes;
+%ignore aiNode::mMeshes;
 
 /////// aiNodeAnim 
 ASSIMP_POINTER_ARRAY(aiNodeAnim,aiVectorKey,mPositionKeys,$self->mNumPositionKeys);
@@ -413,20 +407,18 @@ ASSIMP_POINTER_ARRAY(aiNodeAnim,aiVectorKey,mScalingKeys,$self->mNumScalingKeys)
 // Done
 
 /////// aiScene 
-ASSIMP_POINTER_POINTER(aiScene,aiAnimation,mAnimations,$self->mNumAnimations);
-ASSIMP_POINTER_POINTER(aiScene,aiCamera,mCameras,$self->mNumCameras);
-ASSIMP_POINTER_POINTER(aiScene,aiLight,mLights,$self->mNumLights);
-ASSIMP_POINTER_POINTER(aiScene,aiMaterial,mMaterials,$self->mNumMaterials);
-ASSIMP_POINTER_POINTER(aiScene,aiMesh,mMeshes,$self->mNumMeshes);
-ASSIMP_POINTER_POINTER(aiScene,aiTexture,mTextures,$self->mNumTextures);
-%typemap(cscode) aiScene %{
-  public aiAnimationVector mAnimations { get { return GetmAnimations(); } }
-  public aiCameraVector mCameras { get { return GetmCameras(); } }
-  public aiLightVector mLights { get { return GetmLights(); } }
-  public aiMaterialVector mMaterials { get { return GetmMaterials(); } }
-  public aiMeshVector mMeshes { get { return GetmMeshes(); } }
-  public aiTextureVector mTextures { get { return GetmTextures(); } }
-%}
+%ignore aiScene::mNumAnimations;
+%ignore aiScene::mAnimations;
+%ignore aiScene::mNumCameras;
+%ignore aiScene::mCameras;
+%ignore aiScene::mNumLights;
+%ignore aiScene::mLights;
+%ignore aiScene::mNumMaterials;
+%ignore aiScene::mMaterials;
+%ignore aiScene::mNumMeshes;
+%ignore aiScene::mMeshes;
+%ignore aiScene::mNumTextures;
+%ignore aiScene::mTextures;
 
 /////// aiString 
 %ignore aiString::Append;
@@ -523,7 +515,10 @@ ASSIMP_POINTER_POINTER(aiScene,aiTexture,mTextures,$self->mNumTextures);
 %include "..\..\include\assimp\scene.h"
 %include "..\..\include\assimp\texture.h"
 %include "..\..\include\assimp\Importer.hpp"
+%include "..\..\include\assimp\Exporter.hpp"
+%include "..\..\include\assimp\cexport.h"
 %include "..\..\include\assimp\ProgressHandler.hpp"
+%include "..\..\include\assimp\Array.hpp"
 //%include "..\..\include\IOSystem.h"
 //%include "..\..\include\IOStream.h"
 //%include "..\..\include\Logger.h"
@@ -540,26 +535,43 @@ ASSIMP_POINTER_POINTER(aiScene,aiTexture,mTextures,$self->mNumTextures);
 %template(aiMatrix3x3) aiMatrix3x3t<float>;
 %template(aiMatrix4x4) aiMatrix4x4t<float>;
 
+%extend ArrayType {
+%typemap(cscode) ArrayType %{
+	public interface Interface<T> {
+		uint Size();
+		T Get(uint index);
+		void Set(uint index, T value);
+		void Add(T value);
+	}
+%}
+}
+
+%define ARRAY_DECL(NAME, CTYPE)
+%typemap(csinterfaces) Array<CTYPE> "IDisposable, ArrayType.Interface<$typemap(cstype, CTYPE)>"
+%template(NAME) Array<CTYPE>;
+%enddef
+
+ARRAY_DECL(aiUIntArray, unsigned int);
+ARRAY_DECL(aiVertexWeighthArray, aiVertexWeight);
+ARRAY_DECL(aiNodeArray, aiNode*);
+ARRAY_DECL(aiMeshArray, aiMesh*);
+ARRAY_DECL(aiMaterialArray, aiMaterial*);
+ARRAY_DECL(aiAnimationArray, aiAnimation*);
+ARRAY_DECL(aiTextureArray, aiTexture*);
+ARRAY_DECL(aiLightArray, aiLight*);
+ARRAY_DECL(aiCameraArray, aiCamera*);
+
 %template(FloatVector) std::vector<float>;
 %template(UintVector) std::vector<unsigned int>;
-%template(aiAnimationVector) std::vector<aiAnimation *>;
 %template(aiAnimMeshVector) std::vector<aiAnimMesh *>;
 %template(aiBoneVector) std::vector<aiBone *>;
-%template(aiCameraVector) std::vector<aiCamera *>;
 %template(aiColor4DVectorVector) std::vector<std::vector<aiColor4D *> >;
 %template(aiColor4DVector) std::vector<aiColor4D *>;
 %template(aiFaceVector) std::vector<aiFace *>;
-%template(aiLightVector) std::vector<aiLight *>;
-%template(aiMaterialVector) std::vector<aiMaterial *>;
 %template(aiMeshAnimVector) std::vector<aiMeshAnim *>;
 %template(aiMeshKeyVector) std::vector<aiMeshKey *>;
-%template(aiMeshVector) std::vector<aiMesh *>;
-%template(aiNodeVector) std::vector<aiNode *>;
 %template(aiNodeAnimVector) std::vector<aiNodeAnim *>;
 %template(aiQuatKeyVector) std::vector<aiQuatKey *>;
-%template(aiTextureVector) std::vector<aiTexture *>;
 %template(aiVector3DVector) std::vector<aiVector3D *>;
 %template(aiVector3DVectorVector) std::vector<std::vector<aiVector3D *> >;
 %template(aiVectorKeyVector) std::vector<aiVectorKey *>;
-%template(aiVertexWeightVector) std::vector<aiVertexWeight *>;
-
