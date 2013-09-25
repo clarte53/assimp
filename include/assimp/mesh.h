@@ -176,8 +176,6 @@ struct aiFace
 			mIndices = NULL;
 		}
 		
-		Indices.Create(&mIndices, &mNumIndices);
-		
 		return *this;
 	}
 

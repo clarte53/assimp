@@ -539,7 +539,6 @@ ASSIMP_POINTER_ARRAY(aiNodeAnim,aiVectorKey,mScalingKeys,$self->mNumScalingKeys)
 %extend ArrayType {
 %typemap(cscode) ArrayType %{
 	public interface Interface<T> {
-		void Reserve(uint size);
 		uint Size();
 		T Get(uint index);
 		void Set(uint index, T value);
@@ -551,7 +550,6 @@ ASSIMP_POINTER_ARRAY(aiNodeAnim,aiVectorKey,mScalingKeys,$self->mNumScalingKeys)
 %define ARRAY_DECL(NAME, CTYPE)
 %typemap(csinterfaces) Array<CTYPE> "IDisposable, ArrayType.Interface<$typemap(cstype, CTYPE)>"
 %ignore Array<CTYPE>::Array;
-%ignore Array<CTYPE>::Create;
 %template(NAME) Array<CTYPE>;
 %enddef
 

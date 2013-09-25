@@ -57,15 +57,7 @@ class ArrayType {
 template<typename T>
 class Array {
 
-	public:
-	
-		Array(T** data, unsigned int* size) {
-			Create(data, size);
-		}
-		
-		virtual ~Array() {
-			
-		}
+	protected:
 		
 		void Create(T** data, unsigned int* size) {
 			mData = data;
@@ -102,9 +94,17 @@ class Array {
 					(*mData) = data;
 					mLastReference = data;
 				}
-				
-				(*mSize) = size;
 			}
+		}
+		
+	public:
+		
+		Array(T** data, unsigned int* size) {
+			Create(data, size);
+		}
+		
+		virtual ~Array() {
+			
 		}
 		
 		unsigned int Size() const {
@@ -132,7 +132,7 @@ class Array {
 		void Add(const T& value) {
 			Reserve(Size() + 1);
 			
-			(*mData)[Size() - 1] = value;
+			(*mData)[(*mSize)++] = value;
 		}
 		
 	protected:
@@ -152,16 +152,8 @@ class Array {
 template<typename T>
 class Array<T*> {
 
-	public:
+	protected:
 	
-		Array(T*** data, unsigned int* size) {
-			Create(data, size);
-		}
-		
-		virtual ~Array() {
-			
-		}
-		
 		void Create(T*** data, unsigned int* size) {
 			mData = data;
 			mLastReference = (*data);
@@ -197,9 +189,17 @@ class Array<T*> {
 					(*mData) = data;
 					mLastReference = data;
 				}
-				
-				(*mSize) = size;
 			}
+		}
+		
+	public:
+	
+		Array(T*** data, unsigned int* size) {
+			Create(data, size);
+		}
+		
+		virtual ~Array() {
+			
 		}
 		
 		unsigned int Size() const {
@@ -227,7 +227,7 @@ class Array<T*> {
 		void Add(const T& value) {
 			Reserve(Size() + 1);
 			
-			*((*mData)[Size() - 1]) = value;
+			*((*mData)[(*mSize)++]) = value;
 		}
 		
 	protected:
