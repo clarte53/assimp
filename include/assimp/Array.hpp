@@ -294,6 +294,56 @@ class Array<T*> {
 		
 }; // class Array<T*>
 
+template<typename T>
+class MultiArray {
+
+	public:
+	
+		MultiArray(unsigned int size) : mSize(size) {
+			mData = new Array<T>*[mSize];
+			
+			for(unsigned int i = 0; i < mSize; i++) {
+				mData[i] = NULL;
+			}
+		}
+		
+		virtual ~MultiArray() {
+			for(unsigned int i = 0; i < mSize; i++) {
+				delete mData[i];
+				mData[i] = NULL;
+			}
+		
+			delete[] mData;
+		}
+		
+		unsigned int Size() const {
+			return mSize;
+		}
+		
+		Array<T>& Get(unsigned int index) const {
+			if(index >= Size()) {
+				throw std::out_of_range("Invalid index to unallocated memory");
+			}
+			
+			return *(mData[index]);
+		}
+		
+		void Set(unsigned int index, Array<T>* value) const {
+			if(index >= Size()) {
+				throw std::out_of_range("Invalid index to unallocated memory");
+			}
+			
+			mData[index] = value;
+		}
+
+	protected:
+
+		unsigned int mSize;
+		
+		Array<T>** mData;
+	
+}; // class MultiArray<T>
+
 #endif //__cplusplus
 
 #endif // __ARRAY_HPP_INC__

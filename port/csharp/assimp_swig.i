@@ -538,30 +538,48 @@ ASSIMP_POINTER_ARRAY(aiNodeAnim,aiVectorKey,mScalingKeys,$self->mNumScalingKeys)
 
 %extend ArrayType {
 %typemap(cscode) ArrayType %{
-	public interface Interface<T> {
+	public interface Array<T> {
 		uint Size();
 		T Get(uint index);
 		void Set(uint index, T value);
 		bool Add(T value);
 	}
+	
+	public interface MultiArray<T> {
+		uint Size();
+		T Get(uint index);
+	}
 %}
 }
 
 %define ARRAY_DECL(NAME, CTYPE)
-%typemap(csinterfaces) Array<CTYPE> "IDisposable, ArrayType.Interface<$typemap(cstype, CTYPE)>"
+%typemap(csinterfaces) Array<CTYPE> "IDisposable, ArrayType.Array<$typemap(cstype, CTYPE)>"
 %ignore Array<CTYPE>::Array;
-%template(NAME) Array<CTYPE>;
+%template(NAME##Array) Array<CTYPE>;
 %enddef
 
-ARRAY_DECL(aiUIntArray, unsigned int);
-ARRAY_DECL(aiVertexWeighthArray, aiVertexWeight);
-ARRAY_DECL(aiNodeArray, aiNode*);
-ARRAY_DECL(aiMeshArray, aiMesh*);
-ARRAY_DECL(aiMaterialArray, aiMaterial*);
-ARRAY_DECL(aiAnimationArray, aiAnimation*);
-ARRAY_DECL(aiTextureArray, aiTexture*);
-ARRAY_DECL(aiLightArray, aiLight*);
-ARRAY_DECL(aiCameraArray, aiCamera*);
+%define MULTI_ARRAY_DECL(NAME, CTYPE)
+%typemap(csinterfaces) Array<CTYPE> "IDisposable, ArrayType.MultiArray<$typemap(cstype, CTYPE)>"
+%ignore MultiArray<CTYPE>::MultiArray;
+%ignore MultiArray<CTYPE>::Set;
+ARRAY_DECL(NAME, CTYPE);
+%template(NAME##MultiArray) MultiArray<CTYPE>;
+%enddef
+
+ARRAY_DECL(aiUInt, unsigned int);
+ARRAY_DECL(aiVector3D, aiVector3D); 
+ARRAY_DECL(aiVertexWeighth, aiVertexWeight);
+ARRAY_DECL(aiNode, aiNode*);
+ARRAY_DECL(aiMesh, aiMesh*);
+ARRAY_DECL(aiMaterial, aiMaterial*);
+ARRAY_DECL(aiAnimation, aiAnimation*);
+ARRAY_DECL(aiTexture, aiTexture*);
+ARRAY_DECL(aiLight, aiLight*);
+ARRAY_DECL(aiCamera, aiCamera*);
+ARRAY_DECL(aiAnimMesh, aiAnimMesh*);
+
+MULTI_ARRAY_DECL(aiVector3D, aiVector3D);
+MULTI_ARRAY_DECL(aiColor4D, aiColor4D);
 
 %template(FloatVector) std::vector<float>;
 %template(UintVector) std::vector<unsigned int>;
