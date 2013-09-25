@@ -229,7 +229,8 @@ ASSIMP_POINTER_POINTER(aiAnimation,aiMeshAnim,mMeshChannels,$self->mNumMeshChann
 %ignore aiAnimMesh::mTextureCoords;
 
 /////// aiBone 
-ASSIMP_POINTER_ARRAY(aiBone,aiVertexWeight,mWeights,$self->mNumWeights);
+%ignore aiBone::mNumWeights;
+%ignore aiBone::mWeights;
 
 /////// aiCamera 
 // OK
@@ -548,6 +549,9 @@ ASSIMP_POINTER_ARRAY(aiNodeAnim,aiVectorKey,mScalingKeys,$self->mNumScalingKeys)
 
 %define ARRAY_DECL(NAME, CTYPE)
 %typemap(csinterfaces) Array<CTYPE> "IDisposable, ArrayType.Interface<$typemap(cstype, CTYPE)>"
+%ignore Array<CTYPE>::Array;
+%ignore Array<CTYPE>::Create;
+%ignore Array<CTYPE>::Destroy;
 %template(NAME) Array<CTYPE>;
 %enddef
 
