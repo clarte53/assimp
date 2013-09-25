@@ -64,7 +64,7 @@ class Array {
 		}
 		
 		virtual ~Array() {
-			Destroy();
+			
 		}
 		
 		void Create(T** data, unsigned int* size) {
@@ -78,15 +78,6 @@ class Array {
 			} else {
 				mReservedMemory = (*mSize);
 			}
-		}
-		
-		void Destroy() {/*
-			if((*mData) != NULL) {
-				delete[] (*mData);
-			}
-			
-			(*mData) = NULL;
-			(*mSize) = 0;*/
 		}
 		
 		unsigned int Size() const {
@@ -150,7 +141,7 @@ class Array<T*> {
 		}
 		
 		virtual ~Array() {
-			Destroy();
+			
 		}
 		
 		void Create(T*** data, unsigned int* size) {
@@ -164,19 +155,6 @@ class Array<T*> {
 			} else {
 				mReservedMemory = (*mSize);
 			}
-		}
-		
-		void Destroy() {/*
-			if((*mData) != NULL) {
-				for(unsigned int i = 0; i < Size(); i++) {
-					delete[] ((*mData)[i]);
-				}
-		
-				delete[] (*mData);
-			}
-			
-			(*mData) = NULL;
-			(*mSize) = 0;*/
 		}
 		
 		unsigned int Size() const {

@@ -551,7 +551,6 @@ ASSIMP_POINTER_ARRAY(aiNodeAnim,aiVectorKey,mScalingKeys,$self->mNumScalingKeys)
 %typemap(csinterfaces) Array<CTYPE> "IDisposable, ArrayType.Interface<$typemap(cstype, CTYPE)>"
 %ignore Array<CTYPE>::Array;
 %ignore Array<CTYPE>::Create;
-%ignore Array<CTYPE>::Destroy;
 %template(NAME) Array<CTYPE>;
 %enddef
 
