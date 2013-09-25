@@ -341,29 +341,23 @@ ASSIMP_GETMATERIAL(Integer, AI_MATKEY_TWOSIDED,             int,   TwoSided);
 %ignore aiMatrix4x4::operator[];
 
 /////// aiMesh 
-ASSIMP_POINTER_POINTER(aiMesh,aiAnimMesh,mAnimMeshes,$self->mNumAnimMeshes);
-ASSIMP_POINTER_ARRAY(aiMesh,aiVector3D,mBitangents,$self->mNumVertices);
-ASSIMP_POINTER_POINTER(aiMesh,aiBone,mBones,$self->mNumBones);
-ASSIMP_POINTER_ARRAY_ARRAY(aiMesh,aiColor4D,mColors,AI_MAX_NUMBER_OF_COLOR_SETS,$self->mNumVertices);
-ASSIMP_POINTER_ARRAY(aiMesh,aiFace,mFaces,$self->mNumFaces);
-ASSIMP_POINTER_ARRAY(aiMesh,aiVector3D,mNormals,$self->mNumVertices);
-ASSIMP_POINTER_ARRAY(aiMesh,aiVector3D,mTangents,$self->mNumVertices);
-ASSIMP_POINTER_ARRAY_ARRAY(aiMesh,aiVector3D,mTextureCoords,AI_MAX_NUMBER_OF_TEXTURECOORDS,$self->mNumVertices);
-ASSIMP_ARRAY(aiMesh,unsigned int,mNumUVComponents,AI_MAX_NUMBER_OF_TEXTURECOORDS);
-ASSIMP_POINTER_ARRAY(aiMesh,aiVector3D,mVertices,$self->mNumVertices);
+%ignore aiMesh::mNumVertices;
+%ignore aiMesh::mVertices;
+%ignore aiMesh::mNormals;
+%ignore aiMesh::mTangents;
+%ignore aiMesh::mBitangents;
+%ignore aiMesh::mColors;
+%ignore aiMesh::mTextureCoords;
+%ignore aiMesh::mNumUVComponents;
+%ignore aiMesh::mNumFaces;
+%ignore aiMesh::mFaces;
+%ignore aiMesh::mNumBones;
+%ignore aiMesh::mBones;
+%ignore aiMesh::mNumAnimMeshes;
+%ignore aiMesh::mAnimMeshes;
 %typemap(cstype)   unsigned int mPrimitiveTypes "aiPrimitiveType";
 %typemap(csin)     unsigned int mPrimitiveTypes "(uint)$csinput";
 %typemap(csvarout) unsigned int mPrimitiveTypes %{ get { return (aiPrimitiveType)$imcall; } %}
-%typemap(cscode) aiMesh %{
-  public aiVector3DVector mBitangents { get { return GetmBitangents(); } }
-  public aiBoneVector mBones { get { return GetmBones(); } }
-  public aiColor4DVectorVector mColors { get { return GetmColors(); } }
-  public aiFaceVector mFaces { get { return GetmFaces(); } }
-  public aiVector3DVector mNormals { get { return GetmNormals(); } }
-  public aiVector3DVector mTangents { get { return GetmTangents(); } }
-  public aiVector3DVectorVector mTextureCoords { get { return GetmTextureCoords(); } }
-  public aiVector3DVector mVertices { get { return GetmVertices(); } }
-%}
 
 /////// aiMeshAnim 
 ASSIMP_POINTER_ARRAY(aiMeshAnim,aiMeshKey,mKeys,$self->mNumKeys);

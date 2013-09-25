@@ -390,19 +390,39 @@ struct aiAnimMesh
 
 #ifdef __cplusplus
 
+	Array<aiVector3D> Vertices;
+	
+	Array<aiVector3D> Normals;
+	
+	Array<aiVector3D> Tangents;
+	
+	Array<aiVector3D> Bitangents;
+	
+	MultiArray<aiColor4D> Colors;
+	
+	MultiArray<aiVector3D> TextureCoords;
+
 	aiAnimMesh()
 		: mVertices( NULL )
 		, mNormals( NULL )
 		, mTangents( NULL )
 		, mBitangents( NULL )
 		, mNumVertices( 0 )
+		, Vertices(&mVertices, &mNumVertices)
+		, Normals(&mNormals, &mNumVertices, true)
+		, Tangents(&mTangents, &mNumVertices, true)
+		, Bitangents(&mBitangents, &mNumVertices, true)
+		, Colors(AI_MAX_NUMBER_OF_COLOR_SETS)
+		, TextureCoords(AI_MAX_NUMBER_OF_TEXTURECOORDS)
 	{
 		// fixme consider moving this to the ctor initializer list as well
 		for( unsigned int a = 0; a < AI_MAX_NUMBER_OF_TEXTURECOORDS; a++){
 			mTextureCoords[a] = NULL;
+			TextureCoords.Set(a, new Array<aiVector3D>(&mTextureCoords[a], &mNumVertices, true));
 		}
 		for( unsigned int a = 0; a < AI_MAX_NUMBER_OF_COLOR_SETS; a++) {
 			mColors[a] = NULL;
+			Colors.Set(a, new Array<aiColor4D>(&mColors[a], &mNumVertices, true));
 		}
 	}
 	
@@ -621,6 +641,27 @@ struct aiMesh
 
 #ifdef __cplusplus
 
+	Array<aiVector3D> Vertices;
+	
+	Array<aiVector3D> Normals;
+	
+	Array<aiVector3D> Tangents;
+	
+	Array<aiVector3D> Bitangents;
+	
+	MultiArray<aiColor4D> Colors;
+	
+	MultiArray<aiVector3D> TextureCoords;
+	
+	//static const unsigned int mMaxNumberTextureCoords = AI_MAX_NUMBER_OF_TEXTURECOORDS;
+	//Array<unsigned int> NumUVComponents;
+	
+	Array<aiFace> Faces;
+	
+	Array<aiBone*> Bones;
+	
+	Array<aiAnimMesh*> AnimMeshes;
+
 	//! Default constructor. Initializes all members to 0
 	aiMesh()
 		: mPrimitiveTypes( 0 )
@@ -632,19 +673,32 @@ struct aiMesh
 		, mBitangents( NULL )
 		, mFaces( NULL )
 		, mNumBones( 0 )
-		, mBones( 0 )
+		, mBones( NULL )
 		, mMaterialIndex( 0 )
 		, mNumAnimMeshes( 0 )
 		, mAnimMeshes( NULL )
+		, Vertices(&mVertices, &mNumVertices)
+		, Normals(&mNormals, &mNumVertices, true)
+		, Tangents(&mTangents, &mNumVertices, true)
+		, Bitangents(&mBitangents, &mNumVertices, true)
+		, Colors(AI_MAX_NUMBER_OF_COLOR_SETS)
+		, TextureCoords(AI_MAX_NUMBER_OF_TEXTURECOORDS)
+		//, NumUVComponents(&mNumUVComponents, mMaxNumberTextureCoords, true)
+		, Faces(&mFaces, &mNumFaces)
+		, Bones(&mBones, &mNumBones)
+		, AnimMeshes(&mAnimMeshes, &mNumAnimMeshes)
 	{
 		for( unsigned int a = 0; a < AI_MAX_NUMBER_OF_TEXTURECOORDS; a++)
 		{
 			mNumUVComponents[a] = 0;
 			mTextureCoords[a] = NULL;
+			TextureCoords.Set(a, new Array<aiVector3D>(&mTextureCoords[a], &mNumVertices, true));
 		}
       
-		for( unsigned int a = 0; a < AI_MAX_NUMBER_OF_COLOR_SETS; a++)
+		for( unsigned int a = 0; a < AI_MAX_NUMBER_OF_COLOR_SETS; a++) {
 			mColors[a] = NULL;
+			Colors.Set(a, new Array<aiColor4D>(&mColors[a], &mNumVertices, true));
+		}
 	}
 
 	//! Deletes all storage allocated for the mesh
