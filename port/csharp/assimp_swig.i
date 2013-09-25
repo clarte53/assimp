@@ -542,7 +542,7 @@ ASSIMP_POINTER_ARRAY(aiNodeAnim,aiVectorKey,mScalingKeys,$self->mNumScalingKeys)
 		uint Size();
 		T Get(uint index);
 		void Set(uint index, T value);
-		void Add(T value);
+		bool Add(T value);
 	}
 %}
 }
