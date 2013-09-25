@@ -539,6 +539,7 @@ ASSIMP_POINTER_ARRAY(aiNodeAnim,aiVectorKey,mScalingKeys,$self->mNumScalingKeys)
 %extend ArrayType {
 %typemap(cscode) ArrayType %{
 	public interface Interface<T> {
+		void Reserve(uint size);
 		uint Size();
 		T Get(uint index);
 		void Set(uint index, T value);

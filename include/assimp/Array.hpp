@@ -69,14 +69,41 @@ class Array {
 		
 		void Create(T** data, unsigned int* size) {
 			mData = data;
+			mLastReference = (*data);
 			mSize = size;
-			
-			if(mSize == 0) {
-				mReservedMemory = mDefaultMemory;
+			mReservedMemory = 0;
+		}
+		
+		void Reserve(unsigned int size) {
+			if(size > Size()) {
+				if((*mData) != mLastReference) {
+					mReservedMemory = 0;
+				}
 				
-				(*mData) = new T[mReservedMemory];
-			} else {
-				mReservedMemory = (*mSize);
+				if(size > mReservedMemory) {
+					while(size > mReservedMemory) {
+						if(mReservedMemory == 0) {
+							mReservedMemory = mDefaultMemory;
+						} else {
+							mReservedMemory *= 2;
+						}
+					}
+				
+					T* data = new T[mReservedMemory];
+				
+					for(unsigned int i = 0; i < Size(); i++) {
+						data[i] = (*mData)[i];
+					}
+					for(unsigned int i = Size(); i < mReservedMemory; i++) {
+						data[i] = T();
+					}
+				
+					delete[] (*mData);
+					(*mData) = data;
+					mLastReference = data;
+				}
+				
+				(*mSize) = size;
 			}
 		}
 		
@@ -85,7 +112,7 @@ class Array {
 		}
 		
 		T Get(unsigned int index) const {
-			if(index >= (*mSize)) {
+			if(index >= Size()) {
 				throw std::out_of_range("Invalid index to unallocated memory");
 			}
 			
@@ -94,7 +121,7 @@ class Array {
 		
 		// Warning: copy the value into the data array without regard for ownership
 		void Set(unsigned int index, const T& value) {
-			if(index >= (*mSize)) {
+			if(index >= Size()) {
 				throw std::out_of_range("Invalid index to unallocated memory");
 			}
 			
@@ -103,25 +130,16 @@ class Array {
 		
 		// Warning: copy the value into the data array without regard for ownership
 		void Add(const T& value) {
-			if((*mSize) >= mReservedMemory) {
-				mReservedMemory *= 2;
-				
-				T* data = new T[mReservedMemory];
-				
-				for(unsigned int i = 0; i < (*mSize); i++) {
-					data[i] = (*mData)[i];
-				}
-				
-				delete[] (*mData);
-				(*mData) = data;
-			}
+			Reserve(Size() + 1);
 			
-			(*mData)[(*mSize)++] = value;
+			(*mData)[Size() - 1] = value;
 		}
 		
 	protected:
 	
 		T** mData;
+		
+		T* mLastReference;
 		
 		unsigned int* mSize;
 		
@@ -146,14 +164,41 @@ class Array<T*> {
 		
 		void Create(T*** data, unsigned int* size) {
 			mData = data;
+			mLastReference = (*data);
 			mSize = size;
-			
-			if(mSize == 0) {
-				mReservedMemory = mDefaultMemory;
+			mReservedMemory = 0;
+		}
+
+		void Reserve(unsigned int size) {
+			if(size > Size()) {
+				if((*mData) != mLastReference) {
+					mReservedMemory = 0;
+				}
 				
-				(*mData) = new T*[mReservedMemory];
-			} else {
-				mReservedMemory = (*mSize);
+				if(size > mReservedMemory) {
+					while(size > mReservedMemory) {
+						if(mReservedMemory == 0) {
+							mReservedMemory = mDefaultMemory;
+						} else {
+							mReservedMemory *= 2;
+						}
+					}
+				
+					T** data = new T*[mReservedMemory];
+				
+					for(unsigned int i = 0; i < Size(); i++) {
+						data[i] = (*mData)[i];
+					}
+					for(unsigned int i = Size(); i < mReservedMemory; i++) {
+						data[i] = NULL;
+					}
+				
+					delete[] (*mData);
+					(*mData) = data;
+					mLastReference = data;
+				}
+				
+				(*mSize) = size;
 			}
 		}
 		
@@ -162,7 +207,7 @@ class Array<T*> {
 		}
 		
 		T& Get(unsigned int index) const {
-			if(index >= (*mSize)) {
+			if(index >= Size()) {
 				throw std::out_of_range("Invalid index to unallocated memory");
 			}
 			
@@ -171,7 +216,7 @@ class Array<T*> {
 		
 		// Warning: copy the value into the data array without regard for ownership
 		void Set(unsigned int index, const T& value) {
-			if(index >= (*mSize)) {
+			if(index >= Size()) {
 				throw std::out_of_range("Invalid index to unallocated memory");
 			}
 			
@@ -180,35 +225,25 @@ class Array<T*> {
 		
 		// Warning: copy the value into the data array without regard for ownership
 		void Add(const T& value) {
-			if((*mSize) >= mReservedMemory) {
-				mReservedMemory *= 2;
-				
-				T** data = new T*[mReservedMemory];
-				
-				for(unsigned int i = 0; i < (*mSize); i++) {
-					data[i] = (*mData)[i];
-				}
-				
-				delete[] (*mData);
-				(*mData) = data;
-			}
+			Reserve(Size() + 1);
 			
-			*((*mData)[(*mSize)++]) = value;
+			*((*mData)[Size() - 1]) = value;
 		}
 		
 	protected:
 	
 		T*** mData;
 		
+		T** mLastReference;
+		
 		unsigned int* mSize;
 		
 		unsigned int mReservedMemory;
 		
 		static const unsigned int mDefaultMemory = 128;
-
+		
 }; // class Array<T*>
 
 #endif //__cplusplus
 
 #endif // __ARRAY_HPP_INC__
-
