@@ -60,14 +60,14 @@ class Array {
 	public:
 	
 		Array(T** data, unsigned int* size) {
-			Reset(data, size);
+			Create(data, size);
 		}
 		
 		virtual ~Array() {
-			// no deallocation of memory because the destructors of the englobing classes already do the job
+			Destroy();
 		}
 		
-		void Reset(T** data, unsigned int* size) {
+		void Create(T** data, unsigned int* size) {
 			mData = data;
 			mSize = size;
 			
@@ -78,6 +78,15 @@ class Array {
 			} else {
 				mReservedMemory = (*mSize);
 			}
+		}
+		
+		void Destroy() {/*
+			if((*mData) != NULL) {
+				delete[] (*mData);
+			}
+			
+			(*mData) = NULL;
+			(*mSize) = 0;*/
 		}
 		
 		unsigned int Size() const {
@@ -137,14 +146,14 @@ class Array<T*> {
 	public:
 	
 		Array(T*** data, unsigned int* size) {
-			Reset(data, size);
+			Create(data, size);
 		}
 		
 		virtual ~Array() {
-			// no deallocation of memory because the destructors of the englobing classes already do the job
+			Destroy();
 		}
 		
-		void Reset(T*** data, unsigned int* size) {
+		void Create(T*** data, unsigned int* size) {
 			mData = data;
 			mSize = size;
 			
@@ -155,6 +164,19 @@ class Array<T*> {
 			} else {
 				mReservedMemory = (*mSize);
 			}
+		}
+		
+		void Destroy() {/*
+			if((*mData) != NULL) {
+				for(unsigned int i = 0; i < Size(); i++) {
+					delete[] ((*mData)[i]);
+				}
+		
+				delete[] (*mData);
+			}
+			
+			(*mData) = NULL;
+			(*mSize) = 0;*/
 		}
 		
 		unsigned int Size() const {
