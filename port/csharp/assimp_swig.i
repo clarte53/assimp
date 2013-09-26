@@ -105,6 +105,74 @@ $typemap(cstype, unsigned int);
 %rename(opDelete) operator delete;
 %rename(opDeleteArray) operator delete[];
 
+%include "..\..\include\assimp\Array.hpp"
+
+%extend Interface {
+%typemap(cscode) Interface %{
+	public interface Unmanagable<T> {
+		T Unmanaged();
+	}
+
+	public interface MultiArray<T> {
+		uint Size();
+		T Get(uint index);
+	}
+	
+	public interface FixedArray<T> : MultiArray<T> {
+		void Set(uint index, T value);
+	}
+	
+	public interface Array<T> : FixedArray<T> {
+		void Clear();
+		void Reserve(uint size);
+		bool Add(T value);
+	}
+%}
+}
+
+%define ADD_UNMANAGED_OPTION(CTYPE)
+%typemap(csinterfaces) CTYPE "IDisposable, Interface.Unmanagable<$typemap(cstype, CTYPE)>"
+%typemap(cscode) CTYPE %{
+	public CTYPE Unmanaged() {
+		this.swigCMemOwn = false;
+		
+		return this;
+	}
+%}
+%enddef
+
+%define ADD_UNMANAGED_OPTION_TEMPLATE(NAME, CTYPE)
+%typemap(csinterfaces) CTYPE "IDisposable, Interface.Unmanagable<$typemap(cstype, CTYPE)>"
+%typemap(cscode) CTYPE %{
+	public NAME Unmanaged() {
+		this.swigCMemOwn = false;
+		
+		return this;
+	}
+%}
+%template(NAME) CTYPE;
+%enddef
+
+%define ARRAY_DECL(NAME, CTYPE)
+%typemap(csinterfaces) Array<CTYPE> "IDisposable, Interface.Array<$typemap(cstype, CTYPE)>"
+%ignore Array<CTYPE>::Array;
+%template(NAME##Array) Array<CTYPE>;
+%enddef
+
+%define FIXED_ARRAY_DECL(NAME, CTYPE)
+%typemap(csinterfaces) Array<CTYPE> "IDisposable, Interface.FixedArray<$typemap(cstype, CTYPE)>"
+%ignore MultiArray<CTYPE>::FixedArray;
+%template(NAME##FixedArray) FixedArray<CTYPE>;
+%enddef
+
+%define MULTI_ARRAY_DECL(NAME, CTYPE)
+%typemap(csinterfaces) Array<CTYPE> "IDisposable, Interface.MultiArray<$typemap(cstype, CTYPE)>"
+%ignore MultiArray<CTYPE>::MultiArray;
+%ignore MultiArray<CTYPE>::Set;
+ARRAY_DECL(NAME, CTYPE);
+%template(NAME##MultiArray) MultiArray<CTYPE>;
+%enddef
+
 
 %include "std_vector.i"
 
@@ -236,12 +304,13 @@ ASSIMP_POINTER_POINTER(aiAnimation,aiMeshAnim,mMeshChannels,$self->mNumMeshChann
 // OK
 
 /////// aiColor3D 
-// OK
+ADD_UNMANAGED_OPTION(aiColor3D);
 
 /////// aiColor4D 
-// OK
+ADD_UNMANAGED_OPTION(aiColor4D);
 
-/////// aiFace 
+/////// aiFace
+ADD_UNMANAGED_OPTION(aiFace);
 %ignore aiFace::mNumIndices;
 %ignore aiFace::mIndices;
 
@@ -341,6 +410,7 @@ ASSIMP_GETMATERIAL(Integer, AI_MATKEY_TWOSIDED,             int,   TwoSided);
 %ignore aiMatrix4x4::operator[];
 
 /////// aiMesh 
+ADD_UNMANAGED_OPTION(aiMesh);
 %ignore aiMesh::mNumVertices;
 %ignore aiMesh::mVertices;
 %ignore aiMesh::mNormals;
@@ -369,6 +439,7 @@ ASSIMP_POINTER_ARRAY(aiMeshAnim,aiMeshKey,mKeys,$self->mNumKeys);
 // Done
 
 /////// aiNode 
+ADD_UNMANAGED_OPTION(aiNode);
 %ignore aiNode::mNumChildren;
 %ignore aiNode::mChildren;
 %ignore aiNode::mNumMeshes;
@@ -393,7 +464,7 @@ ASSIMP_POINTER_ARRAY(aiNodeAnim,aiVectorKey,mScalingKeys,$self->mNumScalingKeys)
 %}
 
 /////// aiQuaternion 
-// Done
+ADD_UNMANAGED_OPTION(aiQuaternion);
 
 /////// aiQuatKey 
 // Done
@@ -402,6 +473,7 @@ ASSIMP_POINTER_ARRAY(aiNodeAnim,aiVectorKey,mScalingKeys,$self->mNumScalingKeys)
 // Done
 
 /////// aiScene 
+ADD_UNMANAGED_OPTION(aiScene);
 %ignore aiScene::mNumAnimations;
 %ignore aiScene::mAnimations;
 %ignore aiScene::mNumCameras;
@@ -437,10 +509,10 @@ ASSIMP_POINTER_ARRAY(aiNodeAnim,aiVectorKey,mScalingKeys,$self->mNumScalingKeys)
 // Done
 
 /////// aiVector2D 
-// Done
+ADD_UNMANAGED_OPTION(aiVector2D);
 
 /////// aiVector3D 
-// Done
+ADD_UNMANAGED_OPTION(aiVector3D);
 
 /////// aiVectorKey 
 // Done
@@ -513,7 +585,6 @@ ASSIMP_POINTER_ARRAY(aiNodeAnim,aiVectorKey,mScalingKeys,$self->mNumScalingKeys)
 %include "..\..\include\assimp\Exporter.hpp"
 %include "..\..\include\assimp\cexport.h"
 %include "..\..\include\assimp\ProgressHandler.hpp"
-%include "..\..\include\assimp\Array.hpp"
 //%include "..\..\include\IOSystem.h"
 //%include "..\..\include\IOStream.h"
 //%include "..\..\include\Logger.h"
@@ -521,53 +592,14 @@ ASSIMP_POINTER_ARRAY(aiNodeAnim,aiVectorKey,mScalingKeys,$self->mNumScalingKeys)
 //%include "..\..\include\NullLogger.h"
 
 
-%template(aiColor4D) aiColor4t<float>;
+ADD_UNMANAGED_OPTION_TEMPLATE(aiColor4D, aiColor4t<float>);
 
-%template(aiVector3D) aiVector3t<float>;
-%template(aiVector2D) aiVector2t<float>;
+ADD_UNMANAGED_OPTION_TEMPLATE(aiVector3D, aiVector3t<float>);
+ADD_UNMANAGED_OPTION_TEMPLATE(aiVector2D, aiVector2t<float>);
 
-%template(aiQuaternion) aiQuaterniont<float>;
-%template(aiMatrix3x3) aiMatrix3x3t<float>;
-%template(aiMatrix4x4) aiMatrix4x4t<float>;
-
-%extend ArrayInterface {
-%typemap(cscode) ArrayInterface %{
-	public interface MultiArray<T> {
-		uint Size();
-		T Get(uint index);
-	}
-	
-	public interface FixedArray<T> : MultiArray<T> {
-		void Set(uint index, T value);
-	}
-	
-	public interface Array<T> : FixedArray<T> {
-		void Clear();
-		void Reserve(uint size);
-		bool Add(T value);
-	}
-%}
-}
-
-%define ARRAY_DECL(NAME, CTYPE)
-%typemap(csinterfaces) Array<CTYPE> "IDisposable, ArrayInterface.Array<$typemap(cstype, CTYPE)>"
-%ignore Array<CTYPE>::Array;
-%template(NAME##Array) Array<CTYPE>;
-%enddef
-
-%define FIXED_ARRAY_DECL(NAME, CTYPE)
-%typemap(csinterfaces) Array<CTYPE> "IDisposable, ArrayInterface.FixedArray<$typemap(cstype, CTYPE)>"
-%ignore MultiArray<CTYPE>::FixedArray;
-%template(NAME##FixedArray) FixedArray<CTYPE>;
-%enddef
-
-%define MULTI_ARRAY_DECL(NAME, CTYPE)
-%typemap(csinterfaces) Array<CTYPE> "IDisposable, ArrayInterface.MultiArray<$typemap(cstype, CTYPE)>"
-%ignore MultiArray<CTYPE>::MultiArray;
-%ignore MultiArray<CTYPE>::Set;
-ARRAY_DECL(NAME, CTYPE);
-%template(NAME##MultiArray) MultiArray<CTYPE>;
-%enddef
+ADD_UNMANAGED_OPTION_TEMPLATE(aiQuaternion, aiQuaterniont<float>);
+ADD_UNMANAGED_OPTION_TEMPLATE(aiMatrix3x3, aiMatrix3x3t<float>);
+ADD_UNMANAGED_OPTION_TEMPLATE(aiMatrix4x4, aiMatrix4x4t<float>);
 
 ARRAY_DECL(aiUInt, unsigned int);
 ARRAY_DECL(aiFace, aiFace);

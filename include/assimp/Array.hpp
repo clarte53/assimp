@@ -50,7 +50,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdexcept> 
 
 
-class ArrayInterface {
+class Interface {
 
 };
 
@@ -225,6 +225,7 @@ class Array<T*> {
 			if((*mData) != NULL) {
 				for(unsigned int i = 0; i < Size(); i++) {
 					delete (*mData)[i];
+					(*mData)[i] = NULL;
 				}
 				
 				delete[] (*mData);
