@@ -50,7 +50,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdexcept> 
 
 
-class ArrayType {
+class ArrayInterface {
 
 };
 
@@ -75,6 +75,26 @@ class Array {
 			if(reserve) {
 				Reserve(*mSize);
 			}
+		}
+		
+	public:
+		
+		Array(T** data, unsigned int* size, bool slave = false) : mSlave(slave) {
+			Create(data, size);
+		}
+		
+		virtual ~Array() {
+			
+		}
+		
+		void Clear() {
+			if((*mData) != NULL) {
+				delete[] (*mData);
+				(*mData) = NULL;
+			}
+			
+			(*mSize) = 0;
+			mReservedMemory = 0;
 		}
 		
 		void Reserve(unsigned int size) {
@@ -103,17 +123,11 @@ class Array {
 					(*mData) = data;
 					mLastReference = data;
 				}
+				
+				if(! mSlave) {
+					(*mSize) = size;
+				}
 			}
-		}
-		
-	public:
-		
-		Array(T** data, unsigned int* size, bool slave = false) : mSlave(slave) {
-			Create(data, size);
-		}
-		
-		virtual ~Array() {
-			
 		}
 		
 		unsigned int Size() const {
@@ -197,6 +211,30 @@ class Array<T*> {
 			}
 		}
 
+	public:
+	
+		Array(T*** data, unsigned int* size, bool slave = false) : mSlave(slave) {
+			Create(data, size);
+		}
+		
+		virtual ~Array() {
+			
+		}
+		
+		void Clear() {
+			if((*mData) != NULL) {
+				for(unsigned int i = 0; i < Size(); i++) {
+					delete (*mData)[i];
+				}
+				
+				delete[] (*mData);
+				(*mData) = NULL;
+			}
+			
+			(*mSize) = 0;
+			mReservedMemory = 0;
+		}
+		
 		void Reserve(unsigned int size) {
 			unsigned int previous_size = ((*mSize) <= mReservedMemory ? (*mSize) : mReservedMemory);
 			
@@ -223,17 +261,11 @@ class Array<T*> {
 					(*mData) = data;
 					mLastReference = data;
 				}
+				
+				if(! mSlave) {
+					(*mSize) = size;
+				}
 			}
-		}
-		
-	public:
-	
-		Array(T*** data, unsigned int* size, bool slave = false) : mSlave(slave) {
-			Create(data, size);
-		}
-		
-		virtual ~Array() {
-			
 		}
 		
 		unsigned int Size() const {
@@ -343,6 +375,47 @@ class MultiArray {
 		Array<T>** mData;
 	
 }; // class MultiArray<T>
+
+template<typename T>
+class FixedArray {
+
+	public:
+	
+		FixedArray(T* data, unsigned int size) : mData(data), mSize(size) {
+		
+		}
+		
+		virtual ~FixedArray() {
+		
+		}
+		
+		unsigned int Size() const {
+			return mSize;
+		}
+		
+		T Get(unsigned int index) const {
+			if(index >= Size()) {
+				throw std::out_of_range("Invalid index to unallocated memory");
+			}
+			
+			return mData[index];
+		}
+		
+		void Set(unsigned int index, const T& value) const {
+			if(index >= Size()) {
+				throw std::out_of_range("Invalid index to unallocated memory");
+			}
+			
+			mData[index] = value;
+		}
+		
+	protected:
+	
+		T* mData;
+	
+		unsigned int mSize;
+
+}; // class FixedArray<T>
 
 #endif //__cplusplus
 

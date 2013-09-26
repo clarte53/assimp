@@ -653,8 +653,7 @@ struct aiMesh
 	
 	MultiArray<aiVector3D> TextureCoords;
 	
-	//static const unsigned int mMaxNumberTextureCoords = AI_MAX_NUMBER_OF_TEXTURECOORDS;
-	//Array<unsigned int> NumUVComponents;
+	FixedArray<unsigned int> NumUVComponents;
 	
 	Array<aiFace> Faces;
 	
@@ -683,7 +682,7 @@ struct aiMesh
 		, Bitangents(&mBitangents, &mNumVertices, true)
 		, Colors(AI_MAX_NUMBER_OF_COLOR_SETS)
 		, TextureCoords(AI_MAX_NUMBER_OF_TEXTURECOORDS)
-		//, NumUVComponents(&mNumUVComponents, mMaxNumberTextureCoords, true)
+		, NumUVComponents(&mNumUVComponents[0], AI_MAX_NUMBER_OF_TEXTURECOORDS)
 		, Faces(&mFaces, &mNumFaces)
 		, Bones(&mBones, &mNumBones)
 		, AnimMeshes(&mAnimMeshes, &mNumAnimMeshes)

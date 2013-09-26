@@ -530,30 +530,39 @@ ASSIMP_POINTER_ARRAY(aiNodeAnim,aiVectorKey,mScalingKeys,$self->mNumScalingKeys)
 %template(aiMatrix3x3) aiMatrix3x3t<float>;
 %template(aiMatrix4x4) aiMatrix4x4t<float>;
 
-%extend ArrayType {
-%typemap(cscode) ArrayType %{
-	public interface Array<T> {
-		uint Size();
-		T Get(uint index);
-		void Set(uint index, T value);
-		bool Add(T value);
-	}
-	
+%extend ArrayInterface {
+%typemap(cscode) ArrayInterface %{
 	public interface MultiArray<T> {
 		uint Size();
 		T Get(uint index);
+	}
+	
+	public interface FixedArray<T> : MultiArray<T> {
+		void Set(uint index, T value);
+	}
+	
+	public interface Array<T> : FixedArray<T> {
+		void Clear();
+		void Reserve(uint size);
+		bool Add(T value);
 	}
 %}
 }
 
 %define ARRAY_DECL(NAME, CTYPE)
-%typemap(csinterfaces) Array<CTYPE> "IDisposable, ArrayType.Array<$typemap(cstype, CTYPE)>"
+%typemap(csinterfaces) Array<CTYPE> "IDisposable, ArrayInterface.Array<$typemap(cstype, CTYPE)>"
 %ignore Array<CTYPE>::Array;
 %template(NAME##Array) Array<CTYPE>;
 %enddef
 
+%define FIXED_ARRAY_DECL(NAME, CTYPE)
+%typemap(csinterfaces) Array<CTYPE> "IDisposable, ArrayInterface.FixedArray<$typemap(cstype, CTYPE)>"
+%ignore MultiArray<CTYPE>::FixedArray;
+%template(NAME##FixedArray) FixedArray<CTYPE>;
+%enddef
+
 %define MULTI_ARRAY_DECL(NAME, CTYPE)
-%typemap(csinterfaces) Array<CTYPE> "IDisposable, ArrayType.MultiArray<$typemap(cstype, CTYPE)>"
+%typemap(csinterfaces) Array<CTYPE> "IDisposable, ArrayInterface.MultiArray<$typemap(cstype, CTYPE)>"
 %ignore MultiArray<CTYPE>::MultiArray;
 %ignore MultiArray<CTYPE>::Set;
 ARRAY_DECL(NAME, CTYPE);
@@ -561,7 +570,7 @@ ARRAY_DECL(NAME, CTYPE);
 %enddef
 
 ARRAY_DECL(aiUInt, unsigned int);
-ARRAY_DECL(aiVector3D, aiVector3D); 
+ARRAY_DECL(aiFace, aiFace);
 ARRAY_DECL(aiVertexWeighth, aiVertexWeight);
 ARRAY_DECL(aiNode, aiNode*);
 ARRAY_DECL(aiMesh, aiMesh*);
@@ -570,22 +579,17 @@ ARRAY_DECL(aiAnimation, aiAnimation*);
 ARRAY_DECL(aiTexture, aiTexture*);
 ARRAY_DECL(aiLight, aiLight*);
 ARRAY_DECL(aiCamera, aiCamera*);
+ARRAY_DECL(aiBone, aiBone*);
 ARRAY_DECL(aiAnimMesh, aiAnimMesh*);
+
+FIXED_ARRAY_DECL(aiUInt, unsigned int);
 
 MULTI_ARRAY_DECL(aiVector3D, aiVector3D);
 MULTI_ARRAY_DECL(aiColor4D, aiColor4D);
 
 %template(FloatVector) std::vector<float>;
-%template(UintVector) std::vector<unsigned int>;
-%template(aiAnimMeshVector) std::vector<aiAnimMesh *>;
-%template(aiBoneVector) std::vector<aiBone *>;
-%template(aiColor4DVectorVector) std::vector<std::vector<aiColor4D *> >;
-%template(aiColor4DVector) std::vector<aiColor4D *>;
-%template(aiFaceVector) std::vector<aiFace *>;
-%template(aiMeshAnimVector) std::vector<aiMeshAnim *>;
 %template(aiMeshKeyVector) std::vector<aiMeshKey *>;
 %template(aiNodeAnimVector) std::vector<aiNodeAnim *>;
+%template(aiMeshAnimVector) std::vector<aiMeshAnim *>;
 %template(aiQuatKeyVector) std::vector<aiQuatKey *>;
-%template(aiVector3DVector) std::vector<aiVector3D *>;
-%template(aiVector3DVectorVector) std::vector<std::vector<aiVector3D *> >;
 %template(aiVectorKeyVector) std::vector<aiVectorKey *>;
