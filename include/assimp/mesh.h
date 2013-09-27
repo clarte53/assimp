@@ -409,20 +409,20 @@ struct aiAnimMesh
 		, mBitangents( NULL )
 		, mNumVertices( 0 )
 		, Vertices(&mVertices, &mNumVertices)
-		, Normals(&mNormals, &mNumVertices, true)
-		, Tangents(&mTangents, &mNumVertices, true)
-		, Bitangents(&mBitangents, &mNumVertices, true)
+		, Normals(&mNormals, &mNumVertices)
+		, Tangents(&mTangents, &mNumVertices)
+		, Bitangents(&mBitangents, &mNumVertices)
 		, Colors(AI_MAX_NUMBER_OF_COLOR_SETS)
 		, TextureCoords(AI_MAX_NUMBER_OF_TEXTURECOORDS)
 	{
 		// fixme consider moving this to the ctor initializer list as well
 		for( unsigned int a = 0; a < AI_MAX_NUMBER_OF_TEXTURECOORDS; a++){
 			mTextureCoords[a] = NULL;
-			TextureCoords.Set(a, new Array<aiVector3D>(&mTextureCoords[a], &mNumVertices, true));
+			TextureCoords.Set(a, new Array<aiVector3D>(&mTextureCoords[a], &mNumVertices));
 		}
 		for( unsigned int a = 0; a < AI_MAX_NUMBER_OF_COLOR_SETS; a++) {
 			mColors[a] = NULL;
-			Colors.Set(a, new Array<aiColor4D>(&mColors[a], &mNumVertices, true));
+			Colors.Set(a, new Array<aiColor4D>(&mColors[a], &mNumVertices));
 		}
 	}
 	
@@ -677,9 +677,9 @@ struct aiMesh
 		, mNumAnimMeshes( 0 )
 		, mAnimMeshes( NULL )
 		, Vertices(&mVertices, &mNumVertices)
-		, Normals(&mNormals, &mNumVertices, true)
-		, Tangents(&mTangents, &mNumVertices, true)
-		, Bitangents(&mBitangents, &mNumVertices, true)
+		, Normals(&mNormals, &mNumVertices)
+		, Tangents(&mTangents, &mNumVertices)
+		, Bitangents(&mBitangents, &mNumVertices)
 		, Colors(AI_MAX_NUMBER_OF_COLOR_SETS)
 		, TextureCoords(AI_MAX_NUMBER_OF_TEXTURECOORDS)
 		, NumUVComponents(&mNumUVComponents[0], AI_MAX_NUMBER_OF_TEXTURECOORDS)
@@ -691,12 +691,12 @@ struct aiMesh
 		{
 			mNumUVComponents[a] = 0;
 			mTextureCoords[a] = NULL;
-			TextureCoords.Set(a, new Array<aiVector3D>(&mTextureCoords[a], &mNumVertices, true));
+			TextureCoords.Set(a, new Array<aiVector3D>(&mTextureCoords[a], &mNumVertices));
 		}
       
 		for( unsigned int a = 0; a < AI_MAX_NUMBER_OF_COLOR_SETS; a++) {
 			mColors[a] = NULL;
-			Colors.Set(a, new Array<aiColor4D>(&mColors[a], &mNumVertices, true));
+			Colors.Set(a, new Array<aiColor4D>(&mColors[a], &mNumVertices));
 		}
 	}
 

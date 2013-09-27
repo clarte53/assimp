@@ -66,35 +66,13 @@ class Array {
 			mReservedMemory = (*size);
 		}
 		
-		void Update(bool reserve) {
+		void Update(unsigned int size) {
 			if((*mData) != mLastReference) {
 				mReservedMemory = (*mSize);
 				mLastReference = (*mData);
 			}
 			
-			if(reserve) {
-				Reserve(*mSize);
-			}
-		}
-		
-	public:
-		
-		Array(T** data, unsigned int* size, bool slave = false) : mSlave(slave) {
-			Create(data, size);
-		}
-		
-		virtual ~Array() {
-			
-		}
-		
-		void Clear() {
-			if((*mData) != NULL) {
-				delete[] (*mData);
-				(*mData) = NULL;
-			}
-			
-			(*mSize) = 0;
-			mReservedMemory = 0;
+			Reserve(size);
 		}
 		
 		void Reserve(unsigned int size) {
@@ -124,10 +102,29 @@ class Array {
 					mLastReference = data;
 				}
 				
-				if(! mSlave) {
-					(*mSize) = size;
-				}
+				(*mSize) = ((*mSize) >= size ? (*mSize) : size);
 			}
+		}
+		
+	public:
+		
+		Array(T** data, unsigned int* size) {
+			Create(data, size);
+		}
+		
+		virtual ~Array() {
+			
+		}
+		
+		void Clear() {
+			if((*mData) != NULL) {
+				delete[] (*mData);
+			}
+			
+			(*mData) = NULL;
+			mLastReference = NULL;
+			(*mSize) = 0;
+			mReservedMemory = 0;
 		}
 		
 		unsigned int Size() const {
@@ -135,46 +132,23 @@ class Array {
 		}
 		
 		T Get(unsigned int index) {
-			Update(true);
-			
 			if(index >= Size()) {
 				throw std::out_of_range("Invalid index to unallocated memory");
 			}
+			
+			Update(Size());
 			
 			return (*mData)[index];
 		}
 		
 		// Warning: copy the value into the data array without regard for ownership
 		void Set(unsigned int index, const T& value) {
-			Update(true);
-			
-			if(index >= Size()) {
-				throw std::out_of_range("Invalid index to unallocated memory");
-			}
+			Update(index + 1);
 			
 			(*mData)[index] = value;
 		}
 		
-		// Warning: copy the value into the data array without regard for ownership
-		bool Add(const T& value) {
-			bool result = false;
-			
-			if(! mSlave) {
-				Update(false);
-				
-				Reserve(Size() + 1);
-			
-				(*mData)[(*mSize)++] = value;
-				
-				result = true;
-			}
-			
-			return result;
-		}
-		
 	protected:
-	
-		bool mSlave;
 	
 		T** mData;
 		
@@ -200,42 +174,15 @@ class Array<T*> {
 			mReservedMemory = (*size);
 		}
 		
-		void Update(bool reserve) {
+		void Update(unsigned int size) {
 			if((*mData) != mLastReference) {
 				mReservedMemory = (*mSize);
 				mLastReference = (*mData);
 			}
 			
-			if(reserve) {
-				Reserve(*mSize);
-			}
+			Reserve(size);
 		}
 
-	public:
-	
-		Array(T*** data, unsigned int* size, bool slave = false) : mSlave(slave) {
-			Create(data, size);
-		}
-		
-		virtual ~Array() {
-			
-		}
-		
-		void Clear() {
-			if((*mData) != NULL) {
-				for(unsigned int i = 0; i < Size(); i++) {
-					delete (*mData)[i];
-					(*mData)[i] = NULL;
-				}
-				
-				delete[] (*mData);
-				(*mData) = NULL;
-			}
-			
-			(*mSize) = 0;
-			mReservedMemory = 0;
-		}
-		
 		void Reserve(unsigned int size) {
 			unsigned int previous_size = ((*mSize) <= mReservedMemory ? (*mSize) : mReservedMemory);
 			
@@ -263,10 +210,34 @@ class Array<T*> {
 					mLastReference = data;
 				}
 				
-				if(! mSlave) {
-					(*mSize) = size;
-				}
+				(*mSize) = ((*mSize) >= size ? (*mSize) : size);
 			}
+		}
+		
+	public:
+	
+		Array(T*** data, unsigned int* size) {
+			Create(data, size);
+		}
+		
+		virtual ~Array() {
+			
+		}
+		
+		void Clear() {
+			if((*mData) != NULL) {
+				for(unsigned int i = 0; i < Size(); i++) {
+					delete (*mData)[i];
+					(*mData)[i] = NULL;
+				}
+				
+				delete[] (*mData);
+			}
+			
+			(*mData) = NULL;
+			mLastReference = NULL;
+			(*mSize) = 0;
+			mReservedMemory = 0;
 		}
 		
 		unsigned int Size() const {
@@ -274,46 +245,23 @@ class Array<T*> {
 		}
 		
 		T& Get(unsigned int index) {
-			Update(true);
-			
 			if(index >= Size()) {
 				throw std::out_of_range("Invalid index to unallocated memory");
 			}
+			
+			Update(Size());
 			
 			return *((*mData)[index]);
 		}
 		
 		// Warning: copy the value into the data array without regard for ownership
-		void Set(unsigned int index, const T& value) {
-			Update(true);
-		
-			if(index >= Size()) {
-				throw std::out_of_range("Invalid index to unallocated memory");
-			}
+		void Set(unsigned int index, T* value) {
+			Update(index + 1);
 			
-			*((*mData)[index]) = value;
-		}
-		
-		// Warning: copy the value into the data array without regard for ownership
-		bool Add(const T& value) {
-			bool result = false;
-			
-			if(! mSlave) {
-				Update(false);
-				
-				Reserve(Size() + 1);
-			
-				*((*mData)[(*mSize)++]) = value;
-				
-				result = true;
-			}
-			
-			return result;
+			(*mData)[index] = value;
 		}
 		
 	protected:
-	
-		bool mSlave;
 	
 		T*** mData;
 		

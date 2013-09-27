@@ -124,8 +124,6 @@ $typemap(cstype, unsigned int);
 	
 	public interface Array<T> : FixedArray<T> {
 		void Clear();
-		void Reserve(uint size);
-		bool Add(T value);
 	}
 %}
 }
