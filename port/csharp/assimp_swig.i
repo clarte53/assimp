@@ -426,10 +426,10 @@ ADD_UNMANAGED_OPTION(aiVector3D);
 %ignore Assimp::Importer::ReadFileFromMemory;
 %ignore Assimp::Importer::RegisterLoader;
 %ignore Assimp::Importer::RegisterPPStep;
-%ignore Assimp::Importer::SetPropertyInteger;
-%ignore Assimp::Importer::SetPropertyFloat;
-%ignore Assimp::Importer::SetPropertyString;
-%ignore Assimp::Importer::SetPropertyBool;
+%ignore Assimp::Importer::SetPropertyBool(const char*, bool, bool*);
+%ignore Assimp::Importer::SetPropertyFloat(const char*, float, bool*);
+%ignore Assimp::Importer::SetPropertyInteger(const char*, int, bool*);
+%ignore Assimp::Importer::SetPropertyString(const char*, const std::string&, bool*);
 %ignore Assimp::Importer::UnregisterLoader;
 %ignore Assimp::Importer::UnregisterPPStep;
 %extend Assimp::Importer {
