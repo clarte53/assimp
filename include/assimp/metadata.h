@@ -46,6 +46,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define __AI_METADATA_H_INC__
 
 #ifdef __cplusplus
+#include "Array.hpp"
+
 extern "C" {
 #endif
 
@@ -70,8 +72,14 @@ struct aiMetadata
 
 #ifdef __cplusplus
 
+	Array<aiString*> Keys;
+	
+	Array<aiString*> Values;
+
 	/** Constructor */
 	aiMetadata()
+		: Keys(&mKeys, &mNumProperties)
+		, Values(&mValues, &mNumProperties)
 	{
 		// set all members to zero by default
 		mKeys = NULL;

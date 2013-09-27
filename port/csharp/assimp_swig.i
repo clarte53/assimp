@@ -41,39 +41,41 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %module assimp_swig
 
 %include "typemaps.i"
-$typemap(cstype, unsigned int);
-
 %include "std_string.i"
 
 %{
 #include "..\..\include\assimp\defs.h"
 #include "..\..\include\assimp\config.h"
-#include "..\..\include\assimp\types.h"
 #include "..\..\include\assimp\version.h"
-#include "..\..\include\assimp\postprocess.h"
+#include "..\..\include\assimp\ai_assert.h"
+#include "..\..\include\assimp\types.h"
+#include "..\..\include\assimp\color4.h"
 #include "..\..\include\assimp\vector2.h"
 #include "..\..\include\assimp\vector3.h"
-#include "..\..\include\assimp\color4.h"
+#include "..\..\include\assimp\quaternion.h"
 #include "..\..\include\assimp\matrix3x3.h"
 #include "..\..\include\assimp\matrix4x4.h"
+#include "..\..\include\assimp\scene.h"
+#include "..\..\include\assimp\mesh.h"
+#include "..\..\include\assimp\anim.h"
+#include "..\..\include\assimp\material.h"
+#include "..\..\include\assimp\texture.h"
 #include "..\..\include\assimp\camera.h"
 #include "..\..\include\assimp\light.h"
-#include "..\..\include\assimp\anim.h"
-#include "..\..\include\assimp\mesh.h"
+#include "..\..\include\assimp\postprocess.h"
 #include "..\..\include\assimp\metadata.h"
-#include "..\..\include\assimp\cfileio.h"
-#include "..\..\include\assimp\material.h"
-#include "..\..\include\assimp\quaternion.h"
-#include "..\..\include\assimp\scene.h"
-#include "..\..\include\assimp\texture.h"
 #include "..\..\include\assimp\Importer.hpp"
+#include "..\..\include\assimp\cimport.h"
+#include "..\..\include\assimp\importerdesc.h"
 #include "..\..\include\assimp\Exporter.hpp"
 #include "..\..\include\assimp\cexport.h"
-#include "..\..\include\assimp\IOSystem.hpp"
 #include "..\..\include\assimp\IOStream.hpp"
+#include "..\..\include\assimp\IOSystem.hpp"
+#include "..\..\include\assimp\cfileio.h"
 #include "..\..\include\assimp\Logger.hpp"
-#include "..\..\include\assimp\LogStream.hpp"
+#include "..\..\include\assimp\DefaultLogger.hpp"
 #include "..\..\include\assimp\NullLogger.hpp"
+#include "..\..\include\assimp\LogStream.hpp"
 #include "..\..\include\assimp\ProgressHandler.hpp"
 #include "..\..\include\assimp\Array.hpp"
 %}
@@ -84,26 +86,24 @@ $typemap(cstype, unsigned int);
 #define PACK_STRUCT
 #define AI_FORCE_INLINE
 
-%rename(__add__) operator+;
-%rename(__addnset__) operator+=;
-%rename(__sub__) operator-;
-%rename(__subnset__) operator-=;
-%rename(__mul__) operator*;
-%rename(__mulnset__) operator*=;
-%rename(__div__) operator/;
-%rename(__divnset__) operator/=;
-%rename(__equal__) operator==;
-%rename(__nequal__) operator!=;
-%rename(__idx__) operator[];
-%rename(__set__) operator=;
-%rename(__greater__) operator>;
-%rename(__smaller__) operator<;
-
-%rename(opNew) operator new;
-%rename(opNewArray) operator new[];
-
-%rename(opDelete) operator delete;
-%rename(opDeleteArray) operator delete[];
+%rename(op_add) operator+;
+%rename(op_add_and_set) operator+=;
+%rename(op_sub) operator-;
+%rename(op_sub_and_set) operator-=;
+%rename(op_mul) operator*;
+%rename(op_mul_and_set) operator*=;
+%rename(op_div) operator/;
+%rename(op_div_and_set) operator/=;
+%rename(op_equal) operator==;
+%rename(op_not_equal) operator!=;
+%rename(op_get) operator[];
+%rename(op_set) operator=;
+%rename(op_greater) operator>;
+%rename(op_lesser) operator<;
+%rename(op_new) operator new;
+%rename(op_new_array) operator new[];
+%rename(op_delete) operator delete;
+%rename(op_delete_array) operator delete[];
 
 %include "..\..\include\assimp\Array.hpp"
 
@@ -159,7 +159,7 @@ $typemap(cstype, unsigned int);
 
 %define FIXED_ARRAY_DECL(NAME, CTYPE)
 %typemap(csinterfaces) Array<CTYPE> "IDisposable, Interface.FixedArray<$typemap(cstype, CTYPE)>"
-%ignore MultiArray<CTYPE>::FixedArray;
+%ignore FixedArray<CTYPE>::FixedArray;
 %template(NAME##FixedArray) FixedArray<CTYPE>;
 %enddef
 
@@ -171,123 +171,14 @@ ARRAY_DECL(NAME, CTYPE);
 %template(NAME##MultiArray) MultiArray<CTYPE>;
 %enddef
 
-
-%include "std_vector.i"
-
-// Helper macros for wrapping the pointer-and-length arrays used in the
-// Assimp API.
-
-%define ASSIMP_ARRAY(CLASS, TYPE, NAME, LENGTH)
-%csmethodmodifiers Get##NAME() "private";
-%newobject CLASS::Get##NAME;
-%extend CLASS {
-  std::vector<TYPE > *Get##NAME() {
-    std::vector<TYPE > *result = new std::vector<TYPE >;
-    result->reserve(LENGTH);
-
-    for (unsigned int i = 0; i < LENGTH; ++i) {
-      result->push_back($self->NAME[i]);
-    }
-
-    return result;
-  }
-}
-%ignore CLASS::NAME;
-%enddef
-
-%define ASSIMP_POINTER_ARRAY(CLASS, TYPE, NAME, LENGTH)
-%csmethodmodifiers Get##NAME() "private";
-%newobject CLASS::Get##NAME;
-%extend CLASS {
-  std::vector<TYPE *> *Get##NAME() {
-    std::vector<TYPE *> *result = new std::vector<TYPE *>;
-    result->reserve(LENGTH);
-	 	
-    TYPE *currentValue = (TYPE *)$self->NAME;
-    TYPE *valueLimit = (TYPE *)$self->NAME + LENGTH;
-    while (currentValue < valueLimit) {
-      result->push_back(currentValue);
-      ++currentValue;
-    }
- 	
-    return result;
-  }
-}
-%ignore CLASS::NAME;
-%enddef 
-
-%define ASSIMP_POINTER_POINTER(CLASS, TYPE, NAME, LENGTH)
-%csmethodmodifiers Get##NAME() "private";
-%newobject CLASS::Get##NAME;
-%extend CLASS {
-  std::vector<TYPE *> *Get##NAME() {
-    std::vector<TYPE *> *result = new std::vector<TYPE *>;
-    result->reserve(LENGTH);
-
-    TYPE **currentValue = $self->NAME;
-    TYPE **valueLimit = $self->NAME + LENGTH;
-    while (currentValue < valueLimit) {
-      result->push_back(*currentValue);
-      ++currentValue;
-    }
-
-    return result;
-  }
-}
-%ignore CLASS::NAME;
-%enddef
-
-%define ASSIMP_POINTER_ARRAY_ARRAY(CLASS, TYPE, NAME, OUTER_LENGTH, INNER_LENGTH)
-%csmethodmodifiers Get##NAME() "private";
-%newobject CLASS::Get##NAME;
-%extend CLASS {
-  std::vector< std::vector<TYPE*> > *Get##NAME() {
-    std::vector< std::vector<TYPE*> > *result = new std::vector< std::vector<TYPE*> >;
-    result->reserve(OUTER_LENGTH);
-
-    for (unsigned int i = 0; i < OUTER_LENGTH; ++i) {
-      std::vector<TYPE *> currentElements;
-
-      if ($self->NAME[i] != 0) {
-        currentElements.reserve(INNER_LENGTH);
-
-        TYPE *currentValue = $self->NAME[i];
-        TYPE *valueLimit = $self->NAME[i] + INNER_LENGTH;
-        while (currentValue < valueLimit) {
-          currentElements.push_back(currentValue);
-          ++currentValue;
-        }
-      }
-
-      result->push_back(currentElements);
-    }
-
-    return result;
-  }
-}
-%ignore CLASS::NAME;
-%enddef
-
-%define ASSIMP_GETMATERIAL(XXX, KEY, TYPE, NAME)
-%csmethodmodifiers Get##NAME() "private";
-%newobject aiMaterial::Get##NAME;
-%extend aiMaterial {
-  bool Get##NAME(TYPE* INOUT) {
-         return aiGetMaterial##XXX($self, KEY, INOUT) == AI_SUCCESS;
-  }
-}
-%enddef
-
-
 /////// aiAnimation 
-ASSIMP_POINTER_POINTER(aiAnimation,aiNodeAnim,mChannels,$self->mNumChannels);
-ASSIMP_POINTER_POINTER(aiAnimation,aiMeshAnim,mMeshChannels,$self->mNumMeshChannels);
-%typemap(cscode) aiAnimation %{
-  public aiNodeAnimVector mChannels { get { return GetmChannels(); } }
-  public aiMeshAnimVector mMeshChannels { get { return GetmMeshChannels(); } }
-%}
+%ignore aiAnimation::mNumChannels;
+%ignore aiAnimation::mChannels;
+%ignore aiAnimation::mNumMeshChannels;
+%ignore aiAnimation::mMeshChannels;
 
 /////// aiAnimMesh 
+%ignore aiAnimMesh::mNumVertices;
 %ignore aiAnimMesh::mVertices;
 %ignore aiAnimMesh::mNormals;
 %ignore aiAnimMesh::mTangents;
@@ -307,13 +198,15 @@ ADD_UNMANAGED_OPTION(aiColor3D);
 /////// aiColor4D 
 ADD_UNMANAGED_OPTION(aiColor4D);
 
+/////// aiExportDataBlob
+%ignore aiExportDataBlob::data;
+
 /////// aiFace
 ADD_UNMANAGED_OPTION(aiFace);
 %ignore aiFace::mNumIndices;
 %ignore aiFace::mIndices;
 
-/////// TODO: aiFile 
-%ignore aiFile;
+/////// aiFile
 %ignore aiFile::FileSizeProc;
 %ignore aiFile::FlushProc;
 %ignore aiFile::ReadProc;
@@ -321,10 +214,9 @@ ADD_UNMANAGED_OPTION(aiFace);
 %ignore aiFile::TellProc;
 %ignore aiFile::WriteProc;
 
-/////// TODO: aiFileIO 
-%ignore aiFileIO;
+/////// aiFileIO
 %ignore aiFileIO::CloseProc;
-%ignore aiFileIO::OpenPrc;
+%ignore aiFileIO::OpenProc;
 
 /////// aiLight 
 // Done
@@ -332,11 +224,21 @@ ADD_UNMANAGED_OPTION(aiFace);
 /////// aiLightSourceType 
 // Done
 
-/////// TODO: aiLogStream 
-%ignore aiLogStream;
+/////// aiLogStream
 %ignore aiLogStream::callback;
 
 /////// aiMaterial 
+%ignore aiMaterial::AddBinaryProperty;
+//TODO
+%define ASSIMP_GETMATERIAL(XXX, KEY, TYPE, NAME)
+%csmethodmodifiers Get##NAME() "private";
+%newobject aiMaterial::Get##NAME;
+%extend aiMaterial {
+  bool Get##NAME(TYPE* INOUT) {
+         return aiGetMaterial##XXX($self, KEY, INOUT) == AI_SUCCESS;
+  }
+}
+%enddef
 %ignore aiMaterial::Get;
 %ignore aiMaterial::GetTexture;
 %ignore aiMaterial::mNumAllocated;
@@ -394,18 +296,10 @@ ASSIMP_GETMATERIAL(Integer, AI_MATKEY_TWOSIDED,             int,   TwoSided);
 %}
 
 /////// aiMatrix3x3 
-%ignore aiMatrix3x3::operator!=;
-%ignore aiMatrix3x3::operator*;
-%ignore aiMatrix3x3::operator*=;
-%ignore aiMatrix3x3::operator==;
-%ignore aiMatrix3x3::operator[];
+// Done
 
 /////// aiMatrix4x4 
-%ignore aiMatrix4x4::operator!=;
-%ignore aiMatrix4x4::operator*;
-%ignore aiMatrix4x4::operator*=;
-%ignore aiMatrix4x4::operator==;
-%ignore aiMatrix4x4::operator[];
+// Done
 
 /////// aiMesh 
 ADD_UNMANAGED_OPTION(aiMesh);
@@ -428,13 +322,16 @@ ADD_UNMANAGED_OPTION(aiMesh);
 %typemap(csvarout) unsigned int mPrimitiveTypes %{ get { return (aiPrimitiveType)$imcall; } %}
 
 /////// aiMeshAnim 
-ASSIMP_POINTER_ARRAY(aiMeshAnim,aiMeshKey,mKeys,$self->mNumKeys);
-%typemap(cscode) aiMeshAnim %{
-  public aiMeshKeyVector mKeys { get { return GetmKeys(); } }
-%}
+%ignore aiMeshAnim::mNumKeys;
+%ignore aiMeshAnim::mKeys;
 
 /////// aiMeshKey 
 // Done
+
+/////// aiMetadata
+%ignore aiMetadata::mNumProperties;
+%ignore aiMetadata::mKeys;
+%ignore aiMetadata::mValues;
 
 /////// aiNode 
 ADD_UNMANAGED_OPTION(aiNode);
@@ -444,25 +341,26 @@ ADD_UNMANAGED_OPTION(aiNode);
 %ignore aiNode::mMeshes;
 
 /////// aiNodeAnim 
-ASSIMP_POINTER_ARRAY(aiNodeAnim,aiVectorKey,mPositionKeys,$self->mNumPositionKeys);
-ASSIMP_POINTER_ARRAY(aiNodeAnim,aiQuatKey,mRotationKeys,$self->mNumRotationKeys);
-ASSIMP_POINTER_ARRAY(aiNodeAnim,aiVectorKey,mScalingKeys,$self->mNumScalingKeys);
-%typemap(cscode) aiNodeAnim %{
-  public aiVectorKeyVector mPositionKeys { get { return GetmPositionKeys(); } }
-  public aiQuatKeyVector mRotationKeys { get { return GetmRotationKeys(); } }
-  public aiVectorKeyVector mScalingKeys { get { return GetmScalingKeys(); } }
-%}
+%ignore aiNodeAnim::mNumPositionKeys;
+%ignore aiNodeAnim::mPositionKeys;
+%ignore aiNodeAnim::mNumRotationKeys;
+%ignore aiNodeAnim::mRotationKeys;
+%ignore aiNodeAnim::mNumScalingKeys;
+%ignore aiNodeAnim::mScalingKeys;
 
 /////// aiPlane 
 // Done
 
 /////// aiPostProcessSteps
+%typemap(cstype)   unsigned int pFlags "aiPostProcessSteps";
+%typemap(csin)     unsigned int pFlags "(uint)$csinput"
+%typemap(csvarout) unsigned int pFlags %{ get { return (aiPostProcessSteps)$imcall; } %}
 %typemap(cscode) aiPostProcessSteps %{
 	, aiProcess_ConvertToLeftHanded = aiProcess_MakeLeftHanded|aiProcess_FlipUVs|aiProcess_FlipWindingOrder,
 %}
 
 /////// aiQuaternion 
-ADD_UNMANAGED_OPTION(aiQuaternion);
+// Done
 
 /////// aiQuatKey 
 // Done
@@ -484,6 +382,7 @@ ADD_UNMANAGED_OPTION(aiScene);
 %ignore aiScene::mMeshes;
 %ignore aiScene::mNumTextures;
 %ignore aiScene::mTextures;
+%ignore aiScene::mPrivate;
 
 /////// aiString 
 %ignore aiString::Append;
@@ -494,7 +393,6 @@ ADD_UNMANAGED_OPTION(aiScene);
 %typemap(cscode) aiString %{
   public override string ToString() { return Data; } 
 %}
-
 
 /////// aiTexel 
 // Done
@@ -518,36 +416,36 @@ ADD_UNMANAGED_OPTION(aiVector3D);
 /////// aiVertexWeight 
 // Done
 
-/////// Assimp::*
-%ignore Assimp::IOStream;
-%ignore Assimp::IOSystem;
-%ignore Assimp::Importer::ApplyPostProcessing;
-%ignore Assimp::Importer::FindLoader;
-%ignore Assimp::Importer::GetIOHandler;
-%ignore Assimp::Importer::GetExtensionList(std::string&);
-%ignore Assimp::Importer::GetExtensionList(aiString&);
+/////// Exporter
+%ignore Assimp::Exporter::RegisterExporter;
+
+/////// Importer
+%ignore Assimp::Importer::GetExtensionList;
+%ignore Assimp::Importer::GetImporter;
+%ignore Assimp::Importer::Pimpl;
 %ignore Assimp::Importer::ReadFileFromMemory;
 %ignore Assimp::Importer::RegisterLoader;
 %ignore Assimp::Importer::RegisterPPStep;
-%ignore Assimp::Importer::SetIOHandler;
+%ignore Assimp::Importer::SetPropertyInteger;
+%ignore Assimp::Importer::SetPropertyFloat;
+%ignore Assimp::Importer::SetPropertyString;
+%ignore Assimp::Importer::SetPropertyBool;
 %ignore Assimp::Importer::UnregisterLoader;
 %ignore Assimp::Importer::UnregisterPPStep;
 %extend Assimp::Importer {
-  std::string GetExtensionList() {
+  std::string GetExtensions() {
     std::string tmp;
     $self->GetExtensionList(tmp);
     return tmp;
   }
 }
-%typemap(cstype)   unsigned int pFlags "aiPostProcessSteps";
-%typemap(csin)     unsigned int pFlags "(uint)$csinput"
-%typemap(csvarout) unsigned int pFlags %{ get { return (aiPostProcessSteps)$imcall; } %}
-%ignore Assimp::Logger;
-%ignore Assimp::NullLogger;
+
+/////// IOStream
+%ignore Assimp::IOStream::Read;
+%ignore Assimp::IOStream::Write;
 
 /////// Globals
-%ignore ::aiImportFileEx;
-%ignore ::aiImportFileEx;
+%ignore ::aiCopyScene;
 %ignore ::aiGetMaterialProperty;
 %ignore ::aiGetMaterialFloatArray;
 %ignore ::aiGetMaterialFloat;
@@ -558,68 +456,71 @@ ADD_UNMANAGED_OPTION(aiVector3D);
 %ignore ::aiGetMaterialTextureCount;
 %ignore ::aiGetMaterialTexture;
 
-
 %include "..\..\include\assimp\defs.h"
 %include "..\..\include\assimp\config.h"
-%include "..\..\include\assimp\types.h"
 %include "..\..\include\assimp\version.h"
-%include "..\..\include\assimp\postprocess.h"
+%include "..\..\include\assimp\ai_assert.h"
+%include "..\..\include\assimp\types.h"
+%include "..\..\include\assimp\color4.h"
 %include "..\..\include\assimp\vector2.h"
 %include "..\..\include\assimp\vector3.h"
-%include "..\..\include\assimp\color4.h"
+%include "..\..\include\assimp\quaternion.h"
 %include "..\..\include\assimp\matrix3x3.h"
 %include "..\..\include\assimp\matrix4x4.h"
+%include "..\..\include\assimp\scene.h"
+%include "..\..\include\assimp\mesh.h"
+%include "..\..\include\assimp\anim.h"
+%include "..\..\include\assimp\material.h"
+%include "..\..\include\assimp\texture.h"
 %include "..\..\include\assimp\camera.h"
 %include "..\..\include\assimp\light.h"
-%include "..\..\include\assimp\anim.h"
-%include "..\..\include\assimp\mesh.h"
+%include "..\..\include\assimp\postprocess.h"
 %include "..\..\include\assimp\metadata.h"
-%include "..\..\include\assimp\cfileio.h"
-%include "..\..\include\assimp\material.h"
-%include "..\..\include\assimp\quaternion.h"
-%include "..\..\include\assimp\scene.h"
-%include "..\..\include\assimp\texture.h"
 %include "..\..\include\assimp\Importer.hpp"
+%include "..\..\include\assimp\cimport.h"
+%include "..\..\include\assimp\importerdesc.h"
 %include "..\..\include\assimp\Exporter.hpp"
 %include "..\..\include\assimp\cexport.h"
+%include "..\..\include\assimp\IOStream.hpp"
+%include "..\..\include\assimp\IOSystem.hpp"
+%include "..\..\include\assimp\cfileio.h"
+%include "..\..\include\assimp\Logger.hpp"
+%include "..\..\include\assimp\DefaultLogger.hpp"
+%include "..\..\include\assimp\NullLogger.hpp"
+%include "..\..\include\assimp\LogStream.hpp"
 %include "..\..\include\assimp\ProgressHandler.hpp"
-//%include "..\..\include\IOSystem.h"
-//%include "..\..\include\IOStream.h"
-//%include "..\..\include\Logger.h"
-//%include "..\..\include\LogStream.h"
-//%include "..\..\include\NullLogger.h"
-
 
 ADD_UNMANAGED_OPTION_TEMPLATE(aiColor4D, aiColor4t<float>);
 
-ADD_UNMANAGED_OPTION_TEMPLATE(aiVector3D, aiVector3t<float>);
 ADD_UNMANAGED_OPTION_TEMPLATE(aiVector2D, aiVector2t<float>);
-
+ADD_UNMANAGED_OPTION_TEMPLATE(aiVector3D, aiVector3t<float>);
 ADD_UNMANAGED_OPTION_TEMPLATE(aiQuaternion, aiQuaterniont<float>);
+%ignore aiMatrix3x3t<float>::operator[];
 ADD_UNMANAGED_OPTION_TEMPLATE(aiMatrix3x3, aiMatrix3x3t<float>);
+%ignore aiMatrix4x4t<float>::operator[];
 ADD_UNMANAGED_OPTION_TEMPLATE(aiMatrix4x4, aiMatrix4x4t<float>);
 
-ARRAY_DECL(aiUInt, unsigned int);
 ARRAY_DECL(aiFace, aiFace);
+ARRAY_DECL(aiMeshKey, aiMeshKey);
+ARRAY_DECL(aiQuatKey, aiQuatKey);
+ARRAY_DECL(aiUInt, unsigned int);
+ARRAY_DECL(aiVectorKey, aiVectorKey);
 ARRAY_DECL(aiVertexWeighth, aiVertexWeight);
-ARRAY_DECL(aiNode, aiNode*);
-ARRAY_DECL(aiMesh, aiMesh*);
-ARRAY_DECL(aiMaterial, aiMaterial*);
+
 ARRAY_DECL(aiAnimation, aiAnimation*);
-ARRAY_DECL(aiTexture, aiTexture*);
-ARRAY_DECL(aiLight, aiLight*);
-ARRAY_DECL(aiCamera, aiCamera*);
-ARRAY_DECL(aiBone, aiBone*);
 ARRAY_DECL(aiAnimMesh, aiAnimMesh*);
+ARRAY_DECL(aiBone, aiBone*);
+ARRAY_DECL(aiCamera, aiCamera*);
+ARRAY_DECL(aiLight, aiLight*);
+ARRAY_DECL(aiMaterial, aiMaterial*);
+ARRAY_DECL(aiMesh, aiMesh*);
+ARRAY_DECL(aiMeshAnim, aiMeshAnim*);
+ARRAY_DECL(aiNode, aiNode*);
+ARRAY_DECL(aiNodeAnim, aiNodeAnim*);
+ARRAY_DECL(aiString, aiString*);
+ARRAY_DECL(aiTexture, aiTexture*);
 
 FIXED_ARRAY_DECL(aiUInt, unsigned int);
 
 MULTI_ARRAY_DECL(aiVector3D, aiVector3D);
 MULTI_ARRAY_DECL(aiColor4D, aiColor4D);
-
-%template(FloatVector) std::vector<float>;
-%template(aiMeshKeyVector) std::vector<aiMeshKey *>;
-%template(aiNodeAnimVector) std::vector<aiNodeAnim *>;
-%template(aiMeshAnimVector) std::vector<aiMeshAnim *>;
-%template(aiQuatKeyVector) std::vector<aiQuatKey *>;
-%template(aiVectorKeyVector) std::vector<aiVectorKey *>;

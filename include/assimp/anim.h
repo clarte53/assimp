@@ -50,6 +50,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "quaternion.h"
 
 #ifdef __cplusplus
+#include "Array.hpp"
+
 extern "C" {
 #endif
 
@@ -281,7 +283,17 @@ struct aiNodeAnim
 	C_ENUM aiAnimBehaviour mPostState;
 
 #ifdef __cplusplus
+
+	Array<aiVectorKey> PositionKeys;
+	
+	Array<aiQuatKey> RotationKeys;
+	
+	Array<aiVectorKey> ScalingKeys;
+
 	aiNodeAnim()
+		: PositionKeys(&mPositionKeys, &mNumPositionKeys)
+		, RotationKeys(&mRotationKeys, &mNumRotationKeys)
+		, ScalingKeys(&mScalingKeys, &mNumScalingKeys)
 	{
 		mNumPositionKeys = 0; mPositionKeys = NULL; 
 		mNumRotationKeys = 0; mRotationKeys = NULL; 
@@ -321,9 +333,12 @@ struct aiMeshAnim
 
 #ifdef __cplusplus
 
+	Array<aiMeshKey> Keys;
+
 	aiMeshAnim()
 		: mNumKeys()
 		, mKeys()
+		, Keys(&mKeys, &mNumKeys)
 	{}
 
 	~aiMeshAnim()
@@ -368,6 +383,11 @@ struct aiAnimation
 	C_STRUCT aiMeshAnim** mMeshChannels;
 
 #ifdef __cplusplus
+
+	Array<aiNodeAnim*> Channels;
+	
+	Array<aiMeshAnim*> MeshChannels;
+
 	aiAnimation()
 		: mDuration(-1.)
 		, mTicksPerSecond()
@@ -375,6 +395,8 @@ struct aiAnimation
 		, mChannels()
 		, mNumMeshChannels()
 		, mMeshChannels()
+		, Channels(&mChannels, &mNumChannels)
+		, MeshChannels(&mMeshChannels, &mNumMeshChannels)
 	{
 	}
 
