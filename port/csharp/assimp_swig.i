@@ -171,6 +171,24 @@ ARRAY_DECL(NAME, CTYPE);
 %template(NAME##MultiArray) MultiArray<CTYPE>;
 %enddef
 
+%define GET_MATERIAL(SUFFIXE, KEY, TYPE, NAME)
+%newobject aiMaterial::Get##NAME;
+%extend aiMaterial {
+  bool Get##NAME(TYPE* INOUT) {
+         return aiGetMaterial##SUFFIXE($self, KEY, INOUT) == AI_SUCCESS;
+  }
+}
+%enddef
+
+%define GET_MATERIAL_STACK(SUFFIXE, KEY, TYPE, NAME)
+%newobject aiMaterial::Get##NAME;
+%extend aiMaterial {
+  bool Get##NAME(unsigned int index, TYPE* INOUT) {
+         return aiGetMaterial##SUFFIXE($self, KEY(index), INOUT) == AI_SUCCESS;
+  }
+}
+%enddef
+
 /////// aiAnimation 
 %ignore aiAnimation::mNumChannels;
 %ignore aiAnimation::mChannels;
@@ -230,70 +248,35 @@ ADD_UNMANAGED_OPTION(aiFace);
 /////// aiMaterial 
 %ignore aiMaterial::AddBinaryProperty;
 //TODO
-%define ASSIMP_GETMATERIAL(XXX, KEY, TYPE, NAME)
-%csmethodmodifiers Get##NAME() "private";
-%newobject aiMaterial::Get##NAME;
-%extend aiMaterial {
-  bool Get##NAME(TYPE* INOUT) {
-         return aiGetMaterial##XXX($self, KEY, INOUT) == AI_SUCCESS;
-  }
-}
-%enddef
 %ignore aiMaterial::Get;
 %ignore aiMaterial::GetTexture;
 %ignore aiMaterial::mNumAllocated;
 %ignore aiMaterial::mNumProperties;
 %ignore aiMaterial::mProperties;
-ASSIMP_GETMATERIAL(Color,   AI_MATKEY_COLOR_DIFFUSE,        aiColor4D,  Diffuse);
-ASSIMP_GETMATERIAL(Color,   AI_MATKEY_COLOR_SPECULAR,       aiColor4D,  Specular);
-ASSIMP_GETMATERIAL(Color,   AI_MATKEY_COLOR_AMBIENT,        aiColor4D,  Ambient);
-ASSIMP_GETMATERIAL(Color,   AI_MATKEY_COLOR_EMISSIVE,       aiColor4D,  Emissive);
-ASSIMP_GETMATERIAL(Float,   AI_MATKEY_OPACITY,              float,      Opacity);
-ASSIMP_GETMATERIAL(Float,   AI_MATKEY_SHININESS_STRENGTH,   float,      ShininessStrength);
-ASSIMP_GETMATERIAL(Integer, AI_MATKEY_SHADING_MODEL,        int,        ShadingModel);
-ASSIMP_GETMATERIAL(Integer, AI_MATKEY_TEXFLAGS_DIFFUSE(0),  int,        TexFlagsDiffuse0);
-ASSIMP_GETMATERIAL(Integer, AI_MATKEY_MAPPINGMODE_U_DIFFUSE(0),int,     MappingModeUDiffuse0);
-ASSIMP_GETMATERIAL(Integer, AI_MATKEY_MAPPINGMODE_V_DIFFUSE(0),int,     MappingModeVDiffuse0);
-ASSIMP_GETMATERIAL(String,  AI_MATKEY_TEXTURE_DIFFUSE(0),   aiString,   TextureDiffuse0);
-ASSIMP_GETMATERIAL(String,  AI_MATKEY_TEXTURE_SPECULAR(0),  aiString,   TextureSpecular0);
-ASSIMP_GETMATERIAL(String,  AI_MATKEY_TEXTURE_OPACITY(0),   aiString,   TextureOpacity0);
-ASSIMP_GETMATERIAL(String,  AI_MATKEY_TEXTURE_AMBIENT(0),   aiString,   TextureAmbient0);
-ASSIMP_GETMATERIAL(String,  AI_MATKEY_TEXTURE_EMISSIVE(0),  aiString,   TextureEmissive0);
-ASSIMP_GETMATERIAL(String,  AI_MATKEY_TEXTURE_SHININESS(0), aiString,   TextureShininess0);
-ASSIMP_GETMATERIAL(String,  AI_MATKEY_TEXTURE_LIGHTMAP(0),  aiString,   TextureLightmap0);
-ASSIMP_GETMATERIAL(String,  AI_MATKEY_TEXTURE_NORMALS(0),   aiString,   TextureNormals0);
-ASSIMP_GETMATERIAL(String,  AI_MATKEY_TEXTURE_HEIGHT(0),    aiString,   TextureHeight0);
-ASSIMP_GETMATERIAL(String,  AI_MATKEY_GLOBAL_BACKGROUND_IMAGE, aiString, GlobalBackgroundImage);
-ASSIMP_GETMATERIAL(Integer, AI_MATKEY_TWOSIDED,             int,   TwoSided);
-%typemap(cscode) aiMaterial %{
-    public aiColor4D Diffuse { get { var v = new aiColor4D(); return GetDiffuse(v)?v:DefaultDiffuse; } }
-    public aiColor4D Specular { get { var v = new aiColor4D(); return GetSpecular(v)?v:DefaultSpecular; } }
-    public aiColor4D Ambient { get { var v = new aiColor4D(); return GetAmbient(v)?v:DefaultAmbient; } }
-    public aiColor4D Emissive { get { var v = new aiColor4D(); return GetEmissive(v)?v:DefaultEmissive; } }
-    public float Opacity { get { float v = 0; return GetOpacity(ref v)?v:DefaultOpacity; } }
-    public float ShininessStrength { get { float v = 0; return GetShininessStrength(ref v)?v:DefaultShininessStrength; } }    
-    public aiShadingMode ShadingModel { get { int v = 0; return GetShadingModel(ref v)?((aiShadingMode)v):DefaultShadingModel; } }
-    public aiTextureFlags TexFlagsDiffuse0 { get { int v = 0; return GetTexFlagsDiffuse0(ref v)?((aiTextureFlags)v):DefaultTexFlagsDiffuse0; } }
-    public aiTextureMapMode MappingModeUDiffuse0 { get { int v = 0; return GetMappingModeUDiffuse0(ref v)?((aiTextureMapMode)v):DefaultMappingModeUDiffuse0; } }
-    public aiTextureMapMode MappingModeVDiffuse0 { get { int v = 0; return GetMappingModeVDiffuse0(ref v)?((aiTextureMapMode)v):DefaultMappingModeVDiffuse0; } }
-    public string TextureDiffuse0 { get { var v = new aiString(); return GetTextureDiffuse0(v)?v.ToString():DefaultTextureDiffuse; } }
-    public bool TwoSided { get { int v = 0; return GetTwoSided(ref v)?(v!=0):DefaultTwoSided; } }
-    
-    // These values are returned if the value material property isn't set
-    // Override these if you don't want to check for null
-    public static aiColor4D DefaultDiffuse = new aiColor4D(1.0f, 1.0f, 1.0f, 1.0f);
-    public static aiColor4D DefaultSpecular = new aiColor4D(1.0f, 1.0f, 1.0f, 1.0f);
-    public static aiColor4D DefaultAmbient = new aiColor4D(0.0f, 0.0f, 0.0f, 1.0f);
-    public static aiColor4D DefaultEmissive = new aiColor4D(0.0f, 0.0f, 0.0f, 1.0f);
-    public static float DefaultShininessStrength = 1.0f;
-    public static float DefaultOpacity = 1.0f;
-    public static aiShadingMode DefaultShadingModel = (aiShadingMode)0;
-    public static aiTextureFlags DefaultTexFlagsDiffuse0 = (aiTextureFlags)0;
-    public static aiTextureMapMode DefaultMappingModeUDiffuse0 = aiTextureMapMode.aiTextureMapMode_Wrap;
-    public static aiTextureMapMode DefaultMappingModeVDiffuse0 = aiTextureMapMode.aiTextureMapMode_Wrap;
-    public static string DefaultTextureDiffuse = null;
-    public static bool DefaultTwoSided = false;
-%}
+
+GET_MATERIAL(Color,   AI_MATKEY_COLOR_DIFFUSE,           aiColor4D, Diffuse);
+GET_MATERIAL(Color,   AI_MATKEY_COLOR_SPECULAR,          aiColor4D, Specular);
+GET_MATERIAL(Color,   AI_MATKEY_COLOR_AMBIENT,           aiColor4D, Ambient);
+GET_MATERIAL(Color,   AI_MATKEY_COLOR_EMISSIVE,          aiColor4D, Emissive);
+GET_MATERIAL(Float,   AI_MATKEY_OPACITY,                 float,     Opacity);
+GET_MATERIAL(Float,   AI_MATKEY_SHININESS_STRENGTH,      float,     ShininessStrength);
+GET_MATERIAL(Integer, AI_MATKEY_SHADING_MODEL,           int,       ShadingModel);
+GET_MATERIAL(Integer, AI_MATKEY_TWOSIDED,                int,       TwoSided);
+GET_MATERIAL(String,  AI_MATKEY_GLOBAL_BACKGROUND_IMAGE, aiString,  GlobalBackgroundImage);
+
+GET_MATERIAL_STACK(Integer, AI_MATKEY_TEXFLAGS_DIFFUSE,     int,       TexFlagsDiffuse);
+GET_MATERIAL_STACK(Integer, AI_MATKEY_MAPPINGMODE_U_DIFFUSE,int,       MappingModeUDiffuse);
+GET_MATERIAL_STACK(Integer, AI_MATKEY_MAPPINGMODE_V_DIFFUSE,int,       MappingModeVDiffuse);
+GET_MATERIAL_STACK(String,  AI_MATKEY_TEXTURE_DIFFUSE,      aiString,  TextureDiffuse);
+GET_MATERIAL_STACK(String,  AI_MATKEY_TEXTURE_SPECULAR,     aiString,  TextureSpecular);
+GET_MATERIAL_STACK(String,  AI_MATKEY_TEXTURE_OPACITY,      aiString,  TextureOpacity);
+GET_MATERIAL_STACK(String,  AI_MATKEY_TEXTURE_AMBIENT,      aiString,  TextureAmbient);
+GET_MATERIAL_STACK(String,  AI_MATKEY_TEXTURE_EMISSIVE,     aiString,  TextureEmissive);
+GET_MATERIAL_STACK(String,  AI_MATKEY_TEXTURE_SHININESS,    aiString,  TextureShininess);
+GET_MATERIAL_STACK(String,  AI_MATKEY_TEXTURE_LIGHTMAP,     aiString,  TextureLightmap);
+GET_MATERIAL_STACK(String,  AI_MATKEY_TEXTURE_NORMALS,      aiString,  TextureNormals);
+GET_MATERIAL_STACK(String,  AI_MATKEY_TEXTURE_HEIGHT,       aiString,  TextureHeight);
+
 
 /////// aiMatrix3x3 
 // Done
