@@ -42,6 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /** @file array.hpp
  *  @brief Defines a class to access and modify the arrays of pointers of the assimp types.
  */
+// Warning: When used, think of updating SceneCombiner to copy the array
 #ifndef __ARRAY_HPP_INC__
 #define __ARRAY_HPP_INC__
 
@@ -132,7 +133,7 @@ class Array {
 		}
 		
 		T Get(unsigned int index) {
-			if(index >= Size()) {
+			if(mData == NULL || (*mData) == NULL || index >= Size()) {
 				throw std::out_of_range("Invalid index to unallocated memory");
 			}
 			
@@ -245,7 +246,7 @@ class Array<T*> {
 		}
 		
 		T& Get(unsigned int index) {
-			if(index >= Size()) {
+			if(mData == NULL || (*mData) == NULL || index >= Size()) {
 				throw std::out_of_range("Invalid index to unallocated memory");
 			}
 			
@@ -289,12 +290,17 @@ class MultiArray {
 		}
 		
 		virtual ~MultiArray() {
-			for(unsigned int i = 0; i < mSize; i++) {
-				delete mData[i];
-				mData[i] = NULL;
-			}
+			if(mData != NULL) {
+				for(unsigned int i = 0; i < mSize; i++) {
+					if(mData[i] != NULL) {
+						delete mData[i];
+						mData[i] = NULL;
+					}
+				}
 		
-			delete[] mData;
+				delete[] mData;
+				mData = NULL;
+			}
 		}
 		
 		unsigned int Size() const {
@@ -302,16 +308,20 @@ class MultiArray {
 		}
 		
 		Array<T>& Get(unsigned int index) const {
-			if(index >= Size()) {
+			if(mData == NULL || index >= Size()) {
 				throw std::out_of_range("Invalid index to unallocated memory");
 			}
 			
 			return *(mData[index]);
 		}
 		
-		void Set(unsigned int index, Array<T>* value) const {
-			if(index >= Size()) {
+		void Set(unsigned int index, Array<T>* value, bool dealloc = true) const {
+			if(mData == NULL || index >= Size()) {
 				throw std::out_of_range("Invalid index to unallocated memory");
+			}
+
+			if(dealloc && mData[index] != NULL) {
+				delete mData[index];
 			}
 			
 			mData[index] = value;
@@ -343,7 +353,7 @@ class FixedArray {
 		}
 		
 		T Get(unsigned int index) const {
-			if(index >= Size()) {
+			if(mData == NULL || index >= Size()) {
 				throw std::out_of_range("Invalid index to unallocated memory");
 			}
 			
@@ -351,7 +361,7 @@ class FixedArray {
 		}
 		
 		void Set(unsigned int index, const T& value) const {
-			if(index >= Size()) {
+			if(mData == NULL || index >= Size()) {
 				throw std::out_of_range("Invalid index to unallocated memory");
 			}
 			
