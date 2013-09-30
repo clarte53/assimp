@@ -60,13 +60,6 @@ class Array {
 
 	protected:
 		
-		void Create(T** data, unsigned int* size) {
-			mData = data;
-			mLastReference = (*data);
-			mSize = size;
-			mReservedMemory = (*size);
-		}
-		
 		void Update(unsigned int size) {
 			if((*mData) != mLastReference) {
 				mReservedMemory = (*mSize);
@@ -115,6 +108,13 @@ class Array {
 		
 		virtual ~Array() {
 			
+		}
+		
+		void Create(T** data, unsigned int* size) {
+			mData = data;
+			mLastReference = (*data);
+			mSize = size;
+			mReservedMemory = (*size);
 		}
 		
 		void Clear() {
@@ -168,13 +168,6 @@ class Array<T*> {
 
 	protected:
 	
-		void Create(T*** data, unsigned int* size) {
-			mData = data;
-			mLastReference = (*data);
-			mSize = size;
-			mReservedMemory = (*size);
-		}
-		
 		void Update(unsigned int size) {
 			if((*mData) != mLastReference) {
 				mReservedMemory = (*mSize);
@@ -223,6 +216,13 @@ class Array<T*> {
 		
 		virtual ~Array() {
 			
+		}
+		
+		void Create(T*** data, unsigned int* size) {
+			mData = data;
+			mLastReference = (*data);
+			mSize = size;
+			mReservedMemory = (*size);
 		}
 		
 		void Clear() {
@@ -281,15 +281,29 @@ class MultiArray {
 
 	public:
 	
-		MultiArray(unsigned int size) : mSize(size) {
+		MultiArray(unsigned int size) : mData(NULL) {
+			Create(size, false);
+		}
+		
+		virtual ~MultiArray() {
+			Clear();
+		}
+
+		void Create(unsigned int size, bool dealloc = true) {
+			if(dealloc) {
+				Clear();
+			}
+
+			mSize = size;
+
 			mData = new Array<T>*[mSize];
 			
 			for(unsigned int i = 0; i < mSize; i++) {
 				mData[i] = NULL;
 			}
 		}
-		
-		virtual ~MultiArray() {
+
+		void Clear() {
 			if(mData != NULL) {
 				for(unsigned int i = 0; i < mSize; i++) {
 					if(mData[i] != NULL) {
@@ -340,12 +354,17 @@ class FixedArray {
 
 	public:
 	
-		FixedArray(T* data, unsigned int size) : mData(data), mSize(size) {
-		
+		FixedArray(T* data, unsigned int size) : mData(NULL) {
+			Create(data, size);
 		}
 		
 		virtual ~FixedArray() {
 		
+		}
+
+		void Create(T* data, unsigned int size) {
+			mData = data;
+			mSize = size;
 		}
 		
 		unsigned int Size() const {

@@ -154,18 +154,22 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %define ARRAY_DECL(NAME, CTYPE)
 %typemap(csinterfaces) Array<CTYPE> "IDisposable, Interface.Array<$typemap(cstype, CTYPE)>"
 %ignore Array<CTYPE>::Array;
+%ignore Array<CTYPE>::Create;
 %template(NAME##Array) Array<CTYPE>;
 %enddef
 
 %define FIXED_ARRAY_DECL(NAME, CTYPE)
 %typemap(csinterfaces) Array<CTYPE> "IDisposable, Interface.FixedArray<$typemap(cstype, CTYPE)>"
 %ignore FixedArray<CTYPE>::FixedArray;
+%ignore FixedArray<CTYPE>::Create;
 %template(NAME##FixedArray) FixedArray<CTYPE>;
 %enddef
 
 %define MULTI_ARRAY_DECL(NAME, CTYPE)
 %typemap(csinterfaces) Array<CTYPE> "IDisposable, Interface.MultiArray<$typemap(cstype, CTYPE)>"
 %ignore MultiArray<CTYPE>::MultiArray;
+%ignore MultiArray<CTYPE>::Create;
+%ignore MultiArray<CTYPE>::Clear;
 %ignore MultiArray<CTYPE>::Set;
 ARRAY_DECL(NAME, CTYPE);
 %template(NAME##MultiArray) MultiArray<CTYPE>;
