@@ -171,20 +171,28 @@ ARRAY_DECL(NAME, CTYPE);
 %template(NAME##MultiArray) MultiArray<CTYPE>;
 %enddef
 
-%define GET_MATERIAL(SUFFIXE, KEY, TYPE, NAME)
+%define MATERIAL(TYPE, NAME, KEY)
 %newobject aiMaterial::Get##NAME;
+%newobject aiMaterial::Set##NAME;
 %extend aiMaterial {
-  bool Get##NAME(TYPE* INOUT) {
-         return aiGetMaterial##SUFFIXE($self, KEY, INOUT) == AI_SUCCESS;
+  bool Get##NAME(TYPE& OUTPUT) {
+         return $self->Get<TYPE>(KEY, OUTPUT) == AI_SUCCESS;
+  }
+  bool Set##NAME(TYPE* INPUT) {
+         return $self->AddProperty<TYPE>(INPUT, 1, KEY) == AI_SUCCESS;
   }
 }
 %enddef
 
-%define GET_MATERIAL_STACK(SUFFIXE, KEY, TYPE, NAME)
+%define MATERIAL_TEXTURE(TYPE, NAME, KEY, PARAM)
 %newobject aiMaterial::Get##NAME;
+%newobject aiMaterial::Set##NAME;
 %extend aiMaterial {
-  bool Get##NAME(unsigned int index, TYPE* INOUT) {
-         return aiGetMaterial##SUFFIXE($self, KEY(index), INOUT) == AI_SUCCESS;
+  bool Get##NAME(PARAM param, unsigned int index, TYPE& OUTPUT) {
+         return $self->Get<TYPE>(KEY(param, index), OUTPUT) == AI_SUCCESS;
+  }
+  bool Set##NAME(TYPE* INPUT, PARAM param, unsigned int index) {
+         return $self->AddProperty<TYPE>(INPUT, 1, KEY(param, index)) == AI_SUCCESS;
   }
 }
 %enddef
@@ -247,36 +255,26 @@ ADD_UNMANAGED_OPTION(aiFace);
 
 /////// aiMaterial 
 %ignore aiMaterial::AddBinaryProperty;
-//TODO
+%ignore aiMaterial::AddProperty;
 %ignore aiMaterial::Get;
 %ignore aiMaterial::GetTexture;
+%ignore aiMaterial::RemoveProperty;
 %ignore aiMaterial::mNumAllocated;
 %ignore aiMaterial::mNumProperties;
 %ignore aiMaterial::mProperties;
-
-GET_MATERIAL(Color,   AI_MATKEY_COLOR_DIFFUSE,           aiColor4D, Diffuse);
-GET_MATERIAL(Color,   AI_MATKEY_COLOR_SPECULAR,          aiColor4D, Specular);
-GET_MATERIAL(Color,   AI_MATKEY_COLOR_AMBIENT,           aiColor4D, Ambient);
-GET_MATERIAL(Color,   AI_MATKEY_COLOR_EMISSIVE,          aiColor4D, Emissive);
-GET_MATERIAL(Float,   AI_MATKEY_OPACITY,                 float,     Opacity);
-GET_MATERIAL(Float,   AI_MATKEY_SHININESS_STRENGTH,      float,     ShininessStrength);
-GET_MATERIAL(Integer, AI_MATKEY_SHADING_MODEL,           int,       ShadingModel);
-GET_MATERIAL(Integer, AI_MATKEY_TWOSIDED,                int,       TwoSided);
-GET_MATERIAL(String,  AI_MATKEY_GLOBAL_BACKGROUND_IMAGE, aiString,  GlobalBackgroundImage);
-
-GET_MATERIAL_STACK(Integer, AI_MATKEY_TEXFLAGS_DIFFUSE,     int,       TexFlagsDiffuse);
-GET_MATERIAL_STACK(Integer, AI_MATKEY_MAPPINGMODE_U_DIFFUSE,int,       MappingModeUDiffuse);
-GET_MATERIAL_STACK(Integer, AI_MATKEY_MAPPINGMODE_V_DIFFUSE,int,       MappingModeVDiffuse);
-GET_MATERIAL_STACK(String,  AI_MATKEY_TEXTURE_DIFFUSE,      aiString,  TextureDiffuse);
-GET_MATERIAL_STACK(String,  AI_MATKEY_TEXTURE_SPECULAR,     aiString,  TextureSpecular);
-GET_MATERIAL_STACK(String,  AI_MATKEY_TEXTURE_OPACITY,      aiString,  TextureOpacity);
-GET_MATERIAL_STACK(String,  AI_MATKEY_TEXTURE_AMBIENT,      aiString,  TextureAmbient);
-GET_MATERIAL_STACK(String,  AI_MATKEY_TEXTURE_EMISSIVE,     aiString,  TextureEmissive);
-GET_MATERIAL_STACK(String,  AI_MATKEY_TEXTURE_SHININESS,    aiString,  TextureShininess);
-GET_MATERIAL_STACK(String,  AI_MATKEY_TEXTURE_LIGHTMAP,     aiString,  TextureLightmap);
-GET_MATERIAL_STACK(String,  AI_MATKEY_TEXTURE_NORMALS,      aiString,  TextureNormals);
-GET_MATERIAL_STACK(String,  AI_MATKEY_TEXTURE_HEIGHT,       aiString,  TextureHeight);
-
+MATERIAL(aiColor4D, ColorDiffuse,          AI_MATKEY_COLOR_DIFFUSE);
+MATERIAL(aiColor4D, ColorSpecular,         AI_MATKEY_COLOR_SPECULAR);
+MATERIAL(aiColor4D, ColorAmbient,          AI_MATKEY_COLOR_AMBIENT);
+MATERIAL(aiColor4D, ColorEmissive,         AI_MATKEY_COLOR_EMISSIVE);
+MATERIAL(float,     Opacity,               AI_MATKEY_OPACITY);
+MATERIAL(float,     ShininessStrength,     AI_MATKEY_SHININESS_STRENGTH);
+MATERIAL(int,       ShadingModel,          AI_MATKEY_SHADING_MODEL);
+MATERIAL(int,       TwoSided,              AI_MATKEY_TWOSIDED);
+MATERIAL(aiString,  GlobalBackgroundImage, AI_MATKEY_GLOBAL_BACKGROUND_IMAGE);
+MATERIAL_TEXTURE(aiString, TexturePath,  AI_MATKEY_TEXTURE,       aiTextureType);
+MATERIAL_TEXTURE(int,      TextureFlags, AI_MATKEY_TEXFLAGS,      aiTextureType);
+MATERIAL_TEXTURE(int,      MappingModeU, AI_MATKEY_MAPPINGMODE_U, aiTextureType);
+MATERIAL_TEXTURE(int,      MappingModeV, AI_MATKEY_MAPPINGMODE_V, aiTextureType);
 
 /////// aiMatrix3x3 
 // Done
