@@ -254,6 +254,7 @@ ADD_UNMANAGED_OPTION(aiFace);
 %ignore aiLogStream::callback;
 
 /////// aiMaterial 
+ADD_UNMANAGED_OPTION(aiMaterial);
 %ignore aiMaterial::AddBinaryProperty;
 %ignore aiMaterial::AddProperty;
 %ignore aiMaterial::Get;
