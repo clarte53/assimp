@@ -179,12 +179,16 @@ ARRAY_DECL(NAME, CTYPE);
 %newobject aiMaterial::Get##NAME;
 %newobject aiMaterial::Set##NAME;
 %extend aiMaterial {
-  bool Get##NAME(TYPE& OUTPUT) {
-         return $self->Get<TYPE>(KEY, OUTPUT) == AI_SUCCESS;
-  }
-  bool Set##NAME(TYPE* INPUT) {
-         return $self->AddProperty<TYPE>(INPUT, 1, KEY) == AI_SUCCESS;
-  }
+	bool Get##NAME(TYPE& OUTPUT) {
+		return $self->Get<TYPE>(KEY, OUTPUT) == AI_SUCCESS;
+	}
+	bool Set##NAME(const TYPE* INPUT) {
+	#if #TYPE == "aiString" \
+		return $self->AddProperty(INPUT, KEY) == AI_SUCCESS;
+	#else
+		return $self->AddProperty<TYPE>(INPUT, 1, KEY) == AI_SUCCESS;
+	#endif
+	}
 }
 %enddef
 
@@ -192,12 +196,16 @@ ARRAY_DECL(NAME, CTYPE);
 %newobject aiMaterial::Get##NAME;
 %newobject aiMaterial::Set##NAME;
 %extend aiMaterial {
-  bool Get##NAME(PARAM param, unsigned int index, TYPE& OUTPUT) {
-         return $self->Get<TYPE>(KEY(param, index), OUTPUT) == AI_SUCCESS;
-  }
-  bool Set##NAME(TYPE* INPUT, PARAM param, unsigned int index) {
-         return $self->AddProperty<TYPE>(INPUT, 1, KEY(param, index)) == AI_SUCCESS;
-  }
+	bool Get##NAME(PARAM param, unsigned int index, TYPE& OUTPUT) {
+		return $self->Get<TYPE>(KEY(param, index), OUTPUT) == AI_SUCCESS;
+	}
+	bool Set##NAME(PARAM param, unsigned int index, const TYPE* INPUT) {
+	#if #TYPE == "aiString"
+		return $self->AddProperty(INPUT, KEY(param, index)) == AI_SUCCESS;
+	#else
+		return $self->AddProperty<TYPE>(INPUT, 1, KEY(param, index)) == AI_SUCCESS;
+	#endif
+	}
 }
 %enddef
 
@@ -371,13 +379,12 @@ ADD_UNMANAGED_OPTION(aiScene);
 %ignore aiScene::mPrivate;
 
 /////// aiString 
-%ignore aiString::Append;
-%ignore aiString::Clear;
-%ignore aiString::Set;
 %rename(Data) aiString::data;
 %rename(Length) aiString::length;
 %typemap(cscode) aiString %{
-  public override string ToString() { return Data; } 
+	public override string ToString() {
+		return Data;
+	}
 %}
 
 /////// aiTexel 
