@@ -183,7 +183,7 @@ ARRAY_DECL(NAME, CTYPE);
 		return $self->Get<TYPE>(KEY, OUTPUT) == AI_SUCCESS;
 	}
 	bool Set##NAME(const TYPE* INPUT) {
-	#if #TYPE == "aiString" \
+	#if #TYPE == "aiString"
 		return $self->AddProperty(INPUT, KEY) == AI_SUCCESS;
 	#else
 		return $self->AddProperty<TYPE>(INPUT, 1, KEY) == AI_SUCCESS;
@@ -275,6 +275,7 @@ ADD_UNMANAGED_OPTION(aiMaterial);
 %ignore aiMaterial::mNumAllocated;
 %ignore aiMaterial::mNumProperties;
 %ignore aiMaterial::mProperties;
+MATERIAL(aiString,  Name,                  AI_MATKEY_NAME);
 MATERIAL(aiColor4D, ColorDiffuse,          AI_MATKEY_COLOR_DIFFUSE);
 MATERIAL(aiColor4D, ColorSpecular,         AI_MATKEY_COLOR_SPECULAR);
 MATERIAL(aiColor4D, ColorAmbient,          AI_MATKEY_COLOR_AMBIENT);
