@@ -314,6 +314,7 @@ class MultiArray {
 		
 				delete[] mData;
 				mData = NULL;
+				mSize = 0;
 			}
 		}
 		

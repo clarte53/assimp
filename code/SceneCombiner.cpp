@@ -977,6 +977,17 @@ void SceneCombiner::Copy     (aiMesh** _dest, const aiMesh* src)
 
 	aiMesh* dest = *_dest = new aiMesh();
 
+	// release allocated memory
+	dest->Vertices.Clear();
+	dest->Normals.Clear();
+	dest->Tangents.Clear();
+	dest->Bitangents.Clear();
+	dest->Colors.Clear();
+	dest->TextureCoords.Clear();
+	dest->Faces.Clear();
+	dest->Bones.Clear();
+	dest->AnimMeshes.Clear();
+
 	// get a flat copy
 	::memcpy(dest,src,sizeof(aiMesh));
 
@@ -985,8 +996,8 @@ void SceneCombiner::Copy     (aiMesh** _dest, const aiMesh* src)
 	dest->Normals.Create(&dest->mNormals, &dest->mNumVertices);
 	dest->Tangents.Create(&dest->mTangents, &dest->mNumVertices);
 	dest->Bitangents.Create(&dest->mBitangents, &dest->mNumVertices);
-	dest->Colors.Create(AI_MAX_NUMBER_OF_COLOR_SETS);
-	dest->TextureCoords.Create(AI_MAX_NUMBER_OF_TEXTURECOORDS);
+	dest->Colors.Create(AI_MAX_NUMBER_OF_COLOR_SETS, false);
+	dest->TextureCoords.Create(AI_MAX_NUMBER_OF_TEXTURECOORDS, false);
 	dest->NumUVComponents.Create(&dest->mNumUVComponents[0], AI_MAX_NUMBER_OF_TEXTURECOORDS);
 	dest->Faces.Create(&dest->mFaces, &dest->mNumFaces);
 	dest->Bones.Create(&dest->mBones, &dest->mNumBones);
@@ -1084,6 +1095,10 @@ void SceneCombiner::Copy     (aiAnimation** _dest, const aiAnimation* src)
 
 	aiAnimation* dest = *_dest = new aiAnimation();
 
+	// release allocated memory
+	dest->Channels.Clear();
+	dest->MeshChannels.Clear();
+
 	// get a flat copy
 	::memcpy(dest,src,sizeof(aiAnimation));
 
@@ -1101,6 +1116,11 @@ void SceneCombiner::Copy     (aiNodeAnim** _dest, const aiNodeAnim* src)
 	ai_assert(NULL != _dest && NULL != src);
 
 	aiNodeAnim* dest = *_dest = new aiNodeAnim();
+
+	// release allocated memory
+	dest->PositionKeys.Clear();
+	dest->RotationKeys.Clear();
+	dest->ScalingKeys.Clear();
 
 	// get a flat copy
 	::memcpy(dest,src,sizeof(aiNodeAnim));
@@ -1145,6 +1165,9 @@ void SceneCombiner::Copy     (aiBone** _dest, const aiBone* src)
 
 	aiBone* dest = *_dest = new aiBone();
 
+	// release allocated memory
+	dest->Weights.Clear();
+
 	// get a flat copy
 	::memcpy(dest,src,sizeof(aiBone));
 
@@ -1161,6 +1184,10 @@ void SceneCombiner::Copy     (aiNode** _dest, const aiNode* src)
 	ai_assert(NULL != _dest && NULL != src);
 
 	aiNode* dest = *_dest = new aiNode();
+
+	// release allocated memory
+	dest->Children.Clear();
+	dest->Meshes.Clear();
 
 	// get a flat copy
 	::memcpy(dest,src,sizeof(aiNode));
