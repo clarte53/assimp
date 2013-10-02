@@ -280,6 +280,7 @@ MATERIAL(aiColor4D, ColorDiffuse,          AI_MATKEY_COLOR_DIFFUSE);
 MATERIAL(aiColor4D, ColorSpecular,         AI_MATKEY_COLOR_SPECULAR);
 MATERIAL(aiColor4D, ColorAmbient,          AI_MATKEY_COLOR_AMBIENT);
 MATERIAL(aiColor4D, ColorEmissive,         AI_MATKEY_COLOR_EMISSIVE);
+MATERIAL(aiColor4D, ColorTransparent,      AI_MATKEY_COLOR_TRANSPARENT);
 MATERIAL(float,     Opacity,               AI_MATKEY_OPACITY);
 MATERIAL(float,     ShininessStrength,     AI_MATKEY_SHININESS_STRENGTH);
 MATERIAL(int,       ShadingModel,          AI_MATKEY_SHADING_MODEL);
