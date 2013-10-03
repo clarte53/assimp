@@ -192,18 +192,18 @@ ARRAY_DECL(NAME, CTYPE);
 }
 %enddef
 
-%define MATERIAL_TEXTURE(TYPE, NAME, KEY, PARAM)
+%define MATERIAL_TEXTURE(TYPE, NAME, KEY)
 %newobject aiMaterial::Get##NAME;
 %newobject aiMaterial::Set##NAME;
 %extend aiMaterial {
-	bool Get##NAME(PARAM param, unsigned int index, TYPE& OUTPUT) {
-		return $self->Get<TYPE>(KEY(param, index), OUTPUT) == AI_SUCCESS;
+	bool Get##NAME(aiTextureType type, unsigned int index, TYPE& OUTPUT) {
+		return $self->Get<TYPE>(KEY(type, index), OUTPUT) == AI_SUCCESS;
 	}
-	bool Set##NAME(PARAM param, unsigned int index, const TYPE* INPUT) {
+	bool Set##NAME(aiTextureType type, unsigned int index, const TYPE* INPUT) {
 	#if #TYPE == "aiString"
-		return $self->AddProperty(INPUT, KEY(param, index)) == AI_SUCCESS;
+		return $self->AddProperty(INPUT, KEY(type, index)) == AI_SUCCESS;
 	#else
-		return $self->AddProperty<TYPE>(INPUT, 1, KEY(param, index)) == AI_SUCCESS;
+		return $self->AddProperty<TYPE>(INPUT, 1, KEY(type, index)) == AI_SUCCESS;
 	#endif
 	}
 }
@@ -275,21 +275,34 @@ ADD_UNMANAGED_OPTION(aiMaterial);
 %ignore aiMaterial::mNumAllocated;
 %ignore aiMaterial::mNumProperties;
 %ignore aiMaterial::mProperties;
-MATERIAL(aiString,  Name,                  AI_MATKEY_NAME);
-MATERIAL(aiColor4D, ColorDiffuse,          AI_MATKEY_COLOR_DIFFUSE);
-MATERIAL(aiColor4D, ColorSpecular,         AI_MATKEY_COLOR_SPECULAR);
-MATERIAL(aiColor4D, ColorAmbient,          AI_MATKEY_COLOR_AMBIENT);
-MATERIAL(aiColor4D, ColorEmissive,         AI_MATKEY_COLOR_EMISSIVE);
-MATERIAL(aiColor4D, ColorTransparent,      AI_MATKEY_COLOR_TRANSPARENT);
-MATERIAL(float,     Opacity,               AI_MATKEY_OPACITY);
-MATERIAL(float,     ShininessStrength,     AI_MATKEY_SHININESS_STRENGTH);
-MATERIAL(int,       ShadingModel,          AI_MATKEY_SHADING_MODEL);
-MATERIAL(int,       TwoSided,              AI_MATKEY_TWOSIDED);
-MATERIAL(aiString,  GlobalBackgroundImage, AI_MATKEY_GLOBAL_BACKGROUND_IMAGE);
-MATERIAL_TEXTURE(aiString, TexturePath,  AI_MATKEY_TEXTURE,       aiTextureType);
-MATERIAL_TEXTURE(int,      TextureFlags, AI_MATKEY_TEXFLAGS,      aiTextureType);
-MATERIAL_TEXTURE(int,      MappingModeU, AI_MATKEY_MAPPINGMODE_U, aiTextureType);
-MATERIAL_TEXTURE(int,      MappingModeV, AI_MATKEY_MAPPINGMODE_V, aiTextureType);
+MATERIAL(        aiString,         Name,                  AI_MATKEY_NAME);
+MATERIAL(        aiColor4D,        ColorDiffuse,          AI_MATKEY_COLOR_DIFFUSE);
+MATERIAL(        aiColor4D,        ColorSpecular,         AI_MATKEY_COLOR_SPECULAR);
+MATERIAL(        aiColor4D,        ColorAmbient,          AI_MATKEY_COLOR_AMBIENT);
+MATERIAL(        aiColor4D,        ColorEmissive,         AI_MATKEY_COLOR_EMISSIVE);
+MATERIAL(        aiColor4D,        ColorTransparent,      AI_MATKEY_COLOR_TRANSPARENT);
+MATERIAL(        aiColor4D,        ColorReflective,       AI_MATKEY_COLOR_REFLECTIVE);        // TODO: Check if TYPE is correct !
+MATERIAL(        float,            Opacity,               AI_MATKEY_OPACITY);
+MATERIAL(        float,            Shininess,             AI_MATKEY_SHININESS);
+MATERIAL(        float,            ShininessStrength,     AI_MATKEY_SHININESS_STRENGTH);
+MATERIAL(        float,            Refraction,            AI_MATKEY_REFRACTI);
+MATERIAL(        float,            Reflectivity,          AI_MATKEY_REFLECTIVITY);            // TODO: Check if TYPE is correct !
+MATERIAL(        int,              TwoSided,              AI_MATKEY_TWOSIDED);
+MATERIAL(        int,              EnableWireframe,       AI_MATKEY_ENABLE_WIREFRAME);
+MATERIAL(        int,              BumpScaling,           AI_MATKEY_BUMPSCALING);             // TODO: Check if TYPE is correct !
+MATERIAL(        aiBlendMode,      BlendFunction,         AI_MATKEY_BLEND_FUNC);
+MATERIAL(        aiShadingMode,    ShadingModel,          AI_MATKEY_SHADING_MODEL);
+MATERIAL(        aiString,         GlobalBackgroundImage, AI_MATKEY_GLOBAL_BACKGROUND_IMAGE);
+MATERIAL_TEXTURE(aiString,         TexturePath,           AI_MATKEY_TEXTURE);
+MATERIAL_TEXTURE(int,              UVWSource,             AI_MATKEY_UVWSRC);
+MATERIAL_TEXTURE(aiTextureMapping, Mapping,               AI_MATKEY_MAPPING);
+MATERIAL_TEXTURE(aiTextureFlags,   TextureFlags,          AI_MATKEY_TEXFLAGS);
+MATERIAL_TEXTURE(aiTextureMapMode, MappingModeU,          AI_MATKEY_MAPPINGMODE_U);
+MATERIAL_TEXTURE(aiTextureMapMode, MappingModeV,          AI_MATKEY_MAPPINGMODE_V);
+MATERIAL_TEXTURE(aiUVTransform,    UVTransform,           AI_MATKEY_UVTRANSFORM);             // TODO: Check if TYPE is correct !
+MATERIAL_TEXTURE(aiTextureOp,      TextureOperation,      AI_MATKEY_TEXOP);
+MATERIAL_TEXTURE(aiVector3D,       TextureMappingAxis,    AI_MATKEY_TEXMAP_AXIS);
+MATERIAL_TEXTURE(float,            TextureBlend,          AI_MATKEY_TEXBLEND);
 
 /////// aiMatrix3x3 
 // Done
