@@ -128,6 +128,21 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %}
 }
 
+%define DEF_ENUM(TYPE, NAME)
+%typemap(cstype)   unsigned int NAME "TYPE";
+%typemap(csin)     unsigned int NAME "(uint)$csinput";
+%typemap(csvarout) unsigned int NAME %{ get { return (TYPE)$imcall; } %}
+%enddef
+
+%define ENUM_TYPEMAP(TYPE)
+%typemap(imtype, out="IntPtr") TYPE *INPUT, TYPE &INPUT "TYPE"
+%typemap(cstype, out="$csclassname") TYPE *INPUT, TYPE &INPUT "TYPE"
+%typemap(csin) TYPE *INPUT, TYPE &INPUT "$csinput"
+%typemap(imtype, out="IntPtr") TYPE *OUTPUT, TYPE &OUTPUT "out TYPE"
+%typemap(cstype, out="$csclassname") TYPE *OUTPUT, TYPE &OUTPUT "out TYPE"
+%typemap(csin) TYPE *OUTPUT, TYPE &OUTPUT "out $csinput"
+%enddef
+
 %define ADD_UNMANAGED_OPTION(CTYPE)
 %typemap(csinterfaces) CTYPE "IDisposable, Interface.Unmanagable<$typemap(cstype, CTYPE)>"
 %typemap(cscode) CTYPE %{
@@ -182,11 +197,11 @@ ARRAY_DECL(NAME, CTYPE);
 	bool Get##NAME(TYPE& OUTPUT) {
 		return $self->Get<TYPE>(KEY, OUTPUT) == AI_SUCCESS;
 	}
-	bool Set##NAME(const TYPE* INPUT) {
+	bool Set##NAME(const TYPE& INPUT) {
 	#if #TYPE == "aiString"
-		return $self->AddProperty(INPUT, KEY) == AI_SUCCESS;
+		return $self->AddProperty(&INPUT, KEY) == AI_SUCCESS;
 	#else
-		return $self->AddProperty<TYPE>(INPUT, 1, KEY) == AI_SUCCESS;
+		return $self->AddProperty<TYPE>(&INPUT, 1, KEY) == AI_SUCCESS;
 	#endif
 	}
 }
@@ -199,11 +214,11 @@ ARRAY_DECL(NAME, CTYPE);
 	bool Get##NAME(aiTextureType type, unsigned int index, TYPE& OUTPUT) {
 		return $self->Get<TYPE>(KEY(type, index), OUTPUT) == AI_SUCCESS;
 	}
-	bool Set##NAME(aiTextureType type, unsigned int index, const TYPE* INPUT) {
+	bool Set##NAME(aiTextureType type, unsigned int index, const TYPE& INPUT) {
 	#if #TYPE == "aiString"
-		return $self->AddProperty(INPUT, KEY(type, index)) == AI_SUCCESS;
+		return $self->AddProperty(&INPUT, KEY(type, index)) == AI_SUCCESS;
 	#else
-		return $self->AddProperty<TYPE>(INPUT, 1, KEY(type, index)) == AI_SUCCESS;
+		return $self->AddProperty<TYPE>(&INPUT, 1, KEY(type, index)) == AI_SUCCESS;
 	#endif
 	}
 }
@@ -266,6 +281,12 @@ ADD_UNMANAGED_OPTION(aiFace);
 %ignore aiLogStream::callback;
 
 /////// aiMaterial 
+ENUM_TYPEMAP(aiBlendMode);
+ENUM_TYPEMAP(aiShadingMode);
+ENUM_TYPEMAP(aiTextureMapping);
+ENUM_TYPEMAP(aiTextureFlags);
+ENUM_TYPEMAP(aiTextureMapMode);
+ENUM_TYPEMAP(aiTextureOp);
 ADD_UNMANAGED_OPTION(aiMaterial);
 %ignore aiMaterial::AddBinaryProperty;
 %ignore aiMaterial::AddProperty;
@@ -311,6 +332,7 @@ MATERIAL_TEXTURE(float,            TextureBlend,          AI_MATKEY_TEXBLEND);
 // Done
 
 /////// aiMesh 
+DEF_ENUM(aiPrimitiveType, mPrimitiveTypes);
 ADD_UNMANAGED_OPTION(aiMesh);
 %ignore aiMesh::mNumVertices;
 %ignore aiMesh::mVertices;
@@ -326,9 +348,6 @@ ADD_UNMANAGED_OPTION(aiMesh);
 %ignore aiMesh::mBones;
 %ignore aiMesh::mNumAnimMeshes;
 %ignore aiMesh::mAnimMeshes;
-%typemap(cstype)   unsigned int mPrimitiveTypes "aiPrimitiveType";
-%typemap(csin)     unsigned int mPrimitiveTypes "(uint)$csinput";
-%typemap(csvarout) unsigned int mPrimitiveTypes %{ get { return (aiPrimitiveType)$imcall; } %}
 
 /////// aiMeshAnim 
 %ignore aiMeshAnim::mNumKeys;
@@ -361,9 +380,6 @@ ADD_UNMANAGED_OPTION(aiNode);
 // Done
 
 /////// aiPostProcessSteps
-%typemap(cstype)   unsigned int pFlags "aiPostProcessSteps";
-%typemap(csin)     unsigned int pFlags "(uint)$csinput"
-%typemap(csvarout) unsigned int pFlags %{ get { return (aiPostProcessSteps)$imcall; } %}
 %typemap(cscode) aiPostProcessSteps %{
 	, aiProcess_ConvertToLeftHanded = aiProcess_MakeLeftHanded|aiProcess_FlipUVs|aiProcess_FlipWindingOrder,
 %}
@@ -425,9 +441,11 @@ ADD_UNMANAGED_OPTION(aiVector3D);
 // Done
 
 /////// Exporter
+DEF_ENUM(aiPostProcessSteps, pPreprocessing);
 %ignore Assimp::Exporter::RegisterExporter;
 
 /////// Importer
+DEF_ENUM(aiPostProcessSteps, pFlags);
 %ignore Assimp::Importer::GetExtensionList;
 %ignore Assimp::Importer::GetImporter;
 %ignore Assimp::Importer::Pimpl;
