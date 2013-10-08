@@ -135,12 +135,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %enddef
 
 %define ENUM_TYPEMAP(TYPE)
-%typemap(imtype, out="IntPtr") TYPE *INPUT, TYPE &INPUT "TYPE"
+%typemap(imtype, out="IntPtr")       TYPE *INPUT, TYPE &INPUT "TYPE"
 %typemap(cstype, out="$csclassname") TYPE *INPUT, TYPE &INPUT "TYPE"
-%typemap(csin) TYPE *INPUT, TYPE &INPUT "$csinput"
-%typemap(imtype, out="IntPtr") TYPE *OUTPUT, TYPE &OUTPUT "out TYPE"
+%typemap(csin)                       TYPE *INPUT, TYPE &INPUT "$csinput"
+%typemap(imtype, out="IntPtr")       TYPE *OUTPUT, TYPE &OUTPUT "out TYPE"
 %typemap(cstype, out="$csclassname") TYPE *OUTPUT, TYPE &OUTPUT "out TYPE"
-%typemap(csin) TYPE *OUTPUT, TYPE &OUTPUT "out $csinput"
+%typemap(csin)                       TYPE *OUTPUT, TYPE &OUTPUT "out $csinput"
 %enddef
 
 %define ADD_UNMANAGED_OPTION(CTYPE)
@@ -190,35 +190,55 @@ ARRAY_DECL(NAME, CTYPE);
 %template(NAME##MultiArray) MultiArray<CTYPE>;
 %enddef
 
-%define MATERIAL(TYPE, NAME, KEY)
+%define MATERIAL(ENUM, TYPE, NAME, KEY)
 %newobject aiMaterial::Get##NAME;
 %newobject aiMaterial::Set##NAME;
 %extend aiMaterial {
 	bool Get##NAME(TYPE& OUTPUT) {
-		return $self->Get<TYPE>(KEY, OUTPUT) == AI_SUCCESS;
+		#if ENUM
+			typedef int TEMPLATE_TYPE;
+		#else
+			typedef TYPE TEMPLATE_TYPE;
+		#endif
+		return $self->Get<TEMPLATE_TYPE>(KEY, (TEMPLATE_TYPE&) OUTPUT) == AI_SUCCESS;
 	}
 	bool Set##NAME(const TYPE& INPUT) {
 	#if #TYPE == "aiString"
 		return $self->AddProperty(&INPUT, KEY) == AI_SUCCESS;
 	#else
-		return $self->AddProperty<TYPE>(&INPUT, 1, KEY) == AI_SUCCESS;
+		#if ENUM
+			typedef int TEMPLATE_TYPE;
+		#else
+			typedef TYPE TEMPLATE_TYPE;
+		#endif
+		return $self->AddProperty<TEMPLATE_TYPE>((TEMPLATE_TYPE*) &INPUT, 1, KEY) == AI_SUCCESS;
 	#endif
 	}
 }
 %enddef
 
-%define MATERIAL_TEXTURE(TYPE, NAME, KEY)
+%define MATERIAL_TEXTURE(ENUM, TYPE, NAME, KEY)
 %newobject aiMaterial::Get##NAME;
 %newobject aiMaterial::Set##NAME;
 %extend aiMaterial {
 	bool Get##NAME(aiTextureType type, unsigned int index, TYPE& OUTPUT) {
-		return $self->Get<TYPE>(KEY(type, index), OUTPUT) == AI_SUCCESS;
+		#if ENUM
+			typedef int TEMPLATE_TYPE;
+		#else
+			typedef TYPE TEMPLATE_TYPE;
+		#endif
+		return $self->Get<TEMPLATE_TYPE>(KEY(type, index), (TEMPLATE_TYPE&) OUTPUT) == AI_SUCCESS;
 	}
 	bool Set##NAME(aiTextureType type, unsigned int index, const TYPE& INPUT) {
 	#if #TYPE == "aiString"
 		return $self->AddProperty(&INPUT, KEY(type, index)) == AI_SUCCESS;
 	#else
-		return $self->AddProperty<TYPE>(&INPUT, 1, KEY(type, index)) == AI_SUCCESS;
+		#if ENUM
+			typedef int TEMPLATE_TYPE;
+		#else
+			typedef TYPE TEMPLATE_TYPE;
+		#endif
+		return $self->AddProperty<TEMPLATE_TYPE>((TEMPLATE_TYPE*) &INPUT, 1, KEY(type, index)) == AI_SUCCESS;
 	#endif
 	}
 }
@@ -296,34 +316,34 @@ ADD_UNMANAGED_OPTION(aiMaterial);
 %ignore aiMaterial::mNumAllocated;
 %ignore aiMaterial::mNumProperties;
 %ignore aiMaterial::mProperties;
-MATERIAL(        aiString,         Name,                  AI_MATKEY_NAME);
-MATERIAL(        aiColor4D,        ColorDiffuse,          AI_MATKEY_COLOR_DIFFUSE);
-MATERIAL(        aiColor4D,        ColorSpecular,         AI_MATKEY_COLOR_SPECULAR);
-MATERIAL(        aiColor4D,        ColorAmbient,          AI_MATKEY_COLOR_AMBIENT);
-MATERIAL(        aiColor4D,        ColorEmissive,         AI_MATKEY_COLOR_EMISSIVE);
-MATERIAL(        aiColor4D,        ColorTransparent,      AI_MATKEY_COLOR_TRANSPARENT);
-MATERIAL(        aiColor4D,        ColorReflective,       AI_MATKEY_COLOR_REFLECTIVE);        // TODO: Check if TYPE is correct !
-MATERIAL(        float,            Opacity,               AI_MATKEY_OPACITY);
-MATERIAL(        float,            Shininess,             AI_MATKEY_SHININESS);
-MATERIAL(        float,            ShininessStrength,     AI_MATKEY_SHININESS_STRENGTH);
-MATERIAL(        float,            Refraction,            AI_MATKEY_REFRACTI);
-MATERIAL(        float,            Reflectivity,          AI_MATKEY_REFLECTIVITY);            // TODO: Check if TYPE is correct !
-MATERIAL(        int,              TwoSided,              AI_MATKEY_TWOSIDED);
-MATERIAL(        int,              EnableWireframe,       AI_MATKEY_ENABLE_WIREFRAME);
-MATERIAL(        int,              BumpScaling,           AI_MATKEY_BUMPSCALING);             // TODO: Check if TYPE is correct !
-MATERIAL(        aiBlendMode,      BlendFunction,         AI_MATKEY_BLEND_FUNC);
-MATERIAL(        aiShadingMode,    ShadingModel,          AI_MATKEY_SHADING_MODEL);
-MATERIAL(        aiString,         GlobalBackgroundImage, AI_MATKEY_GLOBAL_BACKGROUND_IMAGE);
-MATERIAL_TEXTURE(aiString,         TexturePath,           AI_MATKEY_TEXTURE);
-MATERIAL_TEXTURE(int,              UVWSource,             AI_MATKEY_UVWSRC);
-MATERIAL_TEXTURE(aiTextureMapping, Mapping,               AI_MATKEY_MAPPING);
-MATERIAL_TEXTURE(aiTextureFlags,   TextureFlags,          AI_MATKEY_TEXFLAGS);
-MATERIAL_TEXTURE(aiTextureMapMode, MappingModeU,          AI_MATKEY_MAPPINGMODE_U);
-MATERIAL_TEXTURE(aiTextureMapMode, MappingModeV,          AI_MATKEY_MAPPINGMODE_V);
-MATERIAL_TEXTURE(aiUVTransform,    UVTransform,           AI_MATKEY_UVTRANSFORM);             // TODO: Check if TYPE is correct !
-MATERIAL_TEXTURE(aiTextureOp,      TextureOperation,      AI_MATKEY_TEXOP);
-MATERIAL_TEXTURE(aiVector3D,       TextureMappingAxis,    AI_MATKEY_TEXMAP_AXIS);
-MATERIAL_TEXTURE(float,            TextureBlend,          AI_MATKEY_TEXBLEND);
+MATERIAL(0,         aiString,         Name,                  AI_MATKEY_NAME);
+MATERIAL(0,         aiColor4D,        ColorDiffuse,          AI_MATKEY_COLOR_DIFFUSE);
+MATERIAL(0,         aiColor4D,        ColorSpecular,         AI_MATKEY_COLOR_SPECULAR);
+MATERIAL(0,         aiColor4D,        ColorAmbient,          AI_MATKEY_COLOR_AMBIENT);
+MATERIAL(0,         aiColor4D,        ColorEmissive,         AI_MATKEY_COLOR_EMISSIVE);
+MATERIAL(0,         aiColor4D,        ColorTransparent,      AI_MATKEY_COLOR_TRANSPARENT);
+MATERIAL(0,         aiColor4D,        ColorReflective,       AI_MATKEY_COLOR_REFLECTIVE);        // TODO: Check if TYPE is correct !
+MATERIAL(0,         float,            Opacity,               AI_MATKEY_OPACITY);
+MATERIAL(0,         float,            Shininess,             AI_MATKEY_SHININESS);
+MATERIAL(0,         float,            ShininessStrength,     AI_MATKEY_SHININESS_STRENGTH);
+MATERIAL(0,         float,            Refraction,            AI_MATKEY_REFRACTI);
+MATERIAL(0,         float,            Reflectivity,          AI_MATKEY_REFLECTIVITY);            // TODO: Check if TYPE is correct !
+MATERIAL(0,         int,              TwoSided,              AI_MATKEY_TWOSIDED);
+MATERIAL(0,         int,              EnableWireframe,       AI_MATKEY_ENABLE_WIREFRAME);
+MATERIAL(0,         int,              BumpScaling,           AI_MATKEY_BUMPSCALING);             // TODO: Check if TYPE is correct !
+MATERIAL(1,         aiBlendMode,      BlendFunction,         AI_MATKEY_BLEND_FUNC);
+MATERIAL(1,         aiShadingMode,    ShadingModel,          AI_MATKEY_SHADING_MODEL);
+MATERIAL(0,         aiString,         GlobalBackgroundImage, AI_MATKEY_GLOBAL_BACKGROUND_IMAGE);
+MATERIAL_TEXTURE(0, aiString,         TexturePath,           AI_MATKEY_TEXTURE);
+MATERIAL_TEXTURE(0, int,              UVWSource,             AI_MATKEY_UVWSRC);
+MATERIAL_TEXTURE(1, aiTextureMapping, Mapping,               AI_MATKEY_MAPPING);
+MATERIAL_TEXTURE(1, aiTextureFlags,   TextureFlags,          AI_MATKEY_TEXFLAGS);
+MATERIAL_TEXTURE(1, aiTextureMapMode, MappingModeU,          AI_MATKEY_MAPPINGMODE_U);
+MATERIAL_TEXTURE(1, aiTextureMapMode, MappingModeV,          AI_MATKEY_MAPPINGMODE_V);
+MATERIAL_TEXTURE(0, aiUVTransform,    UVTransform,           AI_MATKEY_UVTRANSFORM);             // TODO: Check if TYPE is correct !
+MATERIAL_TEXTURE(1, aiTextureOp,      TextureOperation,      AI_MATKEY_TEXOP);
+MATERIAL_TEXTURE(0, aiVector3D,       TextureMappingAxis,    AI_MATKEY_TEXMAP_AXIS);
+MATERIAL_TEXTURE(0, float,            TextureBlend,          AI_MATKEY_TEXBLEND);
 
 /////// aiMatrix3x3 
 // Done
