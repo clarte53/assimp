@@ -318,9 +318,13 @@ void ColladaExporter::WriteMaterials()
 	} else {
 		materials[a].name = name.C_Str();
 	}
-    for( std::string::iterator it = materials[a].name.begin(); it != materials[a].name.end(); ++it )
-      if( !isalnum( *it) )
-        *it = '_';
+	for( std::string::iterator it = materials[a].name.begin(); it != materials[a].name.end(); ++it ) {
+		// isalnum on MSVC asserts for code points in [0,255]. Thus prevent unwanted promotion
+		// of char to signed int and take the unsigned char value.
+		if( !isalnum( static_cast<uint8_t>(*it) ) ) {
+			*it = '_';
+		}
+	}
 
 	aiShadingMode shading;
 	materials[a].shading_model = "phong";

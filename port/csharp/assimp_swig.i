@@ -200,7 +200,7 @@ ARRAY_DECL(NAME, CTYPE);
 		#else
 			typedef TYPE TEMPLATE_TYPE;
 		#endif
-		return $self->Get<TEMPLATE_TYPE>(KEY, (TEMPLATE_TYPE&) OUTPUT) == AI_SUCCESS;
+		return $self->Get(KEY, (TEMPLATE_TYPE&) OUTPUT) == AI_SUCCESS;
 	}
 	bool Set##NAME(const TYPE& INPUT) {
 	#if #TYPE == "aiString"
@@ -211,7 +211,7 @@ ARRAY_DECL(NAME, CTYPE);
 		#else
 			typedef TYPE TEMPLATE_TYPE;
 		#endif
-		return $self->AddProperty<TEMPLATE_TYPE>((TEMPLATE_TYPE*) &INPUT, 1, KEY) == AI_SUCCESS;
+		return $self->AddProperty((TEMPLATE_TYPE*) &INPUT, 1, KEY) == AI_SUCCESS;
 	#endif
 	}
 }
@@ -227,7 +227,7 @@ ARRAY_DECL(NAME, CTYPE);
 		#else
 			typedef TYPE TEMPLATE_TYPE;
 		#endif
-		return $self->Get<TEMPLATE_TYPE>(KEY(type, index), (TEMPLATE_TYPE&) OUTPUT) == AI_SUCCESS;
+		return $self->Get(KEY(type, index), (TEMPLATE_TYPE&) OUTPUT) == AI_SUCCESS;
 	}
 	bool Set##NAME(aiTextureType type, unsigned int index, const TYPE& INPUT) {
 	#if #TYPE == "aiString"
@@ -238,7 +238,7 @@ ARRAY_DECL(NAME, CTYPE);
 		#else
 			typedef TYPE TEMPLATE_TYPE;
 		#endif
-		return $self->AddProperty<TEMPLATE_TYPE>((TEMPLATE_TYPE*) &INPUT, 1, KEY(type, index)) == AI_SUCCESS;
+		return $self->AddProperty((TEMPLATE_TYPE*) &INPUT, 1, KEY(type, index)) == AI_SUCCESS;
 	#endif
 	}
 }
@@ -340,10 +340,10 @@ MATERIAL_TEXTURE(1, aiTextureMapping, Mapping,               AI_MATKEY_MAPPING);
 MATERIAL_TEXTURE(1, aiTextureFlags,   TextureFlags,          AI_MATKEY_TEXFLAGS);
 MATERIAL_TEXTURE(1, aiTextureMapMode, MappingModeU,          AI_MATKEY_MAPPINGMODE_U);
 MATERIAL_TEXTURE(1, aiTextureMapMode, MappingModeV,          AI_MATKEY_MAPPINGMODE_V);
-MATERIAL_TEXTURE(0, aiUVTransform,    UVTransform,           AI_MATKEY_UVTRANSFORM);             // TODO: Check if TYPE is correct !
 MATERIAL_TEXTURE(1, aiTextureOp,      TextureOperation,      AI_MATKEY_TEXOP);
 MATERIAL_TEXTURE(0, aiVector3D,       TextureMappingAxis,    AI_MATKEY_TEXMAP_AXIS);
 MATERIAL_TEXTURE(0, float,            TextureBlend,          AI_MATKEY_TEXBLEND);
+//MATERIAL_TEXTURE(0, aiUVTransform,    UVTransform,           AI_MATKEY_UVTRANSFORM);             // TODO: Check if TYPE is correct !
 
 /////// aiMatrix3x3 
 // Done
