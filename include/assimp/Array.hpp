@@ -148,6 +148,10 @@ class Array {
 			
 			(*mData)[index] = value;
 		}
+
+		void Add(const T& value) {
+			Set(Size(), value);
+		}
 		
 	protected:
 	
@@ -260,6 +264,10 @@ class Array<T*> {
 			Update(index + 1);
 			
 			(*mData)[index] = value;
+		}
+
+		void Add(T* value) {
+			Set(Size(), value);
 		}
 		
 	protected:
