@@ -460,6 +460,10 @@ ADD_UNMANAGED_OPTION(aiVector3D);
 /////// aiVertexWeight 
 // Done
 
+/////// DefaultLogger
+DEF_ENUM(aiDefaultLogStream, defStreams);
+DEF_ENUM(Logger.ErrorSeverity, severity);
+
 /////// Exporter
 DEF_ENUM(aiPostProcessSteps, pPreprocessing);
 %ignore Assimp::Exporter::RegisterExporter;

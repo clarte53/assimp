@@ -84,6 +84,7 @@ SET( Logging_SRCS
 	Win32DebugLogStream.h
 	DefaultLogger.cpp
 	FileLogStream.h
+	StdOStreamLogStream.h
 )
 SOURCE_GROUP(Logging FILES ${Logging_SRCS})
 
@@ -109,7 +110,6 @@ SET( Common_SRCS
 	Importer.cpp
 	IFF.h
 	ParsingUtils.h
-	StdOStreamLogStream.h
 	StreamReader.h
 	StringComparison.h
 	SGSpatialSort.cpp
