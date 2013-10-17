@@ -83,15 +83,15 @@ namespace Assimp {
 
 							Optional(const T& value) : mDefined(true), mValue(value) {}
 
-							operator bool() const {return mDefined;}
+							inline operator bool() const {return mDefined;}
 
-							const T* operator->() const {return &mValue;}
+							inline const T* operator->() const {return &mValue;}
 
-							T* operator->() {return &mValue;}
+							inline T* operator->() {return &mValue;}
 
-							const T& operator*() const {return mValue;}
+							inline const T& operator*() const {return mValue;}
 
-							T& operator*() {return mValue;}
+							inline T& operator*() {return mValue;}
 
 					}; // class Optional<T>
 
@@ -112,15 +112,15 @@ namespace Assimp {
 
 							virtual ~Optional() {if(mDefined && mValue != NULL) {delete mValue;}}
 
-							operator bool() const {return mDefined;}
+							inline operator bool() const {return mDefined;}
 
-							const T* operator->() const {return mValue;}
+							inline const T* operator->() const {return mValue;}
 
-							T* operator->() {return mValue;}
+							inline T* operator->() {return mValue;}
 
-							const T& operator*() const {return *mValue;}
+							inline const T& operator*() const {return *mValue;}
 
-							T& operator*() {return *mValue;}
+							inline T& operator*() {return *mValue;}
 
 					}; // class Optional<T*>
 			
@@ -140,11 +140,11 @@ namespace Assimp {
 
 				public:
 
-					XMLReader(Q3BSP::Q3BSPZipArchive* pArchive, const std::string& pFile);
+					XMLReader(Q3BSP::Q3BSPZipArchive* archive, const std::string& file);
 
 					virtual ~XMLReader();
 
-					void Open(const std::string& pFile);
+					void Open(const std::string& file);
 
 					void Close();
 
@@ -155,28 +155,29 @@ namespace Assimp {
 					bool IsElement() const;
 
 					/** Compares the current xml element name to the given string and returns true if equal */
-					bool IsElement(const std::string& pName) const;
+					bool IsElement(const std::string& name) const;
 				
 					/** Return the name of a node */
 					std::string GetNodeName() const;
 
 					/** Return the value of the attribute at a given index. Throw an exception
 						if the attribute is mandatory but not found */
-					template <typename T>
-					Optional<T> GetAttribute(int pIndex, bool pMandatory = false) const;
+					template<typename T>
+					Optional<T> GetAttribute(int pIndex, bool mandatory = false) const;
 
 					/** Return the value of the attribute with a given name. Throw an exception
 						if the attribute is mandatory but not found or if the value can not be
 							converted into the appropriate type. */
-					template <typename T>
-					Optional<T> GetAttribute(const std::string& pName, bool pMandatory = false) const;
+					template<typename T>
+					Optional<T> GetAttribute(const std::string& name, bool mandatory = false) const;
 
 					/** Reads the text contents of an element, throws an exception if not given.
 						  Skips leading whitespace. */
-					std::string GetTextContent() const;
+					template<typename T>
+					Optional<T> GetContent(bool mandatory = false) const;
 
 					/** Aborts the file reading with an exception */
-					void ThrowException(const std::string& pError) const;
+					void ThrowException(const std::string& error) const;
 
 			}; // end of class XMLReader
 		
@@ -184,17 +185,47 @@ namespace Assimp {
 
 			struct Content {
 
+				struct URI {
+
+					bool external;
+
+					bool has_id;
+
+					std::string filename;
+
+					std::string extension;
+
+					unsigned int id;
+
+				}; // struct URI
+
+				struct ID {
+
+					std::string filename;
+
+					unsigned int id;
+
+					ID(std::string _filename, unsigned int _id) : filename(_filename), id(_id) {}
+
+					inline bool operator<(const ID& other) const {return filename.compare(other.filename) < 0 || id < other.id;}
+
+				}; // struct ID
+
 				struct Reference3D {
 
-					std::map<unsigned int, aiNode*> instances;
+					std::string name;
 
-					std::map<unsigned int, unsigned int> meshes;
+					std::map<ID, aiNode*> instances;
+
+					std::map<ID, unsigned int> meshes;
 
 				}; // struct Reference3D
 
 				aiScene* scene;
 
-				std::map<unsigned int, Reference3D> references;
+				std::map<ID, Reference3D> references;
+
+				std::set<std::string> files_to_parse;
 
 				unsigned int root_index;
 
@@ -204,14 +235,14 @@ namespace Assimp {
 
 			}; // struct Content
 
-			/** Filename, for a verbose error message */
-			std::string mFileName;
+			/** µCurrent filename, for resolving cross-files references and verbose error message */
+			std::string mCurrentFile;
 
 			/** Content of the 3DXML file */
 			Content mContent;
 
 			/** Mapping between the element names and the parsing functions */
-			typedef std::function<void*(const XMLReader& pReader, void* data)> FunctionType;
+			typedef std::function<void*(const XMLReader& reader, void* data)> FunctionType;
 			typedef std::map<std::string, FunctionType> SpecializedMapType;
 			typedef std::map<std::string, SpecializedMapType> FunctionMapType;
 			FunctionMapType mFunctionMap;
@@ -219,38 +250,47 @@ namespace Assimp {
 		public:
 
 			/** Constructor from XML file */
-			_3DXMLParser(const std::string& pFile);
+			_3DXMLParser(const std::string& file);
 
 			virtual ~_3DXMLParser();
 
 		protected:
+			
+			template<typename T>
+			static void ToString(const T& value, std::string& string);
 
 			/** Aborts the file reading with an exception */
-			void ThrowException(const std::string& pError);
+			void ThrowException(const std::string& error) const;
 
 			void Initialize();
 
-			void ParseElement(const XMLReader& pReader, const SpecializedMapType& parent, const std::string& name, void* data);
+			void ParseElement(const XMLReader& reader, const SpecializedMapType& parent, const std::string& name, void* data);
 
-			void ReadManifest(const XMLReader& pReader, std::string& filename);
+			void ParseURI(const std::string& uri, Content::URI& result) const;
 
-			void* ReadModel_3dxml(const XMLReader& pReader, void* data);
+			static void ParseExtension(const std::string& filename, std::string& extension);
 
-			void* ReadHeader(const XMLReader& pReader, void* data);
+			static void ParseID(const std::string& data, unsigned int& id);
 
-			void* ReadProductStructure(const XMLReader& pReader, void* data);
+			void ReadManifest(const XMLReader& reader);
 
-			void* ReadCATMaterialRef(const XMLReader& pReader, void* data);
+			void* ReadModel_3dxml(const XMLReader& reader, void* data);
 
-			void* ReadCATMaterial(const XMLReader& pReader, void* data);
+			void* ReadHeader(const XMLReader& reader, void* data);
+
+			void* ReadProductStructure(const XMLReader& reader, void* data);
+
+			void* ReadCATMaterialRef(const XMLReader& reader, void* data);
+
+			void* ReadCATMaterial(const XMLReader& reader, void* data);
 			
-			void* ReadReference3D(const XMLReader& pReader, void* data);
+			void* ReadReference3D(const XMLReader& reader, void* data);
 
-			void* ReadInstance3D(const XMLReader& pReader, void* data);
+			void* ReadInstance3D(const XMLReader& reader, void* data);
 
-			void* ReadReferenceRep(const XMLReader& pReader, void* data);
+			void* ReadReferenceRep(const XMLReader& reader, void* data);
 
-			void* ReadInstanceRep(const XMLReader& pReader, void* data);
+			void* ReadInstanceRep(const XMLReader& reader, void* data);
 
 	}; // end of class _3DXMLParser
 
@@ -268,8 +308,8 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Check for element match
-	inline bool _3DXMLParser::XMLReader::IsElement(const std::string& pName) const {
-		return IsElement() && pName.compare(mReader->getNodeName()) == 0;
+	inline bool _3DXMLParser::XMLReader::IsElement(const std::string& name) const {
+		return IsElement() && name.compare(mReader->getNodeName()) == 0;
 	}
 	
 	// ------------------------------------------------------------------------------------------------
@@ -279,19 +319,19 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	template <typename T>
-	_3DXMLParser::XMLReader::Optional<T> _3DXMLParser::XMLReader::GetAttribute(int pIndex, bool pMandatory) const {
-		return GetAttribute<T>(mReader->getAttributeName(pIndex) , pMandatory);
+	template<typename T>
+	_3DXMLParser::XMLReader::Optional<T> _3DXMLParser::XMLReader::GetAttribute(int pIndex, bool mandatory) const {
+		return GetAttribute<T>(mReader->getAttributeName(pIndex) , mandatory);
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	template <typename T>
-	_3DXMLParser::XMLReader::Optional<T> _3DXMLParser::XMLReader::GetAttribute(const std::string& pName, bool pMandatory) const {
-		std::string ValueString = mReader->getAttributeValueSafe(pName.c_str());
+	template<typename T>
+	_3DXMLParser::XMLReader::Optional<T> _3DXMLParser::XMLReader::GetAttribute(const std::string& name, bool mandatory) const {
+		std::string ValueString = mReader->getAttributeValueSafe(name.c_str());
 
 		if(ValueString == "") {
-			if(pMandatory) {
-				ThrowException("Attribute \"" + pName + "\" not found.");
+			if(mandatory) {
+				ThrowException("Attribute \"" + name + "\" not found.");
 			} else {
 				return _3DXMLParser::XMLReader::Optional<T>();
 			}
@@ -303,10 +343,62 @@ namespace Assimp {
 		Stream >> Value;
 
 		if(Stream.fail()) {
-			ThrowException("Attribute \"" + pName + "\" can not be converted into the requested type.");
+			ThrowException("Attribute \"" + name + "\" can not be converted into the requested type.");
 		}
 
 		return _3DXMLParser::XMLReader::Optional<T>(Value);
+	}
+	
+	// ------------------------------------------------------------------------------------------------
+	template<typename T>
+	_3DXMLParser::XMLReader::Optional<T> _3DXMLParser::XMLReader::GetContent(bool mandatory) const {
+		// present node should be the beginning of an element
+		if(mReader->getNodeType() != irr::io::EXN_ELEMENT) {
+			ThrowException("The current node is not an xml element.");
+		}
+
+		// present node should not be empty
+		if(mReader->isEmptyElement()) {
+			if(mandatory) {
+				ThrowException("Can not get content of the empty element \"" + std::string(mReader->getNodeName()) + "\".");
+			} else {
+				return _3DXMLParser::XMLReader::Optional<T>();
+			}
+		}
+
+		// read contents of the element
+		if(! mReader->read() || mReader->getNodeType() != irr::io::EXN_TEXT) {
+			ThrowException("The content of the element \"" + std::string(mReader->getNodeName()) + "\" is not composed of text.");
+		}
+
+		// skip leading whitespace
+		const char* text = mReader->getNodeData();
+		SkipSpacesAndLineEnd(&text);
+
+		if(text == NULL) {
+			if(mandatory) {
+				ThrowException("Invalid content in element \"" + std::string(mReader->getNodeName()) + "\".");
+			} else {
+				return _3DXMLParser::XMLReader::Optional<T>();
+			}
+		}
+
+		std::istringstream stream(text);
+		T value;
+
+		stream >> value;
+
+		return _3DXMLParser::XMLReader::Optional<T>(value);
+	}
+	
+	// ------------------------------------------------------------------------------------------------
+	template<typename T>
+	void _3DXMLParser::ToString(const T& value, std::string& string) {
+		std::stringstream stream;
+
+		stream << value;
+
+		string = stream.str();
 	}
 
 } // end of namespace Assimp

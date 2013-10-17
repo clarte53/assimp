@@ -52,11 +52,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ParsingUtils.h"
 #include "Q3BSPZipArchive.h"
 
+#include <algorithm>
+#include <cctype>
+
 namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLParser::XMLReader::XMLReader(Q3BSP::Q3BSPZipArchive* pArchive, const std::string& pFile) : mFileName(pFile), mArchive(pArchive), mStream(NULL), mReader(NULL) {
-		Open(pFile);
+	_3DXMLParser::XMLReader::XMLReader(Q3BSP::Q3BSPZipArchive* archive, const std::string& file) : mFileName(file), mArchive(archive), mStream(NULL), mReader(NULL) {
+		Open(file);
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -65,9 +68,9 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLParser::XMLReader::Open(const std::string& pFile) {
+	void _3DXMLParser::XMLReader::Open(const std::string& file) {
 		if(mStream == NULL && mReader == NULL) {
-			mFileName = pFile;
+			mFileName = file;
 
 			// Open the manifest files
 			mStream = mArchive->Open(mFileName.c_str());
@@ -100,72 +103,72 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	// Reads the text contents of an element, throws an exception if not given. Skips leading whitespace.
-	std::string _3DXMLParser::XMLReader::GetTextContent() const {
-		// present node should be the beginning of an element
-		if(mReader->getNodeType() != irr::io::EXN_ELEMENT) {
-			ThrowException("the current node is not an xml element.");
-		}
-
-		// present node should not be empty
-		if(mReader->isEmptyElement()) {
-			ThrowException("Can not get content of the empty element \"" + std::string(mReader->getNodeName()) + "\".");
-		}
-
-		// read contents of the element
-		if(! mReader->read() || mReader->getNodeType() != irr::io::EXN_TEXT) {
-			ThrowException("The content of the element \"" + std::string(mReader->getNodeName()) + "\" is not composed of text.");
-		}
-
-		// skip leading whitespace
-		const char* text = mReader->getNodeData();
-		SkipSpacesAndLineEnd(&text);
-
-		if(text == NULL) {
-			ThrowException("Invalid content in element \"" + std::string(mReader->getNodeName()) + "\".");
-		}
-
-		return text;
-	}
-
-	// ------------------------------------------------------------------------------------------------
 	// Aborts the file reading with an exception
-	void _3DXMLParser::XMLReader::ThrowException(const std::string& pError) const {
-		throw DeadlyImportError(boost::str(boost::format("3DXML XML parser: %s - %s") % mFileName % pError));
+	void _3DXMLParser::XMLReader::ThrowException(const std::string& error) const {
+		throw DeadlyImportError(boost::str(boost::format("3DXML XML parser: %s - %s") % mFileName % error));
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	// Constructor to be privately used by Importer
-	_3DXMLParser::_3DXMLParser(const std::string& pFile) : mFileName(pFile), mFunctionMap() {
+	_3DXMLParser::_3DXMLParser(const std::string& file) : mCurrentFile(file), mFunctionMap() {
 		// Initialize the mapping with the parsing functions
 		Initialize();
 
 		// Load the compressed archive
-		Q3BSP::Q3BSPZipArchive Archive(pFile);
-		if (! Archive.isOpen()) {
-			ThrowException("Failed to open file " + pFile + "." );
+		Q3BSP::Q3BSPZipArchive archive(mCurrentFile);
+		if (! archive.isOpen()) {
+			ThrowException("Failed to open file " + mCurrentFile + "." );
 		}
 
 		// Create a xml parser for the manifest
-		XMLReader Manifest(&Archive, "Manifest.xml");
+		XMLReader manifest(&archive, "Manifest.xml");
 
 		// Read the name of the main XML file in the manifest
-		std::string filename;
-		ReadManifest(Manifest, filename);
+		ReadManifest(manifest);
 
 		// Cleanning up
-		Manifest.Close();
-
-		// Create a xml parser for the root file
-		XMLReader RootFile(&Archive, filename);
+		manifest.Close();
 
 		FunctionMapType::const_iterator parent_it = mFunctionMap.find("");
 
 		if(parent_it != mFunctionMap.end()) {
-			ParseElement(RootFile, parent_it->second, "Model_3dxml", NULL);
+			// Save the name of the main 3DXML file
+			std::string main_file = mCurrentFile;
+
+			// Create a xml parser for the root file
+			XMLReader root_file(&archive, mCurrentFile);
+
+			// Parse the main 3DXML file
+			ParseElement(root_file, parent_it->second, "Model_3dxml", NULL);
+
+			// Cleanning up
+			root_file.Close();
+
+			// Parse other referenced 3DXML files until all references are resolved
+			while(mContent.files_to_parse.size() != 0) {
+				std::set<std::string>::iterator it = mContent.files_to_parse.begin();
+
+				if(it != mContent.files_to_parse.end()) {
+					// Set the name of the current file
+					mCurrentFile = *it;
+
+					// Create a xml parser for the file
+					XMLReader file(&archive, mCurrentFile);
+
+					// Parse the 3DXML file
+					ParseElement(file, parent_it->second, "Model_3dxml", NULL);
+
+
+					// Remove the file from the list of files to parse
+					it = mContent.files_to_parse.erase(it);
+
+					// Cleanning up
+					file.Close();
+				}
+			}
 
 			if(mContent.has_root_index) {
-				std::map<unsigned int, Content::Reference3D>::const_iterator it = mContent.references.find(mContent.root_index);
+				std::map<Content::ID, Content::Reference3D>::const_iterator it = mContent.references.find(Content::ID(main_file, mContent.root_index));
 
 				if(it != mContent.references.end()) {
 					//TODO
@@ -182,8 +185,8 @@ namespace Assimp {
 	
 	// ------------------------------------------------------------------------------------------------
 	// Aborts the file reading with an exception
-	void _3DXMLParser::ThrowException(const std::string& pError) {
-		throw DeadlyImportError(boost::str(boost::format("3DXML: %s - %s") % mFileName % pError));
+	void _3DXMLParser::ThrowException(const std::string& error) const {
+		throw DeadlyImportError(boost::str(boost::format("3DXML: %s - %s") % mCurrentFile % error));
 	}
 	
 	void _3DXMLParser::Initialize() {
@@ -218,19 +221,19 @@ namespace Assimp {
 	
 	// ------------------------------------------------------------------------------------------------
 	// Parse one element and its sub elements
-	void _3DXMLParser::ParseElement(const XMLReader& pReader, const SpecializedMapType& parent, const std::string& name, void* data) {
-		if(pReader.IsElement(name)) {
+	void _3DXMLParser::ParseElement(const XMLReader& reader, const SpecializedMapType& parent, const std::string& name, void* data) {
+		if(reader.IsElement(name)) {
 			SpecializedMapType::const_iterator func_it = parent.find(name);
 
 			if(func_it != parent.end()) {
-				void* new_data = (func_it->second)(pReader, data);
+				void* new_data = (func_it->second)(reader, data);
 
-				while(pReader.Next()) {
-					if(pReader.IsElement()) {
+				while(reader.Next()) {
+					if(reader.IsElement()) {
 						FunctionMapType::const_iterator parent_it = mFunctionMap.find(name);
 
 						if(parent_it != mFunctionMap.end()) {
-							ParseElement(pReader, parent_it->second, pReader.GetNodeName(), new_data);
+							ParseElement(reader, parent_it->second, reader.GetNodeName(), new_data);
 						}
 					}
 				}
@@ -239,17 +242,72 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
+	// Parse one uri and split it into it's different components
+	void _3DXMLParser::ParseURI(const std::string& uri, Content::URI& result) const {
+		static const unsigned int size_prefix = 10;
+
+		if(uri.substr(0, size_prefix).compare("urn:3DXML:") == 0) {
+			result.external = true;
+
+			std::size_t delim = uri.find_last_of('#');
+
+			if(delim != uri.npos) {
+				result.has_id = true;
+
+				std::string id = uri.substr(delim + 1, uri.npos);
+				ParseID(id, result.id);
+
+				result.filename = uri.substr(size_prefix, delim - 1);
+			} else {
+				result.has_id = false;
+				result.id = 0;
+				result.filename = uri.substr(size_prefix, uri.npos);
+			}
+		} else if(std::count_if(uri.begin(), uri.end(), std::isdigit) == uri.size()) {
+			result.external = false;
+			result.has_id = true;
+			result.filename = mCurrentFile;
+
+			ParseID(uri, result.id);
+		} else {
+			ThrowException("The URI \"" + uri + "\" has an invalid format.");
+		}
+
+		ParseExtension(result.filename, result.extension);
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	// Parse one the extension part of a filename
+	void _3DXMLParser::ParseExtension(const std::string& filename, std::string& extension) {
+		std::size_t pos = filename.find_last_of('.');
+
+		if(pos != filename.npos) {
+			extension = filename.substr(pos + 1, filename.npos);
+		} else {
+			extension = "";
+		}
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	// Parse one numerical id from a string
+	void _3DXMLParser::ParseID(const std::string& data, unsigned int& id) {
+		std::istringstream stream(data);
+
+		stream >> id;
+	}
+
+	// ------------------------------------------------------------------------------------------------
 	// Read the name of the main XML file in the Manifest
-	void _3DXMLParser::ReadManifest(const XMLReader& pReader, std::string& filename) {
+	void _3DXMLParser::ReadManifest(const XMLReader& reader) {
 		bool found = false;
 
-		while(! found && pReader.Next()) {
+		while(! found && reader.Next()) {
 			// handle the root element "Manifest"
-			if(pReader.IsElement("Manifest")) {
-				while(! found && pReader.Next()) {
+			if(reader.IsElement("Manifest")) {
+				while(! found && reader.Next()) {
 					// Read the Root element
-					if(pReader.IsElement("Root")) {
-						filename = pReader.GetTextContent();
+					if(reader.IsElement("Root")) {
+						mCurrentFile = *(reader.GetContent<std::string>(true));
 						found = true;
 					}
 				}
@@ -263,15 +321,15 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Read 3DXML file
-	void* _3DXMLParser::ReadModel_3dxml(const XMLReader& pReader, void* data) {
-		// Nothing to do, everything is already done by ParseElement()
+	void* _3DXMLParser::ReadModel_3dxml(const XMLReader& reader, void* data) {
+		// Nothing specific to do, everything is already done by ParseElement()
 
 		return data;
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	// Read the header section
-	void* _3DXMLParser::ReadHeader(const XMLReader& pReader, void* data) {
+	void* _3DXMLParser::ReadHeader(const XMLReader& reader, void* data) {
 		// Nothing to do (who cares about header information anyway)
 
 		return data;
@@ -279,8 +337,8 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Read the product structure section
-	void* _3DXMLParser::ReadProductStructure(const XMLReader& pReader, void* data) {
-		XMLReader::Optional<unsigned int> root = pReader.GetAttribute<unsigned int>("root");
+	void* _3DXMLParser::ReadProductStructure(const XMLReader& reader, void* data) {
+		XMLReader::Optional<unsigned int> root = reader.GetAttribute<unsigned int>("root");
 
 		if(root) {
 			mContent.root_index = *root;
@@ -292,7 +350,7 @@ namespace Assimp {
 	
 	// ------------------------------------------------------------------------------------------------
 	// Read the CATMaterialRef section
-	void* _3DXMLParser::ReadCATMaterialRef(const XMLReader& pReader, void* data) {
+	void* _3DXMLParser::ReadCATMaterialRef(const XMLReader& reader, void* data) {
 		//TODO
 
 		return data;
@@ -300,7 +358,7 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Read the CATMaterial section
-	void* _3DXMLParser::ReadCATMaterial(const XMLReader& pReader, void* data) {
+	void* _3DXMLParser::ReadCATMaterial(const XMLReader& reader, void* data) {
 		//TODO
 
 		return data;
@@ -308,52 +366,69 @@ namespace Assimp {
 	
 	// ------------------------------------------------------------------------------------------------
 	// Read the Reference3D section
-	void* _3DXMLParser::ReadReference3D(const XMLReader& pReader, void* data) {
-		XMLReader::Optional<unsigned int> id = pReader.GetAttribute<unsigned int>("id", true);
+	void* _3DXMLParser::ReadReference3D(const XMLReader& reader, void* data) {
+		// no need to worry about id -> id is mandatory and if not present an exception has already been raised
+		unsigned int id = *(reader.GetAttribute<unsigned int>("id", true));
+		std::string name;
 
-		XMLReader::Optional<std::string> name = pReader.GetAttribute<std::string>("name");
-		while(pReader.Next()) {
+		XMLReader::Optional<std::string> name_opt = reader.GetAttribute<std::string>("name");
+		while(reader.Next()) {
 			// handle the name of the element
-			if(pReader.IsElement("PLMExternal_ID")) {
-				name = XMLReader::Optional<std::string>(pReader.GetTextContent());
+			if(reader.IsElement("PLMExternal_ID")) {
+				name_opt = reader.GetContent<std::string>(true);
 			}
 		}
 
-		if(mContent.has_root_index && id && mContent.root_index == *id) {
-			// This the root node, but it is only a reference (not an instance), so we create a new node which will be the root
-			aiNode* node = NULL;
-
-			if(name) {
-				node = new aiNode(*name);
-			} else {
-				std::stringstream name;
-				name << *id; // no need to worry about id -> id is mandatory and if not present an exception has already been raised
-
-				node = new aiNode(name.str());
-			}
-
-			mContent.scene->mRootNode = node;
+		if(name_opt) {
+			name = *name_opt;
+		} else {
+			// No name: take the id as the name
+			ToString(id, name);
 		}
 
-		//TODO
+		mContent.references[Content::ID(mCurrentFile, id)].name = name; // Create the Reference3D if not present and asign the name of this reference.
+		// Nothing else to do because of the weird indirection scheme of 3DXML
+		// The Reference3D will be completed by the Instance3D and InstanceRep
 
 		return data;
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	// Read the Instance3D section
-	void* _3DXMLParser::ReadInstance3D(const XMLReader& pReader, void* data) {
-		XMLReader::Optional<unsigned int> id = pReader.GetAttribute<unsigned int>("id", true);
+	void* _3DXMLParser::ReadInstance3D(const XMLReader& reader, void* data) {
+		// no need to worry about id -> id is mandatory and if not present an exception has already been raised
+		unsigned int id = *(reader.GetAttribute<unsigned int>("id", true));
+		unsigned int aggregated_by;
+		std::string instance_of;
+		std::string name;
 
-		//TODO
+		XMLReader::Optional<std::string> name_opt = reader.GetAttribute<std::string>("name");
+		while(reader.Next()) {
+			// handle the name of the element
+			if(reader.IsElement("PLMExternal_ID")) {
+				name_opt = reader.GetContent<std::string>(true);
+			} else if(reader.IsElement("IsAggregatedBy")) {
+				aggregated_by = *(reader.GetContent<unsigned int>(true));
+			} else if(reader.IsElement("IsInstanceOf")) {
+				//TODO instance_of = *(reader.GetContent<std::string>(true));
+			}
+		}
+
+		if(name_opt) {
+			name = *name_opt;
+		} else {
+			// No name: take the id as the name
+			ToString(id, name);
+		}
 
 		return data;
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	// Read the ReferenceRep section
-	void* _3DXMLParser::ReadReferenceRep(const XMLReader& pReader, void* data) {
-		XMLReader::Optional<unsigned int> id = pReader.GetAttribute<unsigned int>("id", true);
+	void* _3DXMLParser::ReadReferenceRep(const XMLReader& reader, void* data) {
+		// no need to worry about id -> id is mandatory and if not present an exception has already been raised
+		unsigned int id = *(reader.GetAttribute<unsigned int>("id", true));
 
 		//TODO
 
@@ -362,8 +437,9 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Read the InstanceRep section
-	void* _3DXMLParser::ReadInstanceRep(const XMLReader& pReader, void* data) {
-		XMLReader::Optional<unsigned int> id = pReader.GetAttribute<unsigned int>("id", true);
+	void* _3DXMLParser::ReadInstanceRep(const XMLReader& reader, void* data) {
+		// no need to worry about id -> id is mandatory and if not present an exception has already been raised
+		unsigned int id = *(reader.GetAttribute<unsigned int>("id", true));
 
 		//TODO
 
