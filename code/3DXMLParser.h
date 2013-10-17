@@ -210,16 +210,26 @@ namespace Assimp {
 					inline bool operator<(const ID& other) const {return filename.compare(other.filename) < 0 || id < other.id;}
 
 				}; // struct ID
+				
+				struct Instance3D;
 
 				struct Reference3D {
 
 					std::string name;
 
-					std::map<ID, aiNode*> instances;
+					std::map<ID, Instance3D> instances;
 
 					std::map<ID, unsigned int> meshes;
 
 				}; // struct Reference3D
+
+				struct Instance3D {
+
+					aiNode* node;
+
+					Reference3D* instance_of;
+
+				}; // struct Instance3D
 
 				aiScene* scene;
 

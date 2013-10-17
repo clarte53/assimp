@@ -371,14 +371,17 @@ namespace Assimp {
 		unsigned int id = *(reader.GetAttribute<unsigned int>("id", true));
 		std::string name;
 
+		// Parse the name of this reference
 		XMLReader::Optional<std::string> name_opt = reader.GetAttribute<std::string>("name");
 		while(reader.Next()) {
 			// handle the name of the element
 			if(reader.IsElement("PLMExternal_ID")) {
 				name_opt = reader.GetContent<std::string>(true);
+				break;
 			}
 		}
 
+		// Test if the name exist, otherwise use the id as name
 		if(name_opt) {
 			name = *name_opt;
 		} else {
@@ -399,9 +402,11 @@ namespace Assimp {
 		// no need to worry about id -> id is mandatory and if not present an exception has already been raised
 		unsigned int id = *(reader.GetAttribute<unsigned int>("id", true));
 		unsigned int aggregated_by;
-		std::string instance_of;
+		Content::URI instance_of;
+		std::string relative_matrix;
 		std::string name;
 
+		// Parse the sub elements of this node
 		XMLReader::Optional<std::string> name_opt = reader.GetAttribute<std::string>("name");
 		while(reader.Next()) {
 			// handle the name of the element
@@ -410,15 +415,55 @@ namespace Assimp {
 			} else if(reader.IsElement("IsAggregatedBy")) {
 				aggregated_by = *(reader.GetContent<unsigned int>(true));
 			} else if(reader.IsElement("IsInstanceOf")) {
-				//TODO instance_of = *(reader.GetContent<std::string>(true));
+				std::string uri = *(reader.GetContent<std::string>(true));
+
+				ParseURI(uri, instance_of);
+			} else if(reader.IsElement("RelativeMatrix")) {
+				relative_matrix = *(reader.GetContent<std::string>(true));
 			}
 		}
 
+		// Test if the name exist, otherwise use the id as name
 		if(name_opt) {
 			name = *name_opt;
 		} else {
 			// No name: take the id as the name
 			ToString(id, name);
+		}
+
+		// Create the associated node
+		aiNode* node = new aiNode(name);
+		aiMatrix4x4& transformation = node->mTransformation;
+
+		// Save the transformation matrix
+		std::istringstream matrix(relative_matrix);
+		matrix
+			>> transformation.a1 >> transformation.a2 >> transformation.a3
+			>> transformation.b1 >> transformation.b2 >> transformation.b3
+			>> transformation.c1 >> transformation.c2 >> transformation.c3
+			>> transformation.a4 >> transformation.b4 >> transformation.c4;
+		transformation.d1 = transformation.d2 = transformation.d3 = 0.0;
+		transformation.d4 = 1.0;
+
+		// If the reference is on another file and does not already exist, add it to the list of files to parse
+		if(instance_of.external && instance_of.has_id &&
+				instance_of.filename.compare(mCurrentFile) != 0 &&
+				mContent.references.find(Content::ID(instance_of.filename, instance_of.id)) == mContent.references.end()) {
+
+			mContent.files_to_parse.insert(instance_of.filename);
+		}
+
+		// Save the reference to the parent Reference3D
+		Content::Reference3D& parent = mContent.references[Content::ID(mCurrentFile, aggregated_by)];
+		Content::Instance3D& instance = parent.instances[Content::ID(mCurrentFile, id)];
+
+		// Save the information corresponding to this instance
+		instance.node = node;
+		if(instance_of.has_id) {
+			// Create the refered Reference3D if necessary
+			instance.instance_of = &(mContent.references[Content::ID(instance_of.filename, instance_of.id)]);
+		} else {
+			ThrowException("The Instance3D \"" + name + "\" refers to an invalid reference without id.");
 		}
 
 		return data;
