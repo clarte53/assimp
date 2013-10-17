@@ -110,60 +110,57 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Constructor to be privately used by Importer
-	_3DXMLParser::_3DXMLParser(const std::string& file) : mCurrentFile(file), mFunctionMap() {
+	_3DXMLParser::_3DXMLParser(const std::string& file) : mReader(NULL), mFunctionMap() {
 		// Initialize the mapping with the parsing functions
 		Initialize();
 
 		// Load the compressed archive
-		Q3BSP::Q3BSPZipArchive archive(mCurrentFile);
+		Q3BSP::Q3BSPZipArchive archive(file);
 		if (! archive.isOpen()) {
-			ThrowException("Failed to open file " + mCurrentFile + "." );
+			ThrowException("Failed to open file " + file + "." );
 		}
 
 		// Create a xml parser for the manifest
-		XMLReader manifest(&archive, "Manifest.xml");
+		mReader = new XMLReader(&archive, "Manifest.xml");
 
 		// Read the name of the main XML file in the manifest
-		ReadManifest(manifest);
+		std::string main_file;
+		ReadManifest(main_file);
 
 		// Cleanning up
-		manifest.Close();
+		delete mReader;
+		mReader = NULL;
 
 		FunctionMapType::const_iterator parent_it = mFunctionMap.find("");
 
 		if(parent_it != mFunctionMap.end()) {
-			// Save the name of the main 3DXML file
-			std::string main_file = mCurrentFile;
-
 			// Create a xml parser for the root file
-			XMLReader root_file(&archive, mCurrentFile);
+			mReader = new XMLReader(&archive, main_file);
 
 			// Parse the main 3DXML file
-			ParseElement(root_file, parent_it->second, "Model_3dxml", NULL);
+			ParseElement(parent_it->second, "Model_3dxml");
 
 			// Cleanning up
-			root_file.Close();
+			delete mReader;
+			mReader = NULL;
 
 			// Parse other referenced 3DXML files until all references are resolved
 			while(mContent.files_to_parse.size() != 0) {
 				std::set<std::string>::iterator it = mContent.files_to_parse.begin();
 
 				if(it != mContent.files_to_parse.end()) {
-					// Set the name of the current file
-					mCurrentFile = *it;
-
 					// Create a xml parser for the file
-					XMLReader file(&archive, mCurrentFile);
+					XMLReader file(&archive, *it);
 
 					// Parse the 3DXML file
-					ParseElement(file, parent_it->second, "Model_3dxml", NULL);
-
+					ParseElement(parent_it->second, "Model_3dxml");
 
 					// Remove the file from the list of files to parse
 					it = mContent.files_to_parse.erase(it);
 
 					// Cleanning up
-					file.Close();
+					delete mReader;
+					mReader = NULL;
 				}
 			}
 
@@ -186,13 +183,13 @@ namespace Assimp {
 	// ------------------------------------------------------------------------------------------------
 	// Aborts the file reading with an exception
 	void _3DXMLParser::ThrowException(const std::string& error) const {
-		throw DeadlyImportError(boost::str(boost::format("3DXML: %s - %s") % mCurrentFile % error));
+		throw DeadlyImportError(boost::str(boost::format("3DXML: %s - %s") % mReader->GetFilename() % error));
 	}
 	
 	void _3DXMLParser::Initialize() {
 		// Saving the mapping between element names and parsing functions
 		if(mFunctionMap.size() == 0) {
-			#define INSERT(parent, token) mFunctionMap[parent][#token] = std::bind(&_3DXMLParser::Read##token, this, std::placeholders::_1, std::placeholders::_2)
+			#define INSERT(parent, token) mFunctionMap[parent][#token] = std::bind(&_3DXMLParser::Read##token, this)
 
 			std::string parent = "";
 			INSERT(parent, Model_3dxml);
@@ -221,19 +218,19 @@ namespace Assimp {
 	
 	// ------------------------------------------------------------------------------------------------
 	// Parse one element and its sub elements
-	void _3DXMLParser::ParseElement(const XMLReader& reader, const SpecializedMapType& parent, const std::string& name, void* data) {
-		if(reader.IsElement(name)) {
+	void _3DXMLParser::ParseElement(const SpecializedMapType& parent, const std::string& name) {
+		if(mReader->IsElement(name)) {
 			SpecializedMapType::const_iterator func_it = parent.find(name);
 
 			if(func_it != parent.end()) {
-				void* new_data = (func_it->second)(reader, data);
+				(func_it->second)();
 
-				while(reader.Next()) {
-					if(reader.IsElement()) {
+				while(mReader->Next()) {
+					if(mReader->IsElement()) {
 						FunctionMapType::const_iterator parent_it = mFunctionMap.find(name);
 
 						if(parent_it != mFunctionMap.end()) {
-							ParseElement(reader, parent_it->second, reader.GetNodeName(), new_data);
+							ParseElement(parent_it->second, mReader->GetNodeName());
 						}
 					}
 				}
@@ -266,7 +263,7 @@ namespace Assimp {
 		} else if(std::count_if(uri.begin(), uri.end(), std::isdigit) == uri.size()) {
 			result.external = false;
 			result.has_id = true;
-			result.filename = mCurrentFile;
+			result.filename = mReader->GetFilename();
 
 			ParseID(uri, result.id);
 		} else {
@@ -298,16 +295,16 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Read the name of the main XML file in the Manifest
-	void _3DXMLParser::ReadManifest(const XMLReader& reader) {
+	void _3DXMLParser::ReadManifest(std::string& main_file) {
 		bool found = false;
 
-		while(! found && reader.Next()) {
+		while(! found && mReader->Next()) {
 			// handle the root element "Manifest"
-			if(reader.IsElement("Manifest")) {
-				while(! found && reader.Next()) {
+			if(mReader->IsElement("Manifest")) {
+				while(! found && mReader->Next()) {
 					// Read the Root element
-					if(reader.IsElement("Root")) {
-						mCurrentFile = *(reader.GetContent<std::string>(true));
+					if(mReader->IsElement("Root")) {
+						main_file = *(mReader->GetContent<std::string>(true));
 						found = true;
 					}
 				}
@@ -321,62 +318,52 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Read 3DXML file
-	void* _3DXMLParser::ReadModel_3dxml(const XMLReader& reader, void* data) {
+	void _3DXMLParser::ReadModel_3dxml() {
 		// Nothing specific to do, everything is already done by ParseElement()
-
-		return data;
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	// Read the header section
-	void* _3DXMLParser::ReadHeader(const XMLReader& reader, void* data) {
+	void _3DXMLParser::ReadHeader() {
 		// Nothing to do (who cares about header information anyway)
-
-		return data;
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	// Read the product structure section
-	void* _3DXMLParser::ReadProductStructure(const XMLReader& reader, void* data) {
-		XMLReader::Optional<unsigned int> root = reader.GetAttribute<unsigned int>("root");
+	void _3DXMLParser::ReadProductStructure() {
+		XMLReader::Optional<unsigned int> root = mReader->GetAttribute<unsigned int>("root");
 
 		if(root) {
 			mContent.root_index = *root;
 			mContent.has_root_index = true;
 		}
-
-		return data;
 	}
 	
 	// ------------------------------------------------------------------------------------------------
 	// Read the CATMaterialRef section
-	void* _3DXMLParser::ReadCATMaterialRef(const XMLReader& reader, void* data) {
+	void _3DXMLParser::ReadCATMaterialRef() {
 		//TODO
-
-		return data;
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	// Read the CATMaterial section
-	void* _3DXMLParser::ReadCATMaterial(const XMLReader& reader, void* data) {
+	void _3DXMLParser::ReadCATMaterial() {
 		//TODO
-
-		return data;
 	}
 	
 	// ------------------------------------------------------------------------------------------------
 	// Read the Reference3D section
-	void* _3DXMLParser::ReadReference3D(const XMLReader& reader, void* data) {
+	void _3DXMLParser::ReadReference3D() {
 		// no need to worry about id -> id is mandatory and if not present an exception has already been raised
-		unsigned int id = *(reader.GetAttribute<unsigned int>("id", true));
+		unsigned int id = *(mReader->GetAttribute<unsigned int>("id", true));
 		std::string name;
 
 		// Parse the name of this reference
-		XMLReader::Optional<std::string> name_opt = reader.GetAttribute<std::string>("name");
-		while(reader.Next()) {
+		XMLReader::Optional<std::string> name_opt = mReader->GetAttribute<std::string>("name");
+		while(mReader->Next()) {
 			// handle the name of the element
-			if(reader.IsElement("PLMExternal_ID")) {
-				name_opt = reader.GetContent<std::string>(true);
+			if(mReader->IsElement("PLMExternal_ID")) {
+				name_opt = mReader->GetContent<std::string>(true);
 				break;
 			}
 		}
@@ -386,40 +373,41 @@ namespace Assimp {
 			name = *name_opt;
 		} else {
 			// No name: take the id as the name
-			ToString(id, name);
+			mReader->ToString(id, name);
 		}
 
-		mContent.references[Content::ID(mCurrentFile, id)].name = name; // Create the Reference3D if not present and asign the name of this reference.
+		mContent.references[Content::ID(mReader->GetFilename(), id)].name = name; // Create the Reference3D if not present and asign the name of this reference.
 		// Nothing else to do because of the weird indirection scheme of 3DXML
 		// The Reference3D will be completed by the Instance3D and InstanceRep
-
-		return data;
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	// Read the Instance3D section
-	void* _3DXMLParser::ReadInstance3D(const XMLReader& reader, void* data) {
+	void _3DXMLParser::ReadInstance3D() {
 		// no need to worry about id -> id is mandatory and if not present an exception has already been raised
-		unsigned int id = *(reader.GetAttribute<unsigned int>("id", true));
+		unsigned int id = *(mReader->GetAttribute<unsigned int>("id", true));
 		unsigned int aggregated_by;
 		Content::URI instance_of;
 		std::string relative_matrix;
+		std::string uri;
 		std::string name;
 
+		const std::string& current_file = mReader->GetFilename();
+
 		// Parse the sub elements of this node
-		XMLReader::Optional<std::string> name_opt = reader.GetAttribute<std::string>("name");
-		while(reader.Next()) {
+		XMLReader::Optional<std::string> name_opt = mReader->GetAttribute<std::string>("name");
+		while(mReader->Next()) {
 			// handle the name of the element
-			if(reader.IsElement("PLMExternal_ID")) {
-				name_opt = reader.GetContent<std::string>(true);
-			} else if(reader.IsElement("IsAggregatedBy")) {
-				aggregated_by = *(reader.GetContent<unsigned int>(true));
-			} else if(reader.IsElement("IsInstanceOf")) {
-				std::string uri = *(reader.GetContent<std::string>(true));
+			if(mReader->IsElement("PLMExternal_ID")) {
+				name_opt = mReader->GetContent<std::string>(true);
+			} else if(mReader->IsElement("IsAggregatedBy")) {
+				aggregated_by = *(mReader->GetContent<unsigned int>(true));
+			} else if(mReader->IsElement("IsInstanceOf")) {
+				uri = *(mReader->GetContent<std::string>(true));
 
 				ParseURI(uri, instance_of);
-			} else if(reader.IsElement("RelativeMatrix")) {
-				relative_matrix = *(reader.GetContent<std::string>(true));
+			} else if(mReader->IsElement("RelativeMatrix")) {
+				relative_matrix = *(mReader->GetContent<std::string>(true));
 			}
 		}
 
@@ -428,8 +416,9 @@ namespace Assimp {
 			name = *name_opt;
 		} else {
 			// No name: take the id as the name
-			ToString(id, name);
+			mReader->ToString(id, name);
 		}
+
 
 		// Create the associated node
 		aiNode* node = new aiNode(name);
@@ -447,15 +436,15 @@ namespace Assimp {
 
 		// If the reference is on another file and does not already exist, add it to the list of files to parse
 		if(instance_of.external && instance_of.has_id &&
-				instance_of.filename.compare(mCurrentFile) != 0 &&
+				instance_of.filename.compare(current_file) != 0 &&
 				mContent.references.find(Content::ID(instance_of.filename, instance_of.id)) == mContent.references.end()) {
 
 			mContent.files_to_parse.insert(instance_of.filename);
 		}
 
 		// Save the reference to the parent Reference3D
-		Content::Reference3D& parent = mContent.references[Content::ID(mCurrentFile, aggregated_by)];
-		Content::Instance3D& instance = parent.instances[Content::ID(mCurrentFile, id)];
+		Content::Reference3D& parent = mContent.references[Content::ID(current_file, aggregated_by)];
+		Content::Instance3D& instance = parent.instances[Content::ID(current_file, id)];
 
 		// Save the information corresponding to this instance
 		instance.node = node;
@@ -463,32 +452,54 @@ namespace Assimp {
 			// Create the refered Reference3D if necessary
 			instance.instance_of = &(mContent.references[Content::ID(instance_of.filename, instance_of.id)]);
 		} else {
-			ThrowException("The Instance3D \"" + name + "\" refers to an invalid reference without id.");
+			ThrowException("The Instance3D \"" + name + "\" refers to an invalid reference \"" + uri + "\" without id.");
 		}
-
-		return data;
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	// Read the ReferenceRep section
-	void* _3DXMLParser::ReadReferenceRep(const XMLReader& reader, void* data) {
+	void _3DXMLParser::ReadReferenceRep() {
 		// no need to worry about id -> id is mandatory and if not present an exception has already been raised
-		unsigned int id = *(reader.GetAttribute<unsigned int>("id", true));
+		unsigned int id = *(mReader->GetAttribute<unsigned int>("id", true));
 
 		//TODO
-
-		return data;
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	// Read the InstanceRep section
-	void* _3DXMLParser::ReadInstanceRep(const XMLReader& reader, void* data) {
+	void _3DXMLParser::ReadInstanceRep() {
 		// no need to worry about id -> id is mandatory and if not present an exception has already been raised
-		unsigned int id = *(reader.GetAttribute<unsigned int>("id", true));
+		unsigned int id = *(mReader->GetAttribute<unsigned int>("id", true));
+		unsigned int aggregated_by;
+		Content::URI instance_of;
+		std::string uri;
+		std::string name;
 
-		//TODO
+		// Parse the sub elements of this node
+		XMLReader::Optional<std::string> name_opt = mReader->GetAttribute<std::string>("name");
+		while(mReader->Next()) {
+			// handle the name of the element
+			if(mReader->IsElement("PLMExternal_ID")) {
+				name_opt = mReader->GetContent<std::string>(true);
+			} else if(mReader->IsElement("IsAggregatedBy")) {
+				aggregated_by = *(mReader->GetContent<unsigned int>(true));
+			} else if(mReader->IsElement("IsInstanceOf")) {
+				uri = *(mReader->GetContent<std::string>(true));
 
-		return data;
+				ParseURI(uri, instance_of);
+			}
+		}
+
+		// Test if the name exist, otherwise use the id as name
+		if(name_opt) {
+			name = *name_opt;
+		} else {
+			// No name: take the id as the name
+			mReader->ToString(id, name);
+		}
+
+
+
 	}
 
 } // Namespace Assimp
