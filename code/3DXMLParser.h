@@ -221,15 +221,29 @@ namespace Assimp {
 				
 				struct Instance3D;
 
-				struct Reference3D {
+				struct InstanceRep;
 
-					std::string name;
+				struct Reference3D {
 
 					std::map<ID, Instance3D> instances;
 
-					std::map<ID, unsigned int> meshes;
+					std::map<ID, InstanceRep> meshes;
+
+					unsigned int nb_references;
+
+					Reference3D() : nb_references(0) {}
 
 				}; // struct Reference3D
+
+				struct ReferenceRep {
+
+					aiMesh* mesh;
+
+					unsigned int index;
+
+					ReferenceRep() : mesh(NULL), index(0) {}
+
+				}; // struct ReferenceRep
 
 				struct Instance3D {
 
@@ -237,11 +251,23 @@ namespace Assimp {
 
 					Reference3D* instance_of;
 
+					Instance3D() : node(NULL), instance_of(NULL) {}
+
 				}; // struct Instance3D
+
+				struct InstanceRep {
+
+					ReferenceRep* instance_of;
+
+					InstanceRep() : instance_of(NULL) {}
+
+				}; // struct InstanceRep
 
 				aiScene* scene;
 
 				std::map<ID, Reference3D> references;
+
+				std::map<ID, ReferenceRep> representations;
 
 				std::set<std::string> files_to_parse;
 
