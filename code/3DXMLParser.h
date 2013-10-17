@@ -225,13 +225,15 @@ namespace Assimp {
 
 				struct Reference3D {
 
+					std::string name;
+
 					std::map<ID, Instance3D> instances;
 
 					std::map<ID, InstanceRep> meshes;
 
 					unsigned int nb_references;
 
-					Reference3D() : nb_references(0) {}
+					Reference3D() : name(""), nb_references(0) {}
 
 				}; // struct Reference3D
 
@@ -257,9 +259,11 @@ namespace Assimp {
 
 				struct InstanceRep {
 
+					std::string name;
+
 					ReferenceRep* instance_of;
 
-					InstanceRep() : instance_of(NULL) {}
+					InstanceRep() : name(""), instance_of(NULL) {}
 
 				}; // struct InstanceRep
 

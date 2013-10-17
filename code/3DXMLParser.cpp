@@ -195,10 +195,10 @@ namespace Assimp {
 				for(; it_instance != end_instance; ++ it_instance) {
 					Content::Instance3D& instance = it_instance->second;
 
-					if(instance.instance_of != NULL) {
+					if(instance.node != NULL && instance.instance_of != NULL) {
 						//TODO
 					} else {
-						//TODO
+						ThrowException("One sub node of \"" + ref.name + "\" is unresolved.");
 					}
 				}
 			}
@@ -395,8 +395,27 @@ namespace Assimp {
 	void _3DXMLParser::ReadReference3D() {
 		// no need to worry about id -> id is mandatory and if not present an exception has already been raised
 		unsigned int id = *(mReader->GetAttribute<unsigned int>("id", true));
+		std::string name;
 
-		mContent.references[Content::ID(mReader->GetFilename(), id)]; // Create the Reference3D if not present.
+		// Parse the sub elements of this node
+		XMLReader::Optional<std::string> name_opt = mReader->GetAttribute<std::string>("name");
+		while(mReader->Next()) {
+			// handle the name of the element
+			if(mReader->IsElement("PLMExternal_ID")) {
+				name_opt = mReader->GetContent<std::string>(true);
+				break;
+			}
+		}
+
+		// Test if the name exist, otherwise use the id as name
+		if(name_opt) {
+			name = *name_opt;
+		} else {
+			// No name: take the id as the name
+			mReader->ToString(id, name);
+		}
+
+		mContent.references[Content::ID(mReader->GetFilename(), id)].name = name; // Create the Reference3D if not present and set its name.
 		// Nothing else to do because of the weird indirection scheme of 3DXML
 		// The Reference3D will be completed by the Instance3D and InstanceRep
 	}
@@ -496,19 +515,31 @@ namespace Assimp {
 		unsigned int aggregated_by;
 		Content::URI instance_of;
 		std::string uri;
+		std::string name;
 
 		const std::string& current_file = mReader->GetFilename();
 
 		// Parse the sub elements of this node
+		XMLReader::Optional<std::string> name_opt = mReader->GetAttribute<std::string>("name");
 		while(mReader->Next()) {
 			// handle the name of the element
-			if(mReader->IsElement("IsAggregatedBy")) {
+			if(mReader->IsElement("PLMExternal_ID")) {
+				name_opt = mReader->GetContent<std::string>(true);
+			} else if(mReader->IsElement("IsAggregatedBy")) {
 				aggregated_by = *(mReader->GetContent<unsigned int>(true));
 			} else if(mReader->IsElement("IsInstanceOf")) {
 				uri = *(mReader->GetContent<std::string>(true));
 
 				ParseURI(uri, instance_of);
 			}
+		}
+
+		// Test if the name exist, otherwise use the id as name
+		if(name_opt) {
+			name = *name_opt;
+		} else {
+			// No name: take the id as the name
+			mReader->ToString(id, name);
 		}
 
 		// If the reference is on another file and does not already exist, add it to the list of files to parse
@@ -524,6 +555,7 @@ namespace Assimp {
 		Content::InstanceRep& mesh = parent.meshes[Content::ID(current_file, id)];
 
 		// Create the refered ReferenceRep if necessary
+		mesh.name = name;
 		mesh.instance_of = &(mContent.representations[Content::ID(instance_of.filename, instance_of.id)]);
 	}
 
