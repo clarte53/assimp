@@ -317,6 +317,10 @@ namespace Assimp {
 
 			static void ParseID(const std::string& data, unsigned int& id);
 
+			void AddMeshes(const Content::Reference3D& ref, aiNode* node) const;
+
+			void AddChildren(const Content::Reference3D& ref, aiNode* node) const;
+
 			void ReadManifest(std::string& main_file);
 
 			void ReadModel_3dxml();

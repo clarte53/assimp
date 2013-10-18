@@ -51,6 +51,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "ParsingUtils.h"
 #include "Q3BSPZipArchive.h"
+#include "SceneCombiner.h"
 
 #include <algorithm>
 #include <cctype>
@@ -163,7 +164,7 @@ namespace Assimp {
 					mReader = NULL;
 				}
 			}
-
+			
 			// Add the meshes into the scene
 			std::map<Content::ID, Content::ReferenceRep>::iterator it_rep = mContent.representations.begin();
 			std::map<Content::ID, Content::ReferenceRep>::iterator end_rep = mContent.representations.end();
@@ -172,45 +173,69 @@ namespace Assimp {
 				mContent.scene->Meshes.Add(it_rep->second.mesh);
 			}
 
-			// Resolve the references
+			// Create the root node
+			if(mContent.has_root_index) {
+				std::map<Content::ID, Content::Reference3D>::iterator it_root = mContent.references.find(Content::ID(main_file, mContent.root_index));
+
+				if(it_root != mContent.references.end()) {
+					Content::Reference3D& root = it_root->second;
+
+					if(root.nb_references == 0) {
+						aiNode* root_node = new aiNode(root.name);
+
+						AddMeshes(root, root_node);
+						AddChildren(root, root_node);
+
+						mContent.scene->mRootNode = root_node;
+					} else {
+						ThrowException("The root Reference3D should not be instantiated.");
+					}
+				} else {
+					std::string id;
+					mReader->ToString(mContent.root_index, id);
+
+					ThrowException("Unresolved root Reference3D with id \"" + id + "\".");
+				}
+			} else {
+				// TODO: no root node specifically named -> we must analyze the node structure to find the root or create an artificial root node
+				ThrowException("No root Reference3D specified.");
+			}
+
+			// Resolve the references of each Reference3D
 			std::map<Content::ID, Content::Reference3D>::iterator it_ref = mContent.references.begin();
 			std::map<Content::ID, Content::Reference3D>::iterator end_ref = mContent.references.end();
 			for(; it_ref != end_ref; ++it_ref) {
 				Content::Reference3D& ref = it_ref->second;
-				/*
-				std::map<Content::ID, Content::InstanceRep>::iterator it_mesh = ref.meshes.begin();
-				std::map<Content::ID, Content::InstanceRep>::iterator end_mesh = ref.meshes.end();
-				for(; it_mesh != end_mesh; ++ it_mesh) {
-					Content::InstanceRep& rep = it_mesh->second;
 
-					if(rep.instance_of != NULL) {
-						//TODO
-					} else {
-						//TODO
-					}
-				}
-				*/
+				// For each instance agreggated by the Reference3D, we resolve the references
 				std::map<Content::ID, Content::Instance3D>::iterator it_instance = ref.instances.begin();
 				std::map<Content::ID, Content::Instance3D>::iterator end_instance = ref.instances.end();
 				for(; it_instance != end_instance; ++ it_instance) {
 					Content::Instance3D& instance = it_instance->second;
 
+					// Is the instance resolved?
 					if(instance.node != NULL && instance.instance_of != NULL) {
-						//TODO
+						// Get the instantiated Reference3D
+						Content::Reference3D& instantiated = *instance.instance_of;
+
+						// Decrement the counter of instances to this Reference3D (used for memory managment)
+						if(instantiated.nb_references > 0) {
+							instantiated.nb_references--;
+						}
+
+						// Copy the indexes of the meshes contained into this instance into the proper aiNode
+						if(instance.node->Meshes.Size() == 0) {
+							AddMeshes(instantiated, instance.node);
+						}
+
+						// Copy the children nodes of this instance into the proper node
+						if(instance.node->Children.Size() == 0) {
+							AddChildren(instantiated, instance.node);
+						}
 					} else {
-						ThrowException("One sub node of \"" + ref.name + "\" is unresolved.");
+						ThrowException("One Instance3D of Reference3D \"" + ref.name + "\" is unresolved.");
 					}
 				}
-			}
-
-			if(mContent.has_root_index) {
-				std::map<Content::ID, Content::Reference3D>::const_iterator it = mContent.references.find(Content::ID(main_file, mContent.root_index));
-
-				if(it != mContent.references.end()) {
-					//TODO
-				}
-			} else {
-				// TODO: no root node specifically named -> we must analyze the node structure to find the root or create an artificial root node
 			}
 		}
 	}
@@ -330,6 +355,50 @@ namespace Assimp {
 		std::istringstream stream(data);
 
 		stream >> id;
+	}
+	
+	// ------------------------------------------------------------------------------------------------
+	// Add the meshes indices into the given node
+	void _3DXMLParser::AddMeshes(const Content::Reference3D& ref, aiNode* node) const {
+		std::map<Content::ID, Content::InstanceRep>::const_iterator it_mesh = ref.meshes.begin();
+		std::map<Content::ID, Content::InstanceRep>::const_iterator end_mesh = ref.meshes.end();
+		for(; it_mesh != end_mesh; ++ it_mesh) {
+			const Content::InstanceRep& rep = it_mesh->second;
+
+			if(rep.instance_of != NULL) {
+				node->Meshes.Add(rep.instance_of->index);
+			} else {
+				ThrowException("One InstanceRep of Reference3D \"" + ref.name + "\" is unresolved.");
+			}
+		}
+	}
+	
+	// ------------------------------------------------------------------------------------------------
+	// Add the children nodes into the given node
+	void _3DXMLParser::AddChildren(const Content::Reference3D& ref, aiNode* node) const {
+		std::map<Content::ID, Content::Instance3D>::const_iterator it_child = ref.instances.begin();
+		std::map<Content::ID, Content::Instance3D>::const_iterator end_child = ref.instances.end();
+		for(; it_child != end_child; ++ it_child) {
+			const Content::Instance3D& child = it_child->second;
+
+			if(child.node != NULL) {
+				// If the counter of references is null, this mean this instance is the last instance of this Reference3D
+				if(ref.nb_references == 0) {
+					// Therefore we can copy the child node directly into the children array
+					node->Children.Add(child.node);
+				} else {
+					// Otherwise we need to make a deep copy of the child node in order to avoid duplicate nodes in the scene hierarchy
+					// (which would cause assimp to deallocate them multiple times, therefore making the application crash)
+					aiNode* copy_node = NULL;
+
+					SceneCombiner::Copy(&copy_node, child.node);
+
+					node->Children.Add(copy_node);
+				}
+			} else {
+				ThrowException("One Instance3D of Reference3D \"" + ref.name + "\" is unresolved.");
+			}
+		}
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -503,6 +572,32 @@ namespace Assimp {
 	void _3DXMLParser::ReadReferenceRep() {
 		// no need to worry about id -> id is mandatory and if not present an exception has already been raised
 		unsigned int id = *(mReader->GetAttribute<unsigned int>("id", true));
+		std::string name;
+
+		// Parse the sub elements of this node
+		XMLReader::Optional<std::string> name_opt = mReader->GetAttribute<std::string>("name");
+		while(mReader->Next()) {
+			// handle the name of the element
+			if(mReader->IsElement("PLMExternal_ID")) {
+				name_opt = mReader->GetContent<std::string>(true);
+				break;
+			}
+		}
+
+		// Test if the name exist, otherwise use the id as name
+		if(name_opt) {
+			name = *name_opt;
+		} else {
+			// No name: take the id as the name
+			mReader->ToString(id, name);
+		}
+		
+		Content::ReferenceRep& rep = mContent.representations[Content::ID(mReader->GetFilename(), id)];
+
+		rep.index = 0;
+
+		rep.mesh = new aiMesh();
+		rep.mesh->mName = name;
 
 		//TODO
 	}
