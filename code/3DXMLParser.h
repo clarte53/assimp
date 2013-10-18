@@ -156,11 +156,23 @@ namespace Assimp {
 					/** Go to the next element */
 					bool Next() const;
 
+					/** Test if this element has sub elements */
+					bool HasElements() const;
+
 					/** Test if the current xml element is an element */
 					bool IsElement() const;
 
+					/** Test if the current xml element is an ending element */
+					bool IsEndElement() const;
+
 					/** Compares the current xml element name to the given string and returns true if equal */
 					bool IsElement(const std::string& name) const;
+
+					/** Compares the current xml element name to the given string and returns true if equal */
+					bool IsEndElement(const std::string& name) const;
+
+					/** Return false if the element is not an ending element, true if it is and the name match and throw an exception otherwise */
+					bool TestEndElement(const std::string& name) const;
 				
 					/** Return the name of a node */
 					std::string GetNodeName() const;
@@ -184,8 +196,14 @@ namespace Assimp {
 					template<typename T>
 					void ToString(const T& value, std::string& string) const;
 
+					template<>
+					void ToString(const std::string& value, std::string& string) const;
+
 					template<typename T>
 					void FromString(const std::string& string, T& value) const;
+
+					template<>
+					void FromString(const std::string& string, std::string& value) const;
 
 			}; // end of class XMLReader
 		
@@ -279,7 +297,7 @@ namespace Assimp {
 
 				bool has_root_index;
 
-				Content() : scene(new aiScene()), references(), root_index(0), has_root_index(false) {}
+				Content(aiScene* _scene) : scene(_scene), references(), root_index(0), has_root_index(false) {}
 
 			}; // struct Content
 
@@ -298,7 +316,7 @@ namespace Assimp {
 		public:
 
 			/** Constructor from XML file */
-			_3DXMLParser(const std::string& file);
+			_3DXMLParser(const std::string& file, aiScene* scene);
 
 			virtual ~_3DXMLParser();
 
@@ -309,6 +327,8 @@ namespace Assimp {
 
 			void Initialize();
 
+			void ParseFile();
+
 			void ParseElement(const SpecializedMapType& parent, const std::string& name);
 
 			void ParseURI(const std::string& uri, Content::URI& result) const;
@@ -317,9 +337,7 @@ namespace Assimp {
 
 			static void ParseID(const std::string& data, unsigned int& id);
 
-			void AddMeshes(const Content::Reference3D& ref, aiNode* node) const;
-
-			void AddChildren(const Content::Reference3D& ref, aiNode* node) const;
+			void BuildStructure(Content::Reference3D& ref, aiNode* node) const;
 
 			void ReadManifest(std::string& main_file);
 
@@ -356,15 +374,49 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
+	// Test if the element has sub elements
+	inline bool _3DXMLParser::XMLReader::HasElements() const {
+		return ! mReader->isEmptyElement();
+	}
+
+	// ------------------------------------------------------------------------------------------------
 	// Test if the current element is an element
 	inline bool _3DXMLParser::XMLReader::IsElement() const {
 		return mReader->getNodeType() == irr::io::EXN_ELEMENT;
 	}
 
 	// ------------------------------------------------------------------------------------------------
+	// Test if the current element is an ending element
+	inline bool _3DXMLParser::XMLReader::IsEndElement() const {
+		return mReader->getNodeType() == irr::io::EXN_ELEMENT_END;
+	}
+
+	// ------------------------------------------------------------------------------------------------
 	// Check for element match
 	inline bool _3DXMLParser::XMLReader::IsElement(const std::string& name) const {
 		return IsElement() && name.compare(mReader->getNodeName()) == 0;
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	// Check for element match
+	inline bool _3DXMLParser::XMLReader::IsEndElement(const std::string& name) const {
+		return IsEndElement() && name.compare(mReader->getNodeName()) == 0;
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	// Return false if the element is not an ending element, true if it is and the name match and throw an exception otherwise
+	inline bool _3DXMLParser::XMLReader::TestEndElement(const std::string& name) const {
+		bool result = false;
+		
+		if(IsEndElement()) {
+			if(IsEndElement("Manifest")) {
+				result = true;
+			} else {
+				ThrowException("Expected end of <" + name + "> element.");
+			}
+		}
+
+		return result;
 	}
 	
 	// ------------------------------------------------------------------------------------------------
@@ -452,16 +504,26 @@ namespace Assimp {
 		string = stream.str();
 	}
 
+	template<>
+	void _3DXMLParser::XMLReader::ToString(const std::string& value, std::string& string) const {
+		string = value;
+	}
+
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
 	void _3DXMLParser::XMLReader::FromString(const std::string& string, T& value) const {
-		std::istringstream stream;
+		std::istringstream stream(string);
 
 		stream >> value;
 
 		if(stream.fail()) {
 			ThrowException("The value \"" + string + "\" can not be converted into \"" + std::string(typeid(T).name()) + "\".");
 		}
+	}
+
+	template<>
+	void _3DXMLParser::XMLReader::FromString(const std::string& string, std::string& value) const {
+		value = string;
 	}
 
 } // end of namespace Assimp

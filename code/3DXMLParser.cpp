@@ -111,7 +111,7 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Constructor to be privately used by Importer
-	_3DXMLParser::_3DXMLParser(const std::string& file) : mReader(NULL), mFunctionMap() {
+	_3DXMLParser::_3DXMLParser(const std::string& file, aiScene* scene) : mReader(NULL), mContent(scene), mFunctionMap() {
 		// Initialize the mapping with the parsing functions
 		Initialize();
 
@@ -132,118 +132,77 @@ namespace Assimp {
 		delete mReader;
 		mReader = NULL;
 
-		FunctionMapType::const_iterator parent_it = mFunctionMap.find("");
+		// Create a xml parser for the root file
+		mReader = new XMLReader(&archive, main_file);
 
-		if(parent_it != mFunctionMap.end()) {
-			// Create a xml parser for the root file
-			mReader = new XMLReader(&archive, main_file);
+		// Parse the main 3DXML file
+		ParseFile();
 
-			// Parse the main 3DXML file
-			ParseElement(parent_it->second, "Model_3dxml");
+		// Cleanning up
+		delete mReader;
+		mReader = NULL;
 
-			// Cleanning up
-			delete mReader;
-			mReader = NULL;
+		// Parse other referenced 3DXML files until all references are resolved
+		while(mContent.files_to_parse.size() != 0) {
+			std::set<std::string>::iterator it = mContent.files_to_parse.begin();
 
-			// Parse other referenced 3DXML files until all references are resolved
-			while(mContent.files_to_parse.size() != 0) {
-				std::set<std::string>::iterator it = mContent.files_to_parse.begin();
+			if(it != mContent.files_to_parse.end()) {
+				// Create a xml parser for the file
+				XMLReader file(&archive, *it);
 
-				if(it != mContent.files_to_parse.end()) {
-					// Create a xml parser for the file
-					XMLReader file(&archive, *it);
+				// Parse the 3DXML file
+				ParseFile();
 
-					// Parse the 3DXML file
-					ParseElement(parent_it->second, "Model_3dxml");
+				// Remove the file from the list of files to parse
+				it = mContent.files_to_parse.erase(it);
 
-					// Remove the file from the list of files to parse
-					it = mContent.files_to_parse.erase(it);
-
-					// Cleanning up
-					delete mReader;
-					mReader = NULL;
-				}
+				// Cleanning up
+				delete mReader;
+				mReader = NULL;
 			}
+		}
 			
-			// Add the meshes into the scene
-			std::map<Content::ID, Content::ReferenceRep>::iterator it_rep = mContent.representations.begin();
-			std::map<Content::ID, Content::ReferenceRep>::iterator end_rep = mContent.representations.end();
-			for(; it_rep != end_rep; ++it_rep) {
-				it_rep->second.index = mContent.scene->Meshes.Size();
-				mContent.scene->Meshes.Add(it_rep->second.mesh);
-			}
+		// Add the meshes into the scene
+		std::map<Content::ID, Content::ReferenceRep>::iterator it_rep = mContent.representations.begin();
+		std::map<Content::ID, Content::ReferenceRep>::iterator end_rep = mContent.representations.end();
+		for(; it_rep != end_rep; ++it_rep) {
+			it_rep->second.index = mContent.scene->Meshes.Size();
+			mContent.scene->Meshes.Add(it_rep->second.mesh);
+		}
 
-			// Create the root node
-			if(mContent.has_root_index) {
-				std::map<Content::ID, Content::Reference3D>::iterator it_root = mContent.references.find(Content::ID(main_file, mContent.root_index));
+		// Create the root node
+		if(mContent.has_root_index) {
+			std::map<Content::ID, Content::Reference3D>::iterator it_root = mContent.references.find(Content::ID(main_file, mContent.root_index));
 
-				if(it_root != mContent.references.end()) {
-					Content::Reference3D& root = it_root->second;
+			if(it_root != mContent.references.end()) {
+				Content::Reference3D& root = it_root->second;
 
-					if(root.nb_references == 0) {
-						aiNode* root_node = new aiNode(root.name);
+				if(root.nb_references == 0) {
+					aiNode* root_node = new aiNode(root.name);
 
-						AddMeshes(root, root_node);
-						AddChildren(root, root_node);
+					// Build the hierarchy recursively
+					BuildStructure(root, root_node);
 
-						mContent.scene->mRootNode = root_node;
-					} else {
-						ThrowException("The root Reference3D should not be instantiated.");
-					}
+					mContent.scene->mRootNode = root_node;
 				} else {
-					std::string id;
-					mReader->ToString(mContent.root_index, id);
-
-					ThrowException("Unresolved root Reference3D with id \"" + id + "\".");
+					ThrowException("The root Reference3D should not be instantiated.");
 				}
 			} else {
-				// TODO: no root node specifically named -> we must analyze the node structure to find the root or create an artificial root node
-				ThrowException("No root Reference3D specified.");
+				std::string id;
+				mReader->ToString(mContent.root_index, id);
+
+				ThrowException("Unresolved root Reference3D with id \"" + id + "\".");
 			}
-
-			// Resolve the references of each Reference3D
-			std::map<Content::ID, Content::Reference3D>::iterator it_ref = mContent.references.begin();
-			std::map<Content::ID, Content::Reference3D>::iterator end_ref = mContent.references.end();
-			for(; it_ref != end_ref; ++it_ref) {
-				Content::Reference3D& ref = it_ref->second;
-
-				// For each instance agreggated by the Reference3D, we resolve the references
-				std::map<Content::ID, Content::Instance3D>::iterator it_instance = ref.instances.begin();
-				std::map<Content::ID, Content::Instance3D>::iterator end_instance = ref.instances.end();
-				for(; it_instance != end_instance; ++ it_instance) {
-					Content::Instance3D& instance = it_instance->second;
-
-					// Is the instance resolved?
-					if(instance.node != NULL && instance.instance_of != NULL) {
-						// Get the instantiated Reference3D
-						Content::Reference3D& instantiated = *instance.instance_of;
-
-						// Decrement the counter of instances to this Reference3D (used for memory managment)
-						if(instantiated.nb_references > 0) {
-							instantiated.nb_references--;
-						}
-
-						// Copy the indexes of the meshes contained into this instance into the proper aiNode
-						if(instance.node->Meshes.Size() == 0) {
-							AddMeshes(instantiated, instance.node);
-						}
-
-						// Copy the children nodes of this instance into the proper node
-						if(instance.node->Children.Size() == 0) {
-							AddChildren(instantiated, instance.node);
-						}
-					} else {
-						ThrowException("One Instance3D of Reference3D \"" + ref.name + "\" is unresolved.");
-					}
-				}
-			}
+		} else {
+			// TODO: no root node specifically named -> we must analyze the node structure to find the root or create an artificial root node
+			ThrowException("No root Reference3D specified.");
 		}
 	}
 
 	_3DXMLParser::~_3DXMLParser() {
 
 	}
-	
+
 	// ------------------------------------------------------------------------------------------------
 	// Aborts the file reading with an exception
 	void _3DXMLParser::ThrowException(const std::string& error) const {
@@ -279,6 +238,23 @@ namespace Assimp {
 			#undef INSERT
 		}
 	}
+
+	// ------------------------------------------------------------------------------------------------
+	// Parse a 3DXML file
+	void _3DXMLParser::ParseFile() {
+		FunctionMapType::const_iterator parent_it = mFunctionMap.find("");
+
+		if(parent_it != mFunctionMap.end()) {
+			// Parse the main 3DXML file
+			while(mReader->Next()) {
+				ParseElement(parent_it->second, "Model_3dxml");
+
+				if(mReader->IsEndElement("Model_3dxml")) {
+					break;
+				}
+			}
+		}
+	}
 	
 	// ------------------------------------------------------------------------------------------------
 	// Parse one element and its sub elements
@@ -289,11 +265,11 @@ namespace Assimp {
 			if(func_it != parent.end()) {
 				(func_it->second)();
 
-				while(mReader->Next()) {
-					if(mReader->IsElement()) {
-						FunctionMapType::const_iterator parent_it = mFunctionMap.find(name);
+				FunctionMapType::const_iterator parent_it = mFunctionMap.find(name);
 
-						if(parent_it != mFunctionMap.end()) {
+				if(parent_it != mFunctionMap.end()) {
+					while(! mReader->IsEndElement(name) && mReader->Next()) {
+						if(mReader->IsElement()) {
 							ParseElement(parent_it->second, mReader->GetNodeName());
 						}
 					}
@@ -358,46 +334,62 @@ namespace Assimp {
 	}
 	
 	// ------------------------------------------------------------------------------------------------
-	// Add the meshes indices into the given node
-	void _3DXMLParser::AddMeshes(const Content::Reference3D& ref, aiNode* node) const {
-		std::map<Content::ID, Content::InstanceRep>::const_iterator it_mesh = ref.meshes.begin();
-		std::map<Content::ID, Content::InstanceRep>::const_iterator end_mesh = ref.meshes.end();
-		for(; it_mesh != end_mesh; ++ it_mesh) {
-			const Content::InstanceRep& rep = it_mesh->second;
+	// Add the meshes indices and children nodes into the given node recursively
+	void _3DXMLParser::BuildStructure(Content::Reference3D& ref, aiNode* node) const {
+		if(node != NULL) {
+			// Copy the indexes of the meshes contained into this instance into the proper aiNode
+			if(node->Meshes.Size() == 0) {
+				std::map<Content::ID, Content::InstanceRep>::const_iterator it_mesh = ref.meshes.begin();
+				std::map<Content::ID, Content::InstanceRep>::const_iterator end_mesh = ref.meshes.end();
+				for(; it_mesh != end_mesh; ++ it_mesh) {
+					const Content::InstanceRep& rep = it_mesh->second;
 
-			if(rep.instance_of != NULL) {
-				node->Meshes.Add(rep.instance_of->index);
-			} else {
-				ThrowException("One InstanceRep of Reference3D \"" + ref.name + "\" is unresolved.");
-			}
-		}
-	}
-	
-	// ------------------------------------------------------------------------------------------------
-	// Add the children nodes into the given node
-	void _3DXMLParser::AddChildren(const Content::Reference3D& ref, aiNode* node) const {
-		std::map<Content::ID, Content::Instance3D>::const_iterator it_child = ref.instances.begin();
-		std::map<Content::ID, Content::Instance3D>::const_iterator end_child = ref.instances.end();
-		for(; it_child != end_child; ++ it_child) {
-			const Content::Instance3D& child = it_child->second;
-
-			if(child.node != NULL) {
-				// If the counter of references is null, this mean this instance is the last instance of this Reference3D
-				if(ref.nb_references == 0) {
-					// Therefore we can copy the child node directly into the children array
-					node->Children.Add(child.node);
-				} else {
-					// Otherwise we need to make a deep copy of the child node in order to avoid duplicate nodes in the scene hierarchy
-					// (which would cause assimp to deallocate them multiple times, therefore making the application crash)
-					aiNode* copy_node = NULL;
-
-					SceneCombiner::Copy(&copy_node, child.node);
-
-					node->Children.Add(copy_node);
+					if(rep.instance_of != NULL) {
+						node->Meshes.Add(rep.instance_of->index);
+					} else {
+						ThrowException("One InstanceRep of Reference3D \"" + ref.name + "\" is unresolved.");
+					}
 				}
-			} else {
-				ThrowException("One Instance3D of Reference3D \"" + ref.name + "\" is unresolved.");
 			}
+
+			// Copy the children nodes of this instance into the proper node
+			if(node->Children.Size() == 0) {
+				std::map<Content::ID, Content::Instance3D>::const_iterator it_child = ref.instances.begin();
+				std::map<Content::ID, Content::Instance3D>::const_iterator end_child = ref.instances.end();
+				for(; it_child != end_child; ++ it_child) {
+					const Content::Instance3D& child = it_child->second;
+
+					if(child.node != NULL && child.instance_of != NULL) {
+						// Construct the hierarchy recursively
+						BuildStructure(*child.instance_of, child.node);
+
+						// Decrement the counter of instances to this Reference3D (used for memory managment)
+						if(ref.nb_references > 0) {
+							ref.nb_references--;
+						}
+
+						// If the counter of references is null, this mean this instance is the last instance of this Reference3D
+						if(ref.nb_references == 0) {
+							// Therefore we can copy the child node directly into the children array
+							node->Children.Add(child.node);
+							child.node->mParent = node;
+						} else {
+							// Otherwise we need to make a deep copy of the child node in order to avoid duplicate nodes in the scene hierarchy
+							// (which would cause assimp to deallocate them multiple times, therefore making the application crash)
+							aiNode* copy_node = NULL;
+
+							SceneCombiner::Copy(&copy_node, child.node);
+
+							node->Children.Add(copy_node);
+							copy_node->mParent = node;
+						}
+					} else {
+						ThrowException("One Instance3D of Reference3D \"" + ref.name + "\" is unresolved.");
+					}
+				}
+			}
+		} else {
+			ThrowException("Invalid Instance3D of Reference3D \"" + ref.name + "\" with null aiNode.");
 		}
 	}
 
@@ -414,6 +406,8 @@ namespace Assimp {
 					if(mReader->IsElement("Root")) {
 						main_file = *(mReader->GetContent<std::string>(true));
 						found = true;
+					} else if(mReader->TestEndElement("Manifest")) {
+						break;
 					}
 				}
 			}
@@ -468,11 +462,14 @@ namespace Assimp {
 
 		// Parse the sub elements of this node
 		XMLReader::Optional<std::string> name_opt = mReader->GetAttribute<std::string>("name");
-		while(mReader->Next()) {
-			// handle the name of the element
-			if(mReader->IsElement("PLMExternal_ID")) {
-				name_opt = mReader->GetContent<std::string>(true);
-				break;
+		if(mReader->HasElements()) {
+			while(mReader->Next()) {
+				// handle the name of the element
+				if(mReader->IsElement("PLM_ExternalID")) {
+					name_opt = mReader->GetContent<std::string>(true);
+				} else if(mReader->IsEndElement("Reference3D")) {
+					break;
+				}
 			}
 		}
 
@@ -499,24 +496,31 @@ namespace Assimp {
 		std::string relative_matrix;
 		std::string uri;
 		std::string name;
+		bool no_elements = false;
 
 		const std::string& current_file = mReader->GetFilename();
 
 		// Parse the sub elements of this node
 		XMLReader::Optional<std::string> name_opt = mReader->GetAttribute<std::string>("name");
-		while(mReader->Next()) {
-			// handle the name of the element
-			if(mReader->IsElement("PLMExternal_ID")) {
-				name_opt = mReader->GetContent<std::string>(true);
-			} else if(mReader->IsElement("IsAggregatedBy")) {
-				aggregated_by = *(mReader->GetContent<unsigned int>(true));
-			} else if(mReader->IsElement("IsInstanceOf")) {
-				uri = *(mReader->GetContent<std::string>(true));
+		if(mReader->HasElements()) {
+			while(mReader->Next()) {
+				// handle the name of the element
+				if(mReader->IsElement("PLM_ExternalID")) {
+					name_opt = mReader->GetContent<std::string>(true);
+				} else if(mReader->IsElement("IsAggregatedBy")) {
+					aggregated_by = *(mReader->GetContent<unsigned int>(true));
+				} else if(mReader->IsElement("IsInstanceOf")) {
+					uri = *(mReader->GetContent<std::string>(true));
 
-				ParseURI(uri, instance_of);
-			} else if(mReader->IsElement("RelativeMatrix")) {
-				relative_matrix = *(mReader->GetContent<std::string>(true));
+					ParseURI(uri, instance_of);
+				} else if(mReader->IsElement("RelativeMatrix")) {
+					relative_matrix = *(mReader->GetContent<std::string>(true));
+				} else if(mReader->IsEndElement("Instance3D")) {
+					break;
+				}
 			}
+		} else {
+			no_elements = true;
 		}
 
 		// Test if the name exist, otherwise use the id as name
@@ -525,6 +529,10 @@ namespace Assimp {
 		} else {
 			// No name: take the id as the name
 			mReader->ToString(id, name);
+		}
+
+		if(no_elements) {
+			ThrowException("The Instance3D \"" + name + "\" has no sub elements. It must at least define \"IsAggregatedBy\" and \"IsInstanceOf\" elements.");
 		}
 
 		// Create the associated node
@@ -576,11 +584,14 @@ namespace Assimp {
 
 		// Parse the sub elements of this node
 		XMLReader::Optional<std::string> name_opt = mReader->GetAttribute<std::string>("name");
-		while(mReader->Next()) {
-			// handle the name of the element
-			if(mReader->IsElement("PLMExternal_ID")) {
-				name_opt = mReader->GetContent<std::string>(true);
-				break;
+		if(mReader->HasElements()) {
+			while(mReader->Next()) {
+				// handle the name of the element
+				if(mReader->IsElement("PLM_ExternalID")) {
+					name_opt = mReader->GetContent<std::string>(true);
+				} else if(mReader->IsEndElement("ReferenceRep")) {
+					break;
+				}
 			}
 		}
 
@@ -611,22 +622,29 @@ namespace Assimp {
 		Content::URI instance_of;
 		std::string uri;
 		std::string name;
+		bool no_elements = false;
 
 		const std::string& current_file = mReader->GetFilename();
 
 		// Parse the sub elements of this node
 		XMLReader::Optional<std::string> name_opt = mReader->GetAttribute<std::string>("name");
-		while(mReader->Next()) {
-			// handle the name of the element
-			if(mReader->IsElement("PLMExternal_ID")) {
-				name_opt = mReader->GetContent<std::string>(true);
-			} else if(mReader->IsElement("IsAggregatedBy")) {
-				aggregated_by = *(mReader->GetContent<unsigned int>(true));
-			} else if(mReader->IsElement("IsInstanceOf")) {
-				uri = *(mReader->GetContent<std::string>(true));
+		if(mReader->HasElements()) {
+			while(mReader->Next()) {
+				// handle the name of the element
+				if(mReader->IsElement("PLM_ExternalID")) {
+					name_opt = mReader->GetContent<std::string>(true);
+				} else if(mReader->IsElement("IsAggregatedBy")) {
+					aggregated_by = *(mReader->GetContent<unsigned int>(true));
+				} else if(mReader->IsElement("IsInstanceOf")) {
+					uri = *(mReader->GetContent<std::string>(true));
 
-				ParseURI(uri, instance_of);
+					ParseURI(uri, instance_of);
+				} else if(mReader->IsEndElement("InstanceRep")) {
+					break;
+				}
 			}
+		} else {
+			no_elements = true;
 		}
 
 		// Test if the name exist, otherwise use the id as name
@@ -635,6 +653,10 @@ namespace Assimp {
 		} else {
 			// No name: take the id as the name
 			mReader->ToString(id, name);
+		}
+
+		if(no_elements) {
+			ThrowException("The InstanceRep \"" + name + "\" has no sub elements. It must at least define \"IsAggregatedBy\" and \"IsInstanceOf\" elements.");
 		}
 
 		// If the reference is on another file and does not already exist, add it to the list of files to parse
