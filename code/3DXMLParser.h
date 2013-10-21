@@ -60,7 +60,7 @@ namespace Assimp {
 
 	class _3DXMLParser {
 
-		protected:
+		public:
 
 			class XMLReader {
 
@@ -233,7 +233,10 @@ namespace Assimp {
 
 					ID(std::string _filename, unsigned int _id) : filename(_filename), id(_id) {}
 
-					inline bool operator<(const ID& other) const {return filename.compare(other.filename) < 0 || id < other.id;}
+					inline bool operator<(const ID& other) const {
+						int comp = filename.compare(other.filename);
+						return comp < 0 || (comp == 0 && id < other.id);
+					}
 
 				}; // struct ID
 				
@@ -257,11 +260,13 @@ namespace Assimp {
 
 				struct ReferenceRep {
 
-					aiMesh* mesh;
+					std::list<aiMesh*> meshes;
 
-					unsigned int index;
+					unsigned int index_begin;
 
-					ReferenceRep() : mesh(NULL), index(0) {}
+					unsigned int index_end;
+
+					ReferenceRep() : meshes(), index_begin(0), index_end(0) {}
 
 				}; // struct ReferenceRep
 
@@ -300,6 +305,9 @@ namespace Assimp {
 				Content(aiScene* _scene) : scene(_scene), references(), root_index(0), has_root_index(false) {}
 
 			}; // struct Content
+
+			/** The archive containing the 3DXML files */ 
+			Q3BSP::Q3BSPZipArchive* mArchive;
 
 			/** Current xml reader */
 			XMLReader* mReader;
@@ -359,6 +367,8 @@ namespace Assimp {
 
 			void ReadInstanceRep();
 
+			void Read3DRep(const std::string& filename, std::list<aiMesh*>& meshes);
+
 	}; // end of class _3DXMLParser
 
 	// ------------------------------------------------------------------------------------------------
@@ -409,7 +419,7 @@ namespace Assimp {
 		bool result = false;
 		
 		if(IsEndElement()) {
-			if(IsEndElement("Manifest")) {
+			if(IsEndElement(name)) {
 				result = true;
 			} else {
 				ThrowException("Expected end of <" + name + "> element.");

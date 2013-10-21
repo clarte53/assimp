@@ -49,6 +49,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "3DXMLParser.h"
 
+#include "3DXMLRepresentation.h"
 #include "ParsingUtils.h"
 #include "Q3BSPZipArchive.h"
 #include "SceneCombiner.h"
@@ -111,18 +112,20 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Constructor to be privately used by Importer
-	_3DXMLParser::_3DXMLParser(const std::string& file, aiScene* scene) : mReader(NULL), mContent(scene), mFunctionMap() {
+	_3DXMLParser::_3DXMLParser(const std::string& file, aiScene* scene) : mArchive(NULL), mReader(NULL), mContent(scene), mFunctionMap() {
 		// Initialize the mapping with the parsing functions
 		Initialize();
 
+		mContent.scene->mFlags |= AI_SCENE_FLAGS_NON_VERBOSE_FORMAT;
+
 		// Load the compressed archive
-		Q3BSP::Q3BSPZipArchive archive(file);
-		if (! archive.isOpen()) {
+		mArchive = new Q3BSP::Q3BSPZipArchive(file);
+		if (! mArchive->isOpen()) {
 			ThrowException("Failed to open file " + file + "." );
 		}
 
 		// Create a xml parser for the manifest
-		mReader = new XMLReader(&archive, "Manifest.xml");
+		mReader = new XMLReader(mArchive, "Manifest.xml");
 
 		// Read the name of the main XML file in the manifest
 		std::string main_file;
@@ -133,7 +136,7 @@ namespace Assimp {
 		mReader = NULL;
 
 		// Create a xml parser for the root file
-		mReader = new XMLReader(&archive, main_file);
+		mReader = new XMLReader(mArchive, main_file);
 
 		// Parse the main 3DXML file
 		ParseFile();
@@ -148,7 +151,7 @@ namespace Assimp {
 
 			if(it != mContent.files_to_parse.end()) {
 				// Create a xml parser for the file
-				XMLReader file(&archive, *it);
+				XMLReader file(mArchive, *it);
 
 				// Parse the 3DXML file
 				ParseFile();
@@ -163,11 +166,13 @@ namespace Assimp {
 		}
 			
 		// Add the meshes into the scene
-		std::map<Content::ID, Content::ReferenceRep>::iterator it_rep = mContent.representations.begin();
-		std::map<Content::ID, Content::ReferenceRep>::iterator end_rep = mContent.representations.end();
-		for(; it_rep != end_rep; ++it_rep) {
-			it_rep->second.index = mContent.scene->Meshes.Size();
-			mContent.scene->Meshes.Add(it_rep->second.mesh);
+		for(std::map<Content::ID, Content::ReferenceRep>::iterator it_rep(mContent.representations.begin()), end_rep(mContent.representations.end()); it_rep != end_rep; ++it_rep) {
+			it_rep->second.index_begin = mContent.scene->Meshes.Size();
+			it_rep->second.index_end = it_rep->second.index_begin + it_rep->second.meshes.size() - 1;
+
+			for(std::list<aiMesh*>::const_iterator it_mesh(it_rep->second.meshes.begin()), end_mesh(it_rep->second.meshes.end()); it_mesh != end_mesh; ++it_mesh) {
+				mContent.scene->Meshes.Add(*it_mesh);
+			}
 		}
 
 		// Create the root node
@@ -197,10 +202,20 @@ namespace Assimp {
 			// TODO: no root node specifically named -> we must analyze the node structure to find the root or create an artificial root node
 			ThrowException("No root Reference3D specified.");
 		}
+
+		// TODO release memory of potentially unused references / instances to avoid memory leaks
 	}
 
 	_3DXMLParser::~_3DXMLParser() {
+		if(mArchive != NULL) {
+			delete mArchive;
+			mArchive = NULL;
+		}
 
+		if(mReader != NULL) {
+			delete mReader;
+			mReader = NULL;
+		}
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -209,6 +224,8 @@ namespace Assimp {
 		throw DeadlyImportError(boost::str(boost::format("3DXML: %s - %s") % mReader->GetFilename() % error));
 	}
 	
+	// ------------------------------------------------------------------------------------------------
+	// Initialize the function parsers mapping 
 	void _3DXMLParser::Initialize() {
 		// Saving the mapping between element names and parsing functions
 		if(mFunctionMap.size() == 0) {
@@ -339,13 +356,13 @@ namespace Assimp {
 		if(node != NULL) {
 			// Copy the indexes of the meshes contained into this instance into the proper aiNode
 			if(node->Meshes.Size() == 0) {
-				std::map<Content::ID, Content::InstanceRep>::const_iterator it_mesh = ref.meshes.begin();
-				std::map<Content::ID, Content::InstanceRep>::const_iterator end_mesh = ref.meshes.end();
-				for(; it_mesh != end_mesh; ++ it_mesh) {
+				for(std::map<Content::ID, Content::InstanceRep>::const_iterator it_mesh(ref.meshes.begin()), end_mesh(ref.meshes.end()); it_mesh != end_mesh; ++ it_mesh) {
 					const Content::InstanceRep& rep = it_mesh->second;
 
 					if(rep.instance_of != NULL) {
-						node->Meshes.Add(rep.instance_of->index);
+						for(unsigned int index = rep.instance_of->index_begin; index <= rep.instance_of->index_end; index++) {
+							node->Meshes.Add(index);
+						}
 					} else {
 						ThrowException("One InstanceRep of Reference3D \"" + ref.name + "\" is unresolved.");
 					}
@@ -354,9 +371,7 @@ namespace Assimp {
 
 			// Copy the children nodes of this instance into the proper node
 			if(node->Children.Size() == 0) {
-				std::map<Content::ID, Content::Instance3D>::const_iterator it_child = ref.instances.begin();
-				std::map<Content::ID, Content::Instance3D>::const_iterator end_child = ref.instances.end();
-				for(; it_child != end_child; ++ it_child) {
+				for(std::map<Content::ID, Content::Instance3D>::const_iterator it_child(ref.instances.begin()), end_child(ref.instances.end()); it_child != end_child; ++ it_child) {
 					const Content::Instance3D& child = it_child->second;
 
 					if(child.node != NULL && child.instance_of != NULL) {
@@ -580,7 +595,10 @@ namespace Assimp {
 	void _3DXMLParser::ReadReferenceRep() {
 		// no need to worry about id -> id is mandatory and if not present an exception has already been raised
 		unsigned int id = *(mReader->GetAttribute<unsigned int>("id", true));
+		std::string format = *(mReader->GetAttribute<std::string>("format", true));
+		std::string file = *(mReader->GetAttribute<std::string>("associatedFile", true));
 		std::string name;
+		Content::URI uri;
 
 		// Parse the sub elements of this node
 		XMLReader::Optional<std::string> name_opt = mReader->GetAttribute<std::string>("name");
@@ -602,15 +620,34 @@ namespace Assimp {
 			// No name: take the id as the name
 			mReader->ToString(id, name);
 		}
-		
+
+		// Parse the external URI to the file containing the representation
+		ParseURI(file, uri);
+		if(! uri.external) {
+			ThrowException("Invalid associated file \"" + file + "\" of ReferenceRep \"" + name + "\". The field must reference another file in the same archive.");
+		}
+
+		// Get the container for this representation
 		Content::ReferenceRep& rep = mContent.representations[Content::ID(mReader->GetFilename(), id)];
+		rep.index_begin = 0;
+		rep.index_end = 0;
+		rep.meshes.clear();
 
-		rep.index = 0;
+		// Check the representation format and call the correct parsing function accordingly
+		if(format.compare("TESSELLATED") == 0) {
+			if(uri.extension.compare("3DRep") == 0) {
+				_3DXMLRepresentation representation(mArchive, uri.filename, rep.meshes);
+			} else {
+				ThrowException("Unsupported extension \"" + uri.extension + "\" for associated file of ReferenceRep \"" + name + "\".");
+			}
+		} else {
+			ThrowException("Unsupported representation format \"" + format + "\"for RefererenceRep \"" + name + ".");
+		}
 
-		rep.mesh = new aiMesh();
-		rep.mesh->mName = name;
-
-		//TODO
+		// Set the names of the parsed meshes with this ReferenceRep name
+		for(std::list<aiMesh*>::iterator it(rep.meshes.begin()), end(rep.meshes.end()); it != end; ++it) {
+			(*it)->mName = name;
+		}
 	}
 
 	// ------------------------------------------------------------------------------------------------
