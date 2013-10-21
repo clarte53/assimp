@@ -86,7 +86,7 @@ namespace Assimp {
 	}
 	
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLRepresentation::ParseMultiArray(const std::string& content, MultiArray<aiColor4D>& array, unsigned int channel, bool alpha) {
+	void _3DXMLRepresentation::ParseMultiArray(const std::string& content, MultiArray<aiColor4D>& array, unsigned int channel, bool alpha) const {
 		std::istringstream stream(content);
 		float r, g, b, a;
 
@@ -114,7 +114,7 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLRepresentation::ParseMultiArray(const std::string& content, MultiArray<aiVector3D>& array, unsigned int channel, unsigned int dimension) {
+	void _3DXMLRepresentation::ParseMultiArray(const std::string& content, MultiArray<aiVector3D>& array, unsigned int channel, unsigned int dimension) const {
 		static const std::size_t dim_max = 3;
 
 		float values[dim_max] = {0, 0, 0};
@@ -137,6 +137,30 @@ namespace Assimp {
 			}
 
 			data.Add(aiVector3D(values[0], values[1], values[2]));
+		}
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	void _3DXMLRepresentation::ParseTriangles(const std::string& content, std::vector<unsigned int>& triangles) const {
+		std::istringstream stream(content);
+		unsigned int value;
+
+		while(! stream.eof()) {
+			char next = stream.peek();
+			while(next == ',' || next == ' ') {
+				stream.get();
+				next = stream.peek();
+			}
+
+			if(! stream.eof()) {
+				stream >> value;
+
+				if(stream.fail()) {
+					ThrowException("Can not convert face value to \"unsigned int\".");
+				}
+
+				triangles.push_back(value);
+			}
 		}
 	}
 
@@ -187,19 +211,74 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	void _3DXMLRepresentation::ReadFaces() {
+		static const unsigned int nb_vertices = 3;
+
 		while(mReader.Next()) {
 			if(mReader.IsElement("SurfaceAttributes")) {
 				//TODO
 			} else if(mReader.IsElement("Face")) {
-				// strips and fans are unsupported for the moment, therefore the parameter triangle is mandatory
-				std::string triangles = *(mReader.GetAttribute<std::string>("triangles", true));
-				//TODO: strips
-				//TODO: fans
+				std::vector<unsigned int> data;
 
-				aiFace face;
-				ParseArray(triangles, face.Indices);
+				_3DXMLParser::XMLReader::Optional<std::string> triangles = mReader.GetAttribute<std::string>("triangles");
+				if(triangles) {
+					data.clear();
 
-				mCurrentMesh->Faces.Add(face);
+					ParseTriangles(*triangles, data);
+
+					for(unsigned int i = 0; i < data.size(); i += 3) {
+						aiFace face;
+
+						face.mNumIndices = nb_vertices;
+						face.mIndices = new unsigned int[nb_vertices];
+
+						for(unsigned int j = 0; j < nb_vertices; j++) {
+							face.mIndices[j] = data[i + j];
+						}
+
+						mCurrentMesh->Faces.Add(face);
+					}
+				}
+
+				_3DXMLParser::XMLReader::Optional<std::string> strips = mReader.GetAttribute<std::string>("strips");
+				if(strips) {
+					data.clear();
+
+					ParseTriangles(*strips, data);
+
+					for(unsigned int i = 0; i < data.size() - (nb_vertices - 1); i++) {
+						aiFace face;
+
+						face.mNumIndices = nb_vertices;
+						face.mIndices = new unsigned int[nb_vertices];
+
+						for(unsigned int j = 0; j < nb_vertices; j++) {
+							face.mIndices[j] = data[i + j];
+						}
+
+						mCurrentMesh->Faces.Add(face);
+					}
+				}
+
+				_3DXMLParser::XMLReader::Optional<std::string> fans = mReader.GetAttribute<std::string>("fans");
+				if(fans) {
+					data.clear();
+
+					ParseTriangles(*fans, data);
+
+					for(unsigned int i = 0; i < data.size() - (nb_vertices - 1); i++) {
+						aiFace face;
+
+						face.mNumIndices = nb_vertices;
+						face.mIndices = new unsigned int[nb_vertices];
+
+						face.mIndices[0] = data[0];
+						for(unsigned int j = 1; j < nb_vertices; j++) {
+							face.mIndices[j] = data[i + j];
+						}
+
+						mCurrentMesh->Faces.Add(face);
+					}
+				}
 			} else if(mReader.TestEndElement("Faces")) {
 				break;
 			}
@@ -218,18 +297,23 @@ namespace Assimp {
 
 				ParseArray(normals, mCurrentMesh->Normals);
 			} else if(mReader.IsElement("TextureCoordinates")) {
+				_3DXMLParser::XMLReader::Optional<unsigned int> channel_opt = mReader.GetAttribute<unsigned int>("channel");
 				std::string format = *(mReader.GetAttribute<std::string>("dimension", true));
-				unsigned int channel = *(mReader.GetAttribute<unsigned int>("channel", true));
 				std::string coordinates = *(mReader.GetContent<std::string>(true));
+
+				unsigned int channel = 0;
+				if(channel_opt) {
+					channel = *channel_opt;
+				}
 
 				if(format.size() != 2 || format[1] != 'D' || ! std::isdigit(format[0])) {
 					ThrowException("Invalid texture coordinate format \"" + format + "\".");
 				}
 
-				unsigned int dimension = std::numeric_limits<unsigned int>::max();
-				std::istringstream stream(format[0]);
+				unsigned int dimension = 0;
+				std::string value(1, format[0]);
 				
-				stream >> dimension;
+				dimension = std::atoi(value.c_str());
 
 				if(dimension == 0 || dimension > 3) {
 					ThrowException("Invalid dimension for texture coordinate format \"" + format + "\".");

@@ -107,7 +107,7 @@ namespace Assimp {
 	// ------------------------------------------------------------------------------------------------
 	// Aborts the file reading with an exception
 	void _3DXMLParser::XMLReader::ThrowException(const std::string& error) const {
-		throw DeadlyImportError(boost::str(boost::format("3DXML XML parser: %s - %s") % mFileName % error));
+		throw DeadlyImportError(boost::str(boost::format("3DXML parser: %s - %s") % mFileName % error));
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -116,7 +116,7 @@ namespace Assimp {
 		// Initialize the mapping with the parsing functions
 		Initialize();
 
-		mContent.scene->mFlags |= AI_SCENE_FLAGS_NON_VERBOSE_FORMAT;
+		//mContent.scene->mFlags |= AI_SCENE_FLAGS_NON_VERBOSE_FORMAT;
 
 		// Load the compressed archive
 		mArchive = new Q3BSP::Q3BSPZipArchive(file);
@@ -151,7 +151,7 @@ namespace Assimp {
 
 			if(it != mContent.files_to_parse.end()) {
 				// Create a xml parser for the file
-				XMLReader file(mArchive, *it);
+				mReader = new XMLReader(mArchive, *it);
 
 				// Parse the 3DXML file
 				ParseFile();
@@ -207,15 +207,16 @@ namespace Assimp {
 	}
 
 	_3DXMLParser::~_3DXMLParser() {
+		if(mReader != NULL) {
+			delete mReader;
+			mReader = NULL;
+		}
+
 		if(mArchive != NULL) {
 			delete mArchive;
 			mArchive = NULL;
 		}
 
-		if(mReader != NULL) {
-			delete mReader;
-			mReader = NULL;
-		}
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -303,19 +304,24 @@ namespace Assimp {
 		if(uri.substr(0, size_prefix).compare("urn:3DXML:") == 0) {
 			result.external = true;
 
-			std::size_t delim = uri.find_last_of('#');
+			std::size_t begin = uri.find_last_of(':');
+			std::size_t end = uri.find_last_of('#');
 
-			if(delim != uri.npos) {
+			if(begin == uri.npos) {
+				ThrowException("The URI \"" + uri + "\" has an invalid format.");
+			}
+
+			if(end != uri.npos) {
 				result.has_id = true;
 
-				std::string id = uri.substr(delim + 1, uri.npos);
+				std::string id = uri.substr(end + 1, uri.npos);
 				ParseID(id, result.id);
 
-				result.filename = uri.substr(size_prefix, delim - 1);
+				result.filename = uri.substr(begin + 1, end - (begin + 1));
 			} else {
 				result.has_id = false;
 				result.id = 0;
-				result.filename = uri.substr(size_prefix, uri.npos);
+				result.filename = uri.substr(begin + 1, uri.npos);
 			}
 		} else if(std::count_if(uri.begin(), uri.end(), std::isdigit) == uri.size()) {
 			result.external = false;

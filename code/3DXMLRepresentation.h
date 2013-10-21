@@ -76,14 +76,16 @@ namespace Assimp {
 			void ThrowException(const std::string& error) const;
 
 			template<typename T>
-			void ParseArray(const std::string& content, Array<T>& array);
+			void ParseArray(const std::string& content, Array<T>& array) const;
 
 			template<>
-			void ParseArray<aiVector3D>(const std::string& content, Array<aiVector3D>& array);
+			void ParseArray<aiVector3D>(const std::string& content, Array<aiVector3D>& array) const;
 
-			void ParseMultiArray(const std::string& content, MultiArray<aiColor4D>& array, unsigned int channel, bool alpha = true);
+			void ParseMultiArray(const std::string& content, MultiArray<aiColor4D>& array, unsigned int channel, bool alpha = true) const;
 
-			void ParseMultiArray(const std::string& content, MultiArray<aiVector3D>& array, unsigned int channel, unsigned int dimension);
+			void ParseMultiArray(const std::string& content, MultiArray<aiVector3D>& array, unsigned int channel, unsigned int dimension) const;
+
+			void ParseTriangles(const std::string& content, std::vector<unsigned int>& triangles) const;
 
 			void ReadVisualizationRep();
 
@@ -99,7 +101,7 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
-	void _3DXMLRepresentation::ParseArray(const std::string& content, Array<T>& array) {
+	void _3DXMLRepresentation::ParseArray(const std::string& content, Array<T>& array) const {
 		std::istringstream stream(content);
 		T value;
 
@@ -115,7 +117,7 @@ namespace Assimp {
 	}
 
 	template<>
-	void _3DXMLRepresentation::ParseArray<aiVector3D>(const std::string& content, Array<aiVector3D>& array) {
+	void _3DXMLRepresentation::ParseArray<aiVector3D>(const std::string& content, Array<aiVector3D>& array) const {
 		std::istringstream stream(content);
 		float x, y, z;
 
