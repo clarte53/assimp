@@ -164,27 +164,15 @@ namespace Assimp {
 					/** Test if this element has sub elements */
 					bool HasElements() const;
 
-					/** Test if the current xml element is an element */
-					bool IsElement() const;
-
-					/** Test if the current xml element is an ending element */
-					bool IsEndElement() const;
-
 					/** Compares the current xml element name to the given string and returns true if equal */
 					bool IsElement(const std::string& name) const;
 
-					/** Compares the current xml element name to the given string and returns true if equal */
-					bool IsEndElement(const std::string& name) const;
-
-					/** Return false if the element is not an ending element, true if it is and the name match and throw an exception otherwise */
-					bool TestEndElement(const std::string& name) const;
-				
 					void SkipElement() const;
 
 					void SkipUntilEnd(const std::string& name) const;
 
 					template<typename T>
-					void ParseNode(const std::string& name, const typename ParsingMap<T>::type& map, T& params) const;
+					void ParseNode(const typename ParsingMap<T>::type& map, T& params) const;
 
 					/** Return the name of a node */
 					std::string GetNodeName() const;
@@ -410,59 +398,30 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	// Test if the current element is an element
-	inline bool _3DXMLParser::XMLReader::IsElement() const {
-		return mReader->getNodeType() == irr::io::EXN_ELEMENT;
-	}
-
-	// ------------------------------------------------------------------------------------------------
-	// Test if the current element is an ending element
-	inline bool _3DXMLParser::XMLReader::IsEndElement() const {
-		return mReader->getNodeType() == irr::io::EXN_ELEMENT_END;
-	}
-
-	// ------------------------------------------------------------------------------------------------
 	// Check for element match
 	inline bool _3DXMLParser::XMLReader::IsElement(const std::string& name) const {
-		return IsElement() && name.compare(mReader->getNodeName()) == 0;
-	}
-
-	// ------------------------------------------------------------------------------------------------
-	// Check for element match
-	inline bool _3DXMLParser::XMLReader::IsEndElement(const std::string& name) const {
-		return IsEndElement() && name.compare(mReader->getNodeName()) == 0;
-	}
-
-	// ------------------------------------------------------------------------------------------------
-	// Return false if the element is not an ending element, true if it is and the name match and throw an exception otherwise
-	inline bool _3DXMLParser::XMLReader::TestEndElement(const std::string& name) const {
-		bool result = false;
-		
-		if(IsEndElement()) {
-			if(IsEndElement(name)) {
-				result = true;
-			} else {
-				ThrowException("Expected end of <" + name + "> element.");
-			}
-		}
-
-		return result;
+		return mReader->getNodeType() == irr::io::EXN_ELEMENT && name.compare(mReader->getNodeName()) == 0;
 	}
 	
 	// ------------------------------------------------------------------------------------------------
 	// Parse a node
 	template<typename T>
-	void _3DXMLParser::XMLReader::ParseNode(const std::string& name, const typename ParsingMap<T>::type& map, T& params) const {
+	void _3DXMLParser::XMLReader::ParseNode(const typename ParsingMap<T>::type& map, T& params) const {
 		irr::io::EXML_NODE node_type;
+		std::string node_name;
 
 		// Test if it's not an <element />
 		if(! mReader->isEmptyElement()) {
+			// Save the current node name for checking closing of elements
+			std::string name = mReader->getNodeName();
+
 			while(mReader->read()) {
 				node_type = mReader->getNodeType();
+				node_name = mReader->getNodeName();
 
 				// Test if we have an opening element
 				if(node_type == irr::io::EXN_ELEMENT) {
-					typename ParsingMap<T>::type::const_iterator it = map.find(mReader->getNodeName());
+					typename ParsingMap<T>::type::const_iterator it = map.find(node_name);
 
 					// Is the element mapped?
 					if(it != map.end()) {
@@ -474,13 +433,12 @@ namespace Assimp {
 						SkipElement();
 					}
 				} else if(node_type == irr::io::EXN_ELEMENT_END) {
-					// Is the closing element correct?
-					if(name.compare(mReader->getNodeName()) != 0) {
+					if(name.compare(node_name) == 0) {
+						// Ok, we can stop the loop
+						break;
+					} else {
 						ThrowException("Expected end of <" + name + "> element.");
 					}
-
-					// Ok, we can stop the loop
-					break;
 				}
 			}
 		}

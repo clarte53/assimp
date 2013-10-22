@@ -293,7 +293,7 @@ namespace Assimp {
 		// Parse the main 3DXML file
 		while(mReader->Next()) {
 			if(mReader->IsElement("Model_3dxml")) {
-				mReader->ParseNode("Model_3dxml", mapping, params);
+				mReader->ParseNode(mapping, params);
 			} else {
 				mReader->SkipElement();
 			}
@@ -448,7 +448,7 @@ namespace Assimp {
 		while(! params.found && mReader->Next()) {
 			// handle the root element "Manifest"
 			if(mReader->IsElement("Manifest")) {
-				mReader->ParseNode("Manifest", mapping, params);
+				mReader->ParseNode(mapping, params);
 			} else {
 				mReader->SkipElement();
 			}
@@ -505,7 +505,7 @@ namespace Assimp {
 
 		params.me = this;
 
-		mReader->ParseNode("ProductStructure", mapping, params);
+		mReader->ParseNode(mapping, params);
 	}
 	
 	// ------------------------------------------------------------------------------------------------
@@ -559,7 +559,7 @@ namespace Assimp {
 		params.name = mReader->GetAttribute<std::string>("name");
 		params.id = *(mReader->GetAttribute<unsigned int>("id", true));
 
-		mReader->ParseNode("Reference3D", mapping, params);
+		mReader->ParseNode(mapping, params);
 
 		// Nothing else to do because of the weird indirection scheme of 3DXML
 		// The Reference3D will be completed by the Instance3D and InstanceRep
@@ -655,7 +655,7 @@ namespace Assimp {
 			ThrowException("In Instance3D \"" + mReader->ToString(params.id) + "\": the instance has no sub elements. It must at least define \"IsAggregatedBy\" and \"IsInstanceOf\" elements.");
 		}
 
-		mReader->ParseNode("Instance3D", mapping, params);
+		mReader->ParseNode(mapping, params);
 		
 		if(params.instance == NULL) {
 			ThrowException("In Instance3D \"" + mReader->ToString(params.id) + "\": the instance has no sub element \"IsAggregatedBy\".");
@@ -716,7 +716,7 @@ namespace Assimp {
 		std::string file = *(mReader->GetAttribute<std::string>("associatedFile", true));
 		Content::URI uri;
 
-		mReader->ParseNode("ReferenceRep", mapping, params);
+		mReader->ParseNode(mapping, params);
 
 		// Parse the external URI to the file containing the representation
 		ParseURI(file, uri);
@@ -817,7 +817,7 @@ namespace Assimp {
 			ThrowException("In InstanceRep \"" + mReader->ToString(params.id) + "\": the instance has no sub elements. It must at least define \"IsAggregatedBy\" and \"IsInstanceOf\" elements.");
 		}
 
-		mReader->ParseNode("InstanceRep", mapping, params);
+		mReader->ParseNode(mapping, params);
 
 		if(params.mesh == NULL) {
 			ThrowException("In InstanceRep \"" + mReader->ToString(params.id) + "\": the instance has no sub element \"IsAggregatedBy\".");
