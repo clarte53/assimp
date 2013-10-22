@@ -123,6 +123,11 @@ namespace Assimp {
 							inline T& operator*() {return *mValue;}
 
 					}; // class Optional<T*>
+
+					template<typename T>
+					struct ParsingMap {
+						typedef std::map<std::string, std::function<void(T&)>> type;
+					}; // struct ParsingMap
 			
 				protected:
 
@@ -174,6 +179,13 @@ namespace Assimp {
 					/** Return false if the element is not an ending element, true if it is and the name match and throw an exception otherwise */
 					bool TestEndElement(const std::string& name) const;
 				
+					void SkipElement() const;
+
+					void SkipUntilEnd(const std::string& name) const;
+
+					template<typename T>
+					void ParseNode(const std::string& name, const typename ParsingMap<T>::type& map, T& params) const;
+
 					/** Return the name of a node */
 					std::string GetNodeName() const;
 
@@ -194,16 +206,16 @@ namespace Assimp {
 					Optional<T> GetContent(bool mandatory = false) const;
 
 					template<typename T>
-					void ToString(const T& value, std::string& string) const;
+					std::string ToString(const T& value) const;
 
 					template<>
-					void ToString(const std::string& value, std::string& string) const;
+					std::string ToString(const std::string& value) const;
 
 					template<typename T>
-					void FromString(const std::string& string, T& value) const;
+					T FromString(const std::string& string) const;
 
 					template<>
-					void FromString(const std::string& string, std::string& value) const;
+					std::string FromString(const std::string& string) const;
 
 			}; // end of class XMLReader
 		
@@ -212,6 +224,8 @@ namespace Assimp {
 			struct Content {
 
 				struct URI {
+
+					std::string uri;
 
 					bool external;
 
@@ -222,6 +236,8 @@ namespace Assimp {
 					std::string extension;
 
 					unsigned int id;
+
+					URI() : uri(""), external(false), has_id(false), filename(""), extension(""), id(0) {}
 
 				}; // struct URI
 
@@ -246,6 +262,8 @@ namespace Assimp {
 
 				struct Reference3D {
 
+					unsigned int id;
+
 					std::string name;
 
 					std::map<ID, Instance3D> instances;
@@ -254,11 +272,13 @@ namespace Assimp {
 
 					unsigned int nb_references;
 
-					Reference3D() : name(""), nb_references(0) {}
+					Reference3D() : id(0), name(""), nb_references(0) {}
 
 				}; // struct Reference3D
 
 				struct ReferenceRep {
+					
+					unsigned int id;
 
 					std::list<aiMesh*> meshes;
 
@@ -266,27 +286,31 @@ namespace Assimp {
 
 					unsigned int index_end;
 
-					ReferenceRep() : meshes(), index_begin(0), index_end(0) {}
+					ReferenceRep() : id(0), meshes(), index_begin(0), index_end(0) {}
 
 				}; // struct ReferenceRep
 
 				struct Instance3D {
+					
+					unsigned int id;
 
 					aiNode* node;
 
 					Reference3D* instance_of;
 
-					Instance3D() : node(NULL), instance_of(NULL) {}
+					Instance3D() : id(0), node(NULL), instance_of(NULL) {}
 
 				}; // struct Instance3D
 
 				struct InstanceRep {
+					
+					unsigned int id;
 
 					std::string name;
 
 					ReferenceRep* instance_of;
 
-					InstanceRep() : name(""), instance_of(NULL) {}
+					InstanceRep() : id(0), name(""), instance_of(NULL) {}
 
 				}; // struct InstanceRep
 
@@ -333,11 +357,7 @@ namespace Assimp {
 			/** Aborts the file reading with an exception */
 			void ThrowException(const std::string& error) const;
 
-			void Initialize();
-
 			void ParseFile();
-
-			void ParseElement(const SpecializedMapType& parent, const std::string& name);
 
 			void ParseURI(const std::string& uri, Content::URI& result) const;
 
@@ -430,6 +450,43 @@ namespace Assimp {
 	}
 	
 	// ------------------------------------------------------------------------------------------------
+	// Parse a node
+	template<typename T>
+	void _3DXMLParser::XMLReader::ParseNode(const std::string& name, const typename ParsingMap<T>::type& map, T& params) const {
+		irr::io::EXML_NODE node_type;
+
+		// Test if it's not an <element />
+		if(! mReader->isEmptyElement()) {
+			while(mReader->read()) {
+				node_type = mReader->getNodeType();
+
+				// Test if we have an opening element
+				if(node_type == irr::io::EXN_ELEMENT) {
+					typename ParsingMap<T>::type::const_iterator it = map.find(mReader->getNodeName());
+
+					// Is the element mapped?
+					if(it != map.end()) {
+						(it->second)(params);
+
+						SkipUntilEnd(it->first);
+					} else {
+						// Ignore elements that are not mapped
+						SkipElement();
+					}
+				} else if(node_type == irr::io::EXN_ELEMENT_END) {
+					// Is the closing element correct?
+					if(name.compare(mReader->getNodeName()) != 0) {
+						ThrowException("Expected end of <" + name + "> element.");
+					}
+
+					// Ok, we can stop the loop
+					break;
+				}
+			}
+		}
+	}
+
+	// ------------------------------------------------------------------------------------------------
 	// Return the name of a node
 	inline std::string  _3DXMLParser::XMLReader::GetNodeName() const {
 		return mReader->getNodeName();
@@ -444,9 +501,9 @@ namespace Assimp {
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
 	_3DXMLParser::XMLReader::Optional<T> _3DXMLParser::XMLReader::GetAttribute(const std::string& name, bool mandatory) const {
-		std::string value_str = mReader->getAttributeValueSafe(name.c_str());
+		std::string value = mReader->getAttributeValueSafe(name.c_str());
 
-		if(value_str == "") {
+		if(value == "") {
 			if(mandatory) {
 				ThrowException("Attribute \"" + name + "\" not found.");
 			} else {
@@ -454,10 +511,7 @@ namespace Assimp {
 			}
 		}
 
-		T value;
-		FromString(value_str, value);
-
-		return _3DXMLParser::XMLReader::Optional<T>(value);
+		return _3DXMLParser::XMLReader::Optional<T>(FromString<T>(value));
 	}
 	
 	// ------------------------------------------------------------------------------------------------
@@ -494,15 +548,12 @@ namespace Assimp {
 			}
 		}
 
-		T value;
-		FromString(text, value);
-
-		return _3DXMLParser::XMLReader::Optional<T>(value);
+		return _3DXMLParser::XMLReader::Optional<T>(FromString<T>(text));
 	}
 	
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
-	void _3DXMLParser::XMLReader::ToString(const T& value, std::string& string) const {
+	std::string _3DXMLParser::XMLReader::ToString(const T& value) const {
 		std::stringstream stream;
 
 		stream << value;
@@ -511,29 +562,32 @@ namespace Assimp {
 			ThrowException("The type \"" + std::string(typeid(T).name()) + "\" can not be converted into string.");
 		}
 
-		string = stream.str();
+		return stream.str();
 	}
 
 	template<>
-	void _3DXMLParser::XMLReader::ToString(const std::string& value, std::string& string) const {
-		string = value;
+	std::string _3DXMLParser::XMLReader::ToString(const std::string& value) const {
+		return value;
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
-	void _3DXMLParser::XMLReader::FromString(const std::string& string, T& value) const {
+	T _3DXMLParser::XMLReader::FromString(const std::string& string) const {
 		std::istringstream stream(string);
+		T value;
 
 		stream >> value;
 
 		if(stream.fail()) {
 			ThrowException("The value \"" + string + "\" can not be converted into \"" + std::string(typeid(T).name()) + "\".");
 		}
+
+		return value;
 	}
 
 	template<>
-	void _3DXMLParser::XMLReader::FromString(const std::string& string, std::string& value) const {
-		value = string;
+	std::string _3DXMLParser::XMLReader::FromString(const std::string& string) const {
+		return string;
 	}
 
 } // end of namespace Assimp

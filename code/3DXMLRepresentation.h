@@ -76,14 +76,14 @@ namespace Assimp {
 			void ThrowException(const std::string& error) const;
 
 			template<typename T>
-			void ParseArray(const std::string& content, Array<T>& array) const;
+			void ParseArray(const std::string& content, Array<T>& array, unsigned int start_index) const;
 
 			template<>
-			void ParseArray<aiVector3D>(const std::string& content, Array<aiVector3D>& array) const;
+			void ParseArray<aiVector3D>(const std::string& content, Array<aiVector3D>& array, unsigned int start_index) const;
 
-			void ParseMultiArray(const std::string& content, MultiArray<aiColor4D>& array, unsigned int channel, bool alpha = true) const;
+			void ParseMultiArray(const std::string& content, MultiArray<aiColor4D>& array, unsigned int channel, unsigned int start_index,  bool alpha = true) const;
 
-			void ParseMultiArray(const std::string& content, MultiArray<aiVector3D>& array, unsigned int channel, unsigned int dimension) const;
+			void ParseMultiArray(const std::string& content, MultiArray<aiVector3D>& array, unsigned int channel, unsigned int start_index, unsigned int dimension) const;
 
 			void ParseTriangles(const std::string& content, std::vector<unsigned int>& triangles) const;
 
@@ -101,10 +101,11 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
-	void _3DXMLRepresentation::ParseArray(const std::string& content, Array<T>& array) const {
+	void _3DXMLRepresentation::ParseArray(const std::string& content, Array<T>& array, unsigned int start_index) const {
 		std::istringstream stream(content);
 		T value;
 
+		unsigned int index = start_index;
 		while(! stream.eof()) {
 			stream >> value;
 
@@ -112,15 +113,16 @@ namespace Assimp {
 				ThrowException("Can not convert array value to \"" + std::string(typeid(T).name()) +"\".");
 			}
 
-			array.Add(value);
+			array.Set(index++, value);
 		}
 	}
 
 	template<>
-	void _3DXMLRepresentation::ParseArray<aiVector3D>(const std::string& content, Array<aiVector3D>& array) const {
+	void _3DXMLRepresentation::ParseArray<aiVector3D>(const std::string& content, Array<aiVector3D>& array, unsigned int start_index) const {
 		std::istringstream stream(content);
 		float x, y, z;
 
+		unsigned int index = start_index;
 		while(! stream.eof()) {
 			stream >> x >> y >> z;
 
@@ -132,7 +134,7 @@ namespace Assimp {
 				ThrowException("Can not convert array value to \"aiVector3D\".");
 			}
 
-			array.Add(aiVector3D(x, y, z));
+			array.Set(index++, aiVector3D(x, y, z));
 		}
 	}
 	

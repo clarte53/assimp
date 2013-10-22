@@ -86,12 +86,13 @@ namespace Assimp {
 	}
 	
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLRepresentation::ParseMultiArray(const std::string& content, MultiArray<aiColor4D>& array, unsigned int channel, bool alpha) const {
+	void _3DXMLRepresentation::ParseMultiArray(const std::string& content, MultiArray<aiColor4D>& array, unsigned int channel, unsigned int start_index, bool alpha) const {
 		std::istringstream stream(content);
 		float r, g, b, a;
 
 		Array<aiColor4D>& data = array.Get(channel);
 
+		unsigned int index = start_index;
 		while(! stream.eof()) {
 			stream >> r >> g >> b;
 
@@ -109,12 +110,12 @@ namespace Assimp {
 				ThrowException("Can not convert array value to \"aiColor4D\".");
 			}
 
-			data.Add(aiColor4D(r, g, b, a));
+			data.Set(index++, aiColor4D(r, g, b, a));
 		}
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLRepresentation::ParseMultiArray(const std::string& content, MultiArray<aiVector3D>& array, unsigned int channel, unsigned int dimension) const {
+	void _3DXMLRepresentation::ParseMultiArray(const std::string& content, MultiArray<aiVector3D>& array, unsigned int channel, unsigned int start_index, unsigned int dimension) const {
 		static const std::size_t dim_max = 3;
 
 		float values[dim_max] = {0, 0, 0};
@@ -123,6 +124,7 @@ namespace Assimp {
 		
 		Array<aiVector3D>& data = array.Get(channel);
 
+		unsigned int index = start_index;
 		while(! stream.eof()) {
 			for(unsigned int i = 0; i < dimension; i++) {
 				stream >> values[i];
@@ -136,7 +138,7 @@ namespace Assimp {
 				ThrowException("Can not convert array value to \"aiVector3D\".");
 			}
 
-			data.Add(aiVector3D(values[0], values[1], values[2]));
+			data.Set(index++, aiVector3D(values[0], values[1], values[2]));
 		}
 	}
 
@@ -219,6 +221,8 @@ namespace Assimp {
 			} else if(mReader.IsElement("Face")) {
 				std::vector<unsigned int> data;
 
+				unsigned int index = mCurrentMesh->Faces.Size();
+
 				_3DXMLParser::XMLReader::Optional<std::string> triangles = mReader.GetAttribute<std::string>("triangles");
 				if(triangles) {
 					data.clear();
@@ -235,7 +239,7 @@ namespace Assimp {
 							face.mIndices[j] = data[i + j];
 						}
 
-						mCurrentMesh->Faces.Add(face);
+						mCurrentMesh->Faces.Set(index++, face);
 					}
 				}
 
@@ -255,7 +259,7 @@ namespace Assimp {
 							face.mIndices[j] = data[i + j];
 						}
 
-						mCurrentMesh->Faces.Add(face);
+						mCurrentMesh->Faces.Set(index++, face);
 					}
 				}
 
@@ -276,10 +280,10 @@ namespace Assimp {
 							face.mIndices[j] = data[i + j];
 						}
 
-						mCurrentMesh->Faces.Add(face);
+						mCurrentMesh->Faces.Set(index++, face);
 					}
 				}
-			} else if(mReader.TestEndElement("Faces")) {
+			} else if(mReader.IsEndElement("Faces")) {
 				break;
 			}
 		}
@@ -287,15 +291,17 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	void _3DXMLRepresentation::ReadVertexBuffer() {
+		unsigned int start_index = mCurrentMesh->Vertices.Size();
+
 		while(mReader.Next()) {
 			if(mReader.IsElement("Positions")) {
 				std::string vertices = *(mReader.GetContent<std::string>(true));
 
-				ParseArray(vertices, mCurrentMesh->Vertices);
+				ParseArray(vertices, mCurrentMesh->Vertices, start_index);
 			} else if(mReader.IsElement("Normals")) {
 				std::string normals = *(mReader.GetContent<std::string>(true));
 
-				ParseArray(normals, mCurrentMesh->Normals);
+				ParseArray(normals, mCurrentMesh->Normals, start_index);
 			} else if(mReader.IsElement("TextureCoordinates")) {
 				_3DXMLParser::XMLReader::Optional<unsigned int> channel_opt = mReader.GetAttribute<unsigned int>("channel");
 				std::string format = *(mReader.GetAttribute<std::string>("dimension", true));
@@ -319,7 +325,7 @@ namespace Assimp {
 					ThrowException("Invalid dimension for texture coordinate format \"" + format + "\".");
 				}
 
-				ParseMultiArray(coordinates, mCurrentMesh->TextureCoords, channel, dimension);
+				ParseMultiArray(coordinates, mCurrentMesh->TextureCoords, channel, start_index, dimension);
 			} else if(mReader.IsElement("DiffuseColors")) {
 				std::string format = *(mReader.GetAttribute<std::string>("format", true));
 				std::string color = *(mReader.GetContent<std::string>(true));
