@@ -57,7 +57,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLRepresentation::_3DXMLRepresentation(Q3BSP::Q3BSPZipArchive* archive, const std::string& filename, std::list<aiMesh*>& meshes) : mReader(archive, filename), mMeshes(meshes) {
+	_3DXMLRepresentation::_3DXMLRepresentation(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, std::list<ScopeGuard<aiMesh>>& meshes) : mReader(archive, filename), mMeshes(meshes), mCurrentMesh(NULL) {
 		struct Params {
 			_3DXMLRepresentation* me;
 		} params;
@@ -67,7 +67,7 @@ namespace Assimp {
 
 			// Parse Root element
 			map.insert(std::make_pair("Root", [](Params& params){
-				params.me->mCurrentMesh = new aiMesh();
+				params.me->mCurrentMesh = ScopeGuard<aiMesh>(new aiMesh());
 
 				params.me->ReadVisualizationRep();
 
@@ -90,6 +90,11 @@ namespace Assimp {
 		}
 
 		mReader.Close();
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	_3DXMLRepresentation::~_3DXMLRepresentation() {
+
 	}
 
 	// ------------------------------------------------------------------------------------------------

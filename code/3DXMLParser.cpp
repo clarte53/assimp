@@ -60,7 +60,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLParser::XMLReader::XMLReader(Q3BSP::Q3BSPZipArchive* archive, const std::string& file) : mFileName(file), mArchive(archive), mStream(NULL), mReader(NULL) {
+	_3DXMLParser::XMLReader::XMLReader(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& file) : mFileName(file), mArchive(archive), mStream(NULL), mReader(NULL) {
 		Open(file);
 	}
 
@@ -75,7 +75,7 @@ namespace Assimp {
 			mFileName = file;
 
 			// Open the manifest files
-			mStream = mArchive->Open(mFileName.c_str());
+			mStream = ScopeGuard<IOStream>(mArchive->Open(mFileName.c_str()));
 			if(mStream == NULL) {
 				// because Q3BSPZipArchive (now) correctly close all open files automatically on destruction,
 				// we do not have to worry about closing the stream explicitly on exceptions
@@ -85,8 +85,8 @@ namespace Assimp {
 
 			// generate a XML reader for it
 			// the pointer is automatically deleted at the end of the function, even if some exceptions are raised
-			boost::scoped_ptr<CIrrXML_IOStreamReader> IOWrapper(new CIrrXML_IOStreamReader(mStream));
-			mReader = irr::io::createIrrXMLReader(IOWrapper.get());
+			ScopeGuard<CIrrXML_IOStreamReader> IOWrapper(new CIrrXML_IOStreamReader(mStream));
+			mReader = ScopeGuard<irr::io::IrrXMLReader>(irr::io::createIrrXMLReader(IOWrapper.get()));
 			if(mReader == NULL) {
 				ThrowException("Unable to create XML reader for file \"" + mFileName + "\".");
 			}
@@ -95,13 +95,7 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	void _3DXMLParser::XMLReader::Close() {
-		if(mStream != NULL && mReader != NULL) {
-			delete mReader;
-			mReader = NULL;
-
-			mArchive->Close(mStream);
-			mStream = NULL;
-		}
+		mArchive->Close(mStream.dismiss());
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -147,51 +141,38 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Constructor to be privately used by Importer
-	_3DXMLParser::_3DXMLParser(const std::string& file, aiScene* scene) : mArchive(NULL), mReader(NULL), mContent(scene), mFunctionMap() {
+	_3DXMLParser::_3DXMLParser(const std::string& file, aiScene* scene) : mArchive(new Q3BSP::Q3BSPZipArchive(file)), mReader(NULL), mContent(scene) {
 		// Load the compressed archive
-		mArchive = new Q3BSP::Q3BSPZipArchive(file);
 		if (! mArchive->isOpen()) {
 			ThrowException("Failed to open file " + file + "." );
 		}
 
 		// Create a xml parser for the manifest
-		mReader = new XMLReader(mArchive, "Manifest.xml");
+		mReader = ScopeGuard<XMLReader>(new XMLReader(mArchive, "Manifest.xml"));
 
 		// Read the name of the main XML file in the manifest
 		std::string main_file;
 		ReadManifest(main_file);
 
-		// Cleanning up
-		delete mReader;
-		mReader = NULL;
-
 		// Create a xml parser for the root file
-		mReader = new XMLReader(mArchive, main_file);
+		mReader = ScopeGuard<XMLReader>(new XMLReader(mArchive, main_file));
 
 		// Parse the main 3DXML file
 		ParseFile();
 
-		// Cleanning up
-		delete mReader;
-		mReader = NULL;
-
 		// Parse other referenced 3DXML files until all references are resolved
 		while(mContent.files_to_parse.size() != 0) {
-			std::set<std::string>::iterator it = mContent.files_to_parse.begin();
+			std::set<std::string>::const_iterator it = mContent.files_to_parse.begin();
 
 			if(it != mContent.files_to_parse.end()) {
 				// Create a xml parser for the file
-				mReader = new XMLReader(mArchive, *it);
+				mReader = ScopeGuard<XMLReader>(new XMLReader(mArchive, *it));
 
 				// Parse the 3DXML file
 				ParseFile();
 
 				// Remove the file from the list of files to parse
 				it = mContent.files_to_parse.erase(it);
-
-				// Cleanning up
-				delete mReader;
-				mReader = NULL;
 			}
 		}
 			
@@ -201,8 +182,9 @@ namespace Assimp {
 			it_rep->second.index_end = it_rep->second.index_begin + it_rep->second.meshes.size() - 1;
 
 			unsigned int index = mContent.scene->Meshes.Size();
-			for(std::list<aiMesh*>::const_iterator it_mesh(it_rep->second.meshes.begin()), end_mesh(it_rep->second.meshes.end()); it_mesh != end_mesh; ++it_mesh) {
-				mContent.scene->Meshes.Set(index++, *it_mesh);
+			for(std::list<ScopeGuard<aiMesh>>::iterator it_mesh(it_rep->second.meshes.begin()), end_mesh(it_rep->second.meshes.end()); it_mesh != end_mesh; ++it_mesh) {
+				// Realease the ownership of the mesh to the protected scene
+				mContent.scene->Meshes.Set(index++, it_mesh->dismiss());
 			}
 		}
 
@@ -214,12 +196,11 @@ namespace Assimp {
 				Content::Reference3D& root = it_root->second;
 
 				if(root.nb_references == 0) {
-					aiNode* root_node = new aiNode(root.name);
+					// mRootNode is contained inside the scene, which is already protected against memory leaks
+					mContent.scene->mRootNode = new aiNode(root.name);
 
 					// Build the hierarchy recursively
-					BuildStructure(root, root_node);
-
-					mContent.scene->mRootNode = root_node;
+					BuildStructure(root, mContent.scene->mRootNode);
 				} else {
 					ThrowException("The root Reference3D should not be instantiated.");
 				}
@@ -230,20 +211,9 @@ namespace Assimp {
 			// TODO: no root node specifically named -> we must analyze the node structure to find the root or create an artificial root node
 			ThrowException("No root Reference3D specified.");
 		}
-
-		// TODO release memory of potentially unused references / instances to avoid memory leaks
 	}
 
 	_3DXMLParser::~_3DXMLParser() {
-		if(mReader != NULL) {
-			delete mReader;
-			mReader = NULL;
-		}
-
-		if(mArchive != NULL) {
-			delete mArchive;
-			mArchive = NULL;
-		}
 
 	}
 
@@ -368,7 +338,7 @@ namespace Assimp {
 		if(node != NULL) {
 			// Copy the indexes of the meshes contained into this instance into the proper aiNode
 			if(node->Meshes.Size() == 0) {
-				for(std::map<Content::ID, Content::InstanceRep>::const_iterator it_mesh(ref.meshes.begin()), end_mesh(ref.meshes.end()); it_mesh != end_mesh; ++ it_mesh) {
+				for(std::map<Content::ID, Content::InstanceRep>::const_iterator it_mesh(ref.meshes.begin()), end_mesh(ref.meshes.end()); it_mesh != end_mesh; ++it_mesh) {
 					const Content::InstanceRep& rep = it_mesh->second;
 
 					if(rep.instance_of != NULL) {
@@ -383,12 +353,12 @@ namespace Assimp {
 
 			// Copy the children nodes of this instance into the proper node
 			if(node->Children.Size() == 0) {
-				for(std::map<Content::ID, Content::Instance3D>::const_iterator it_child(ref.instances.begin()), end_child(ref.instances.end()); it_child != end_child; ++ it_child) {
-					const Content::Instance3D& child = it_child->second;
+				for(std::map<Content::ID, Content::Instance3D>::iterator it_child(ref.instances.begin()), end_child(ref.instances.end()); it_child != end_child; ++ it_child) {
+					Content::Instance3D& child = it_child->second;
 
-					if(child.node != NULL && child.instance_of != NULL) {
+					if(child.node.get() != NULL && child.instance_of != NULL) {
 						// Construct the hierarchy recursively
-						BuildStructure(*child.instance_of, child.node);
+						BuildStructure(*child.instance_of, child.node.get());
 
 						// Decrement the counter of instances to this Reference3D (used for memory managment)
 						if(ref.nb_references > 0) {
@@ -398,8 +368,8 @@ namespace Assimp {
 						// If the counter of references is null, this mean this instance is the last instance of this Reference3D
 						if(ref.nb_references == 0) {
 							// Therefore we can copy the child node directly into the children array
-							node->Children.Set(node->Children.Size(), child.node);
 							child.node->mParent = node;
+							node->Children.Set(node->Children.Size(), child.node.dismiss());
 						} else {
 							// Otherwise we need to make a deep copy of the child node in order to avoid duplicate nodes in the scene hierarchy
 							// (which would cause assimp to deallocate them multiple times, therefore making the application crash)
@@ -407,8 +377,8 @@ namespace Assimp {
 
 							SceneCombiner::Copy(&copy_node, child.node);
 
-							node->Children.Set(node->Children.Size(), copy_node);
 							copy_node->mParent = node;
+							node->Children.Set(node->Children.Size(), copy_node);
 						}
 					} else {
 						ThrowException("One Instance3D of Reference3D \"" + mReader->ToString(ref.id) + "\" is unresolved.");
@@ -525,7 +495,7 @@ namespace Assimp {
 	void _3DXMLParser::ReadReference3D() {
 		struct Params {
 			_3DXMLParser* me;
-			XMLReader::Optional<std::string> name;
+			XMLReader::Optional<std::string> name_opt;
 			unsigned int id;
 		} params;
 
@@ -534,32 +504,30 @@ namespace Assimp {
 
 			// Parse PLM_ExternalID element
 			map.insert(std::make_pair("PLM_ExternalID", [](Params& params){
-				params.name = params.me->mReader->GetContent<std::string>(true);
-
-				// Test if the name exist, otherwise use the id as name
-				std::string name;
-				if(params.name) {
-					name = *params.name;
-				} else {
-					// No name: take the id as the name
-					name = params.me->mReader->ToString(params.id);
-				}
-
-				Content::Reference3D& ref = params.me->mContent.references[Content::ID(params.me->mReader->GetFilename(), params.id)]; // Create the Reference3D if not present.
-				
-				// Save id and name for future error / log messages
-				ref.id = params.id;
-				ref.name = name;
+				params.name_opt = params.me->mReader->GetContent<std::string>(true);
 			}));
 			
 			return map;
 		})());
 
 		params.me = this;
-		params.name = mReader->GetAttribute<std::string>("name");
+		params.name_opt = mReader->GetAttribute<std::string>("name");
 		params.id = *(mReader->GetAttribute<unsigned int>("id", true));
 
 		mReader->ParseNode(mapping, params);
+
+		Content::Reference3D& ref = mContent.references[Content::ID(mReader->GetFilename(), params.id)]; // Create the Reference3D if not present.
+				
+		// Save id and name for future error / log messages
+		ref.id = params.id;
+
+		// Test if the name exist, otherwise use the id as name
+		if(params.name_opt) {
+			ref.name = *(params.name_opt);
+		} else {
+			// No name: take the id as the name
+			ref.name = mReader->ToString(params.id);
+		}
 
 		// Nothing else to do because of the weird indirection scheme of 3DXML
 		// The Reference3D will be completed by the Instance3D and InstanceRep
@@ -570,11 +538,12 @@ namespace Assimp {
 	void _3DXMLParser::ReadInstance3D() {
 		struct Params {
 			_3DXMLParser* me;
-			aiNode* node;
-			XMLReader::Optional<std::string> name;
-			unsigned int id;
-			Content::Instance3D* instance;
+			XMLReader::Optional<std::string> name_opt;
+			Content::Instance3D instance;
 			Content::URI instance_of;
+			unsigned int aggregated_by;
+			bool has_aggregated_by;
+			bool has_instance_of;
 		} params;
 
 		static const std::map<std::string, std::function<void(Params&)>> mapping(([](){
@@ -582,31 +551,14 @@ namespace Assimp {
 
 			// Parse PLM_ExternalID element
 			map.insert(std::make_pair("PLM_ExternalID", [](Params& params){
-				params.name = params.me->mReader->GetContent<std::string>(true);
-
-				// Test if the name exist, otherwise use the id as name
-				std::string name;
-				if(params.name) {
-					name = *params.name;
-				} else {
-					// No name: take the id as the name
-					name = params.me->mReader->ToString(params.id);
-				}
-
-				// Set the node name
-				params.node->mName = name;
+				params.name_opt = params.me->mReader->GetContent<std::string>(true);		
 			}));
 
 			// Parse IsAggregatedBy element
 			map.insert(std::make_pair("IsAggregatedBy", [](Params& params){
-				unsigned int aggregated_by = *(params.me->mReader->GetContent<unsigned int>(true));
+				params.aggregated_by = *(params.me->mReader->GetContent<unsigned int>(true));
 
-				// Save the reference to the parent Reference3D
-				Content::Reference3D& parent = params.me->mContent.references[Content::ID(params.me->mReader->GetFilename(), aggregated_by)];
-				params.instance = &(parent.instances[Content::ID(params.me->mReader->GetFilename(), params.id)]);
-
-				// Save id for future error / log messages
-				params.instance->id = params.id;
+				params.has_aggregated_by = true;
 			}));
 
 			// Parse IsInstanceOf element
@@ -623,13 +575,15 @@ namespace Assimp {
 
 					params.me->mContent.files_to_parse.insert(params.instance_of.filename);
 				}
+
+				params.has_instance_of = true;
 			}));
 
 			// Parse RelativeMatrix element
 			map.insert(std::make_pair("RelativeMatrix", [](Params& params){
 				std::string relative_matrix = *(params.me->mReader->GetContent<std::string>(true));
 
-				aiMatrix4x4& transformation = params.node->mTransformation;
+				aiMatrix4x4& transformation = params.instance.node->mTransformation;
 
 				// Save the transformation matrix
 				std::istringstream matrix(relative_matrix);
@@ -646,36 +600,54 @@ namespace Assimp {
 		})());
 
 		params.me = this;
-		params.node = new aiNode();
-		params.name = mReader->GetAttribute<std::string>("name");
-		params.id = *(mReader->GetAttribute<unsigned int>("id", true));
-		params.instance = NULL;
+		params.name_opt = mReader->GetAttribute<std::string>("name");
+		params.instance.id = *(mReader->GetAttribute<unsigned int>("id", true));
+		params.has_aggregated_by = false;
+		params.has_instance_of = false;
 
 		if(! mReader->HasElements()) {
-			ThrowException("In Instance3D \"" + mReader->ToString(params.id) + "\": the instance has no sub elements. It must at least define \"IsAggregatedBy\" and \"IsInstanceOf\" elements.");
+			ThrowException("In Instance3D \"" + mReader->ToString(params.instance.id) + "\": the instance has no sub elements. It must at least define \"IsAggregatedBy\" and \"IsInstanceOf\" elements.");
 		}
 
 		mReader->ParseNode(mapping, params);
 		
-		if(params.instance == NULL) {
-			ThrowException("In Instance3D \"" + mReader->ToString(params.id) + "\": the instance has no sub element \"IsAggregatedBy\".");
+		if(! params.has_aggregated_by) {
+			ThrowException("In Instance3D \"" + mReader->ToString(params.instance.id) + "\": the instance has no sub element \"IsAggregatedBy\".");
 		}
 		
-		if(params.instance_of.uri.compare("") == 0) {
-			ThrowException("In Instance3D \"" + mReader->ToString(params.id) + "\": the instance has no sub element \"IsInstanceOf\".");
+		if(! params.has_instance_of) {
+			ThrowException("In Instance3D \"" + mReader->ToString(params.instance.id) + "\": the instance has no sub element \"IsInstanceOf\".");
+		}
+
+		// Test if the name exist, otherwise use the id as name
+		std::string name;
+		if(params.name_opt) {
+			params.instance.node->mName = *(params.name_opt);
+		} else {
+			// No name: take the id as the name
+			params.instance.node->mName = mReader->ToString(params.instance.id);
 		}
 
 		// Save the information corresponding to this instance
 		if(params.instance_of.has_id) {
-			params.instance->node = params.node;
-
 			// Create the refered Reference3D if necessary
-			params.instance->instance_of = &(mContent.references[Content::ID(params.instance_of.filename, params.instance_of.id)]);
+			params.instance.instance_of = &(mContent.references[Content::ID(params.instance_of.filename, params.instance_of.id)]);
 
 			// Update the number of instances of this Reference3D
-			params.instance->instance_of->nb_references++;
+			params.instance.instance_of->nb_references++;
 		} else {
-			ThrowException("In Instance3D \"" + mReader->ToString(params.id) + "\": the instance refers to an invalid reference \"" + params.instance_of.uri + "\" without id.");
+			ThrowException("In Instance3D \"" + mReader->ToString(params.instance.id) + "\": the instance refers to an invalid reference \"" + params.instance_of.uri + "\" without id.");
+		}
+
+		// Save the reference to the parent Reference3D
+		Content::Reference3D& parent = params.me->mContent.references[Content::ID(params.me->mReader->GetFilename(), params.aggregated_by)];
+				
+		// Insert the instance into the aggregating Reference3D
+		// The ownership of the node pointer owned by ScopeGuard is automatically transfered to the inserted instance
+		auto result = parent.instances.insert(std::make_pair(Content::ID(params.me->mReader->GetFilename(), params.instance.id), params.instance));
+
+		if(! result.second) {
+			params.me->ThrowException("In Instance3D \"" + params.me->mReader->ToString(params.instance.id) + "\": the instance is already aggregated by the Reference3D \"" + params.me->mReader->ToString(params.aggregated_by) + "\".");
 		}
 	}
 
@@ -685,7 +657,6 @@ namespace Assimp {
 		struct Params {
 			_3DXMLParser* me;
 			XMLReader::Optional<std::string> name_opt;
-			std::string name;
 			unsigned int id;
 		} params;
 
@@ -695,15 +666,6 @@ namespace Assimp {
 			// Parse PLM_ExternalID element
 			map.insert(std::make_pair("PLM_ExternalID", [](Params& params){
 				params.name_opt = params.me->mReader->GetContent<std::string>(true);
-
-				// Test if the name exist, otherwise use the id as name
-				std::string name;
-				if(params.name_opt) {
-					params.name = *params.name_opt;
-				} else {
-					// No name: take the id as the name
-					params.name = params.me->mReader->ToString(params.id);
-				}
 			}));
 
 			return map;
@@ -742,9 +704,18 @@ namespace Assimp {
 			ThrowException("In ReferenceRep \"" + mReader->ToString(params.id) + "\": unsupported representation format \"" + format + "\".");
 		}
 
+		// Test if the name exist, otherwise use the id as name
+		std::string name;
+		if(params.name_opt) {
+			name = *(params.name_opt);
+		} else {
+			// No name: take the id as the name
+			name = params.me->mReader->ToString(params.id);
+		}
+
 		// Set the names of the parsed meshes with this ReferenceRep name
-		for(std::list<aiMesh*>::iterator it(rep.meshes.begin()), end(rep.meshes.end()); it != end; ++it) {
-			(*it)->mName = params.name;
+		for(std::list<ScopeGuard<aiMesh>>::const_iterator it(rep.meshes.begin()), end(rep.meshes.end()); it != end; ++it) {
+			(*it)->mName = name;
 		}
 	}
 
@@ -754,7 +725,6 @@ namespace Assimp {
 		struct Params {
 			_3DXMLParser* me;
 			XMLReader::Optional<std::string> name_opt;
-			std::string name;
 			unsigned int id;
 			Content::InstanceRep* mesh;
 			Content::URI instance_of;
@@ -766,15 +736,6 @@ namespace Assimp {
 			// Parse PLM_ExternalID element
 			map.insert(std::make_pair("PLM_ExternalID", [](Params& params){
 				params.name_opt = params.me->mReader->GetContent<std::string>(true);
-
-				// Test if the name exist, otherwise use the id as name
-				std::string name;
-				if(params.name_opt) {
-					params.name = *params.name_opt;
-				} else {
-					// No name: take the id as the name
-					params.name = params.me->mReader->ToString(params.id);
-				}
 			}));
 
 			// Parse IsAggregatedBy element
@@ -827,8 +788,15 @@ namespace Assimp {
 			ThrowException("In InstanceRep \"" + mReader->ToString(params.id) + "\": the instance has no sub element \"IsInstanceOf\".");
 		}
 
+		// Test if the name exist, otherwise use the id as name
+		if(params.name_opt) {
+			params.mesh->name = *(params.name_opt);
+		} else {
+			// No name: take the id as the name
+			params.mesh->name = params.me->mReader->ToString(params.id);
+		}
+
 		// Create the refered ReferenceRep if necessary
-		params.mesh->name = params.name;
 		params.mesh->instance_of = &(mContent.representations[Content::ID(params.instance_of.filename, params.instance_of.id)]);
 	}
 

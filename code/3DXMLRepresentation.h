@@ -61,14 +61,16 @@ namespace Assimp {
 			_3DXMLParser::XMLReader mReader;
 
 			/** List containing the parsed meshes */
-			std::list<aiMesh*>& mMeshes;
+			std::list<ScopeGuard<aiMesh>>& mMeshes;
 
 			/** The mesh currently parsed */
-			aiMesh* mCurrentMesh;
+			ScopeGuard<aiMesh> mCurrentMesh;
 
 		public: 
 
-			_3DXMLRepresentation(Q3BSP::Q3BSPZipArchive* archive, const std::string& filename, std::list<aiMesh*>& meshes);
+			_3DXMLRepresentation(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, std::list<ScopeGuard<aiMesh>>& meshes);
+
+			virtual ~_3DXMLRepresentation();
 
 		protected:
 

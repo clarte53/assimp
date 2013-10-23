@@ -49,6 +49,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <boost/noncopyable.hpp>
 #include <functional>
+#include <memory>
 
 namespace Assimp {
 
@@ -135,17 +136,17 @@ namespace Assimp {
 					std::string mFileName;
 
 					/** Zip archive containing the data */
-					Q3BSP::Q3BSPZipArchive* mArchive;
+					std::shared_ptr<Q3BSP::Q3BSPZipArchive> mArchive;
 
 					/** Stream to the content of a file in the zip archive */
-					IOStream* mStream;
+					ScopeGuard<IOStream> mStream;
 
 					/** XML reader, member for everyday use */
-					irr::io::IrrXMLReader* mReader;
+					ScopeGuard<irr::io::IrrXMLReader> mReader;
 
 				public:
 
-					XMLReader(Q3BSP::Q3BSPZipArchive* archive, const std::string& file);
+					XMLReader(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& file);
 
 					virtual ~XMLReader();
 
@@ -268,7 +269,7 @@ namespace Assimp {
 					
 					unsigned int id;
 
-					std::list<aiMesh*> meshes;
+					std::list<ScopeGuard<aiMesh>> meshes;
 
 					unsigned int index_begin;
 
@@ -282,11 +283,11 @@ namespace Assimp {
 					
 					unsigned int id;
 
-					aiNode* node;
+					ScopeGuard<aiNode> node;
 
 					Reference3D* instance_of;
 
-					Instance3D() : id(0), node(NULL), instance_of(NULL) {}
+					Instance3D() : id(0), node(new aiNode()), instance_of(NULL) {}
 
 				}; // struct Instance3D
 
@@ -319,19 +320,13 @@ namespace Assimp {
 			}; // struct Content
 
 			/** The archive containing the 3DXML files */ 
-			Q3BSP::Q3BSPZipArchive* mArchive;
+			std::shared_ptr<Q3BSP::Q3BSPZipArchive> mArchive;
 
 			/** Current xml reader */
-			XMLReader* mReader;
+			ScopeGuard<XMLReader> mReader;
 
 			/** Content of the 3DXML file */
 			Content mContent;
-
-			/** Mapping between the element names and the parsing functions */
-			typedef std::function<void()> FunctionType;
-			typedef std::map<std::string, FunctionType> SpecializedMapType;
-			typedef std::map<std::string, SpecializedMapType> FunctionMapType;
-			FunctionMapType mFunctionMap;
 
 		public:
 
