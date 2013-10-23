@@ -70,7 +70,46 @@ namespace Assimp {
 				params.me->mCurrentMesh = ScopeGuard<aiMesh>(new aiMesh());
 
 				params.me->ReadVisualizationRep();
+				/*
+				// Duplicate the vertices to avoid different faces sharing the same (and to pass the ValidateDataStructure test...)
+				ScopeGuard<aiMesh> processed_mesh(new aiMesh());
+				unsigned int vertice_index = 0;
+				for(unsigned int i = 0; i < params.me->mCurrentMesh->Faces.Size(); i++) {
+					aiFace& face = params.me->mCurrentMesh->Faces.Get(i);
 
+					aiFace processed_face;
+					for(unsigned int j = 0; j < face.Indices.Size(); j++) {
+						unsigned int index = face.Indices.Get(j);
+
+						processed_face.Indices.Set(j, vertice_index);
+
+						if(params.me->mCurrentMesh->HasPositions()) {
+							processed_mesh->Vertices.Set(vertice_index, params.me->mCurrentMesh->Vertices.Get(index));
+						}
+						if(params.me->mCurrentMesh->HasNormals()) {
+							processed_mesh->Normals.Set(vertice_index, params.me->mCurrentMesh->Normals.Get(index));
+						}
+						if(params.me->mCurrentMesh->HasTangentsAndBitangents()) {
+							processed_mesh->Tangents.Set(vertice_index, params.me->mCurrentMesh->Tangents.Get(index));
+							processed_mesh->Bitangents.Set(vertice_index, params.me->mCurrentMesh->Bitangents.Get(index));
+						}
+						for(unsigned int k = 0; k < AI_MAX_NUMBER_OF_TEXTURECOORDS; k++) {
+							if(params.me->mCurrentMesh->HasTextureCoords(k)) {
+								processed_mesh->TextureCoords.Get(k).Set(vertice_index, params.me->mCurrentMesh->TextureCoords.Get(k).Get(index));
+							}
+						}
+						for(unsigned int k = 0; k < AI_MAX_NUMBER_OF_COLOR_SETS; k++) {
+							if(params.me->mCurrentMesh->HasVertexColors(k)) {
+								processed_mesh->Colors.Get(k).Set(vertice_index, params.me->mCurrentMesh->Colors.Get(k).Get(index));
+							}
+						}
+
+						vertice_index++;
+					}
+
+					processed_mesh->Faces.Set(i, processed_face);
+				}
+				*/
 				params.me->mMeshes.push_back(params.me->mCurrentMesh);
 			}));
 			
