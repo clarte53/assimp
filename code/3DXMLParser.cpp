@@ -588,9 +588,9 @@ namespace Assimp {
 				// Save the transformation matrix
 				std::istringstream matrix(relative_matrix);
 				matrix
-					>> transformation.a1 >> transformation.a2 >> transformation.a3
-					>> transformation.b1 >> transformation.b2 >> transformation.b3
-					>> transformation.c1 >> transformation.c2 >> transformation.c3
+					>> transformation.a1 >> transformation.b1 >> transformation.c1
+					>> transformation.a2 >> transformation.b2 >> transformation.c2
+					>> transformation.a3 >> transformation.b3 >> transformation.c3
 					>> transformation.a4 >> transformation.b4 >> transformation.c4;
 				transformation.d1 = transformation.d2 = transformation.d3 = 0.0;
 				transformation.d4 = 1.0;
