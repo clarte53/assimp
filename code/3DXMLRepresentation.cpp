@@ -143,6 +143,47 @@ namespace Assimp {
 	}
 	
 	// ------------------------------------------------------------------------------------------------
+	void _3DXMLRepresentation::ParseArray(const std::string& content, std::vector<aiVector3D>& array) const {
+		std::istringstream stream(content);
+		float x, y, z;
+
+		while(! stream.eof()) {
+			stream >> x >> y >> z;
+
+			if(! stream.eof()) {
+				stream.ignore(std::numeric_limits<std::streamsize>::max(), ',');
+			}
+
+			if(stream.fail()) {
+				ThrowException("Can not convert array value to \"aiVector3D\".");
+			}
+
+			array.push_back(aiVector3D(x, y, z));
+		}
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	void _3DXMLRepresentation::ParseArray(const std::string& content, Array<aiVector3D>& array, unsigned int start_index) const {
+		std::istringstream stream(content);
+		float x, y, z;
+
+		unsigned int index = start_index;
+		while(! stream.eof()) {
+			stream >> x >> y >> z;
+
+			if(! stream.eof()) {
+				stream.ignore(std::numeric_limits<std::streamsize>::max(), ',');
+			}
+
+			if(stream.fail()) {
+				ThrowException("Can not convert array value to \"aiVector3D\".");
+			}
+
+			array.Set(index++, aiVector3D(x, y, z));
+		}
+	}
+	
+	// ------------------------------------------------------------------------------------------------
 	void _3DXMLRepresentation::ParseMultiArray(const std::string& content, MultiArray<aiColor4D>& array, unsigned int channel, unsigned int start_index, bool alpha) const {
 		std::istringstream stream(content);
 		float r, g, b, a;
@@ -260,6 +301,7 @@ namespace Assimp {
 	void _3DXMLRepresentation::ReadPolygonRep() {
 		struct Params {
 			_3DXMLRepresentation* me;
+			unsigned int face_offset;
 		} params;
 
 		static const std::map<std::string, std::function<void(Params&)>> mapping(([](){
@@ -275,10 +317,10 @@ namespace Assimp {
 			//map.insert(std::make_pair("PolygonalLOD", [](Params& params){ }));
 			
 			// Parse Faces element
-			map.insert(std::make_pair("Faces", [](Params& params){params.me->ReadFaces();}));
+			map.insert(std::make_pair("Faces", [](Params& params){params.me->ReadFaces(params.face_offset);}));
 			
 			// Parse Edges element
-			//map.insert(std::make_pair("Edges", [](Params& params){ }));
+			map.insert(std::make_pair("Edges", [](Params& params){params.me->ReadEdges();}));
 			
 			// Parse VertexBuffer element
 			map.insert(std::make_pair("VertexBuffer", [](Params& params){params.me->ReadVertexBuffer();}));
@@ -287,14 +329,16 @@ namespace Assimp {
 		})());
 
 		params.me = this;
+		params.face_offset = mCurrentMesh->Vertices.Size();
 
 		mReader.ParseNode(mapping, params);
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLRepresentation::ReadFaces() {
+	void _3DXMLRepresentation::ReadFaces(unsigned int face_offset) {
 		struct Params {
 			_3DXMLRepresentation* me;
+			unsigned int face_offset;
 		} params;
 
 		static const std::map<std::string, std::function<void(Params&)>> mapping(([](){
@@ -306,6 +350,8 @@ namespace Assimp {
 			// Parse Face element
 			map.insert(std::make_pair("Face", [](Params& params){
 				static const unsigned int nb_vertices = 3;
+
+				//TODO: SurfaceAttributes
 
 				std::vector<unsigned int> data;
 
@@ -324,7 +370,7 @@ namespace Assimp {
 						face.mIndices = new unsigned int[nb_vertices];
 
 						for(unsigned int j = 0; j < nb_vertices; j++) {
-							face.mIndices[j] = data[i + j];
+							face.mIndices[j] = data[i + j] + params.face_offset;
 						}
 
 						params.me->mCurrentMesh->Faces.Set(index++, face);
@@ -344,7 +390,7 @@ namespace Assimp {
 						face.mIndices = new unsigned int[nb_vertices];
 
 						for(unsigned int j = 0; j < nb_vertices; j++) {
-							face.mIndices[j] = data[i + j];
+							face.mIndices[j] = data[i + j] + params.face_offset;
 						}
 
 						params.me->mCurrentMesh->Faces.Set(index++, face);
@@ -365,10 +411,58 @@ namespace Assimp {
 
 						face.mIndices[0] = data[0];
 						for(unsigned int j = 1; j < nb_vertices; j++) {
-							face.mIndices[j] = data[i + j];
+							face.mIndices[j] = data[i + j] + params.face_offset;
 						}
 
 						params.me->mCurrentMesh->Faces.Set(index++, face);
+					}
+				}
+			}));
+			
+			return map;
+		})());
+
+		params.me = this;
+		params.face_offset = face_offset;
+
+		mReader.ParseNode(mapping, params);
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	void _3DXMLRepresentation::ReadEdges() {
+		struct Params {
+			_3DXMLRepresentation* me;
+		} params;
+
+		static const std::map<std::string, std::function<void(Params&)>> mapping(([](){
+			std::map<std::string, std::function<void(Params&)>> map;
+
+			// Parse LineAttributes element
+			//map.insert(std::make_pair("LineAttributes", [](Params& params){ }));
+
+			// Parse Polyline element
+			map.insert(std::make_pair("Polyline", [](Params& params){
+				//TODO: LineAttributes
+
+				std::string vertices = *(params.me->mReader.GetAttribute<std::string>("vertices"));
+
+				std::vector<aiVector3D> data;
+				params.me->ParseArray(vertices, data);
+
+				if(! data.empty()) {
+
+					unsigned int index = params.me->mCurrentMesh->Vertices.Size();
+
+					params.me->mCurrentMesh->Vertices.Set(index++, data[0]);
+
+					for(unsigned int i = 1; i < data.size(); i++, index++) {
+						params.me->mCurrentMesh->Vertices.Set(index, data[i]);
+						
+						aiFace face;
+						face.Indices.Set(face.Indices.Size(), index - 1);
+						face.Indices.Set(face.Indices.Size(), index);
+
+						params.me->mCurrentMesh->Faces.Set(params.me->mCurrentMesh->Faces.Size(), face);
 					}
 				}
 			}));

@@ -77,11 +77,9 @@ namespace Assimp {
 			/** Aborts the file reading with an exception */
 			void ThrowException(const std::string& error) const;
 
-			template<typename T>
-			void ParseArray(const std::string& content, Array<T>& array, unsigned int start_index) const;
+			void ParseArray(const std::string& content, std::vector<aiVector3D>& array) const;
 
-			template<>
-			void ParseArray<aiVector3D>(const std::string& content, Array<aiVector3D>& array, unsigned int start_index) const;
+			void ParseArray(const std::string& content, Array<aiVector3D>& array, unsigned int start_index) const;
 
 			void ParseMultiArray(const std::string& content, MultiArray<aiColor4D>& array, unsigned int channel, unsigned int start_index,  bool alpha = true) const;
 
@@ -95,51 +93,14 @@ namespace Assimp {
 
 			void ReadPolygonRep();
 
-			void ReadFaces();
+			void ReadFaces(unsigned int face_offset);
+
+			void ReadEdges();
 
 			void ReadVertexBuffer();
 
 	}; // class _3DXMLRepresentation
 
-	// ------------------------------------------------------------------------------------------------
-	template<typename T>
-	void _3DXMLRepresentation::ParseArray(const std::string& content, Array<T>& array, unsigned int start_index) const {
-		std::istringstream stream(content);
-		T value;
-
-		unsigned int index = start_index;
-		while(! stream.eof()) {
-			stream >> value;
-
-			if(stream.fail()) {
-				ThrowException("Can not convert array value to \"" + std::string(typeid(T).name()) +"\".");
-			}
-
-			array.Set(index++, value);
-		}
-	}
-
-	template<>
-	void _3DXMLRepresentation::ParseArray<aiVector3D>(const std::string& content, Array<aiVector3D>& array, unsigned int start_index) const {
-		std::istringstream stream(content);
-		float x, y, z;
-
-		unsigned int index = start_index;
-		while(! stream.eof()) {
-			stream >> x >> y >> z;
-
-			if(! stream.eof()) {
-				stream.ignore(std::numeric_limits<std::streamsize>::max(), ',');
-			}
-
-			if(stream.fail()) {
-				ThrowException("Can not convert array value to \"aiVector3D\".");
-			}
-
-			array.Set(index++, aiVector3D(x, y, z));
-		}
-	}
-	
 } // end of namespace Assimp
 
 #endif // AI_3DXMLREPRESENTATION_H_INC
