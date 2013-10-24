@@ -147,8 +147,6 @@ namespace Assimp {
 			ThrowException("Failed to open file " + file + "." );
 		}
 
-		scene->mFlags |= AI_SCENE_FLAGS_NON_VERBOSE_FORMAT;
-
 		// Create a xml parser for the manifest
 		mReader = ScopeGuard<XMLReader>(new XMLReader(mArchive, "Manifest.xml"));
 

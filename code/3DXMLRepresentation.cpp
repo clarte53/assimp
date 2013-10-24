@@ -70,7 +70,7 @@ namespace Assimp {
 				params.me->mCurrentMesh = ScopeGuard<aiMesh>(new aiMesh());
 
 				params.me->ReadVisualizationRep();
-				/*
+				
 				// Duplicate the vertices to avoid different faces sharing the same (and to pass the ValidateDataStructure test...)
 				ScopeGuard<aiMesh> processed_mesh(new aiMesh());
 				unsigned int vertice_index = 0;
@@ -109,8 +109,8 @@ namespace Assimp {
 
 					processed_mesh->Faces.Set(i, processed_face);
 				}
-				*/
-				params.me->mMeshes.push_back(params.me->mCurrentMesh);
+				
+				params.me->mMeshes.push_back(processed_mesh);
 			}));
 			
 			return map;
