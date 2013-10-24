@@ -252,6 +252,8 @@ namespace Assimp {
 				struct Reference3D {
 
 					unsigned int id;
+					
+					bool has_name;
 
 					std::string name;
 
@@ -261,13 +263,17 @@ namespace Assimp {
 
 					unsigned int nb_references;
 
-					Reference3D() : id(0), name(""), nb_references(0) {}
+					Reference3D() : id(0), has_name(false), name(""), nb_references(0) {}
 
 				}; // struct Reference3D
 
 				struct ReferenceRep {
 					
 					unsigned int id;
+					
+					bool has_name;
+					
+					std::string name;
 
 					std::list<ScopeGuard<aiMesh>> meshes;
 
@@ -275,19 +281,21 @@ namespace Assimp {
 
 					unsigned int index_end;
 
-					ReferenceRep() : id(0), meshes(), index_begin(0), index_end(0) {}
+					ReferenceRep() : id(0), has_name(false), name(""), meshes(), index_begin(0), index_end(0) {}
 
 				}; // struct ReferenceRep
 
 				struct Instance3D {
 					
 					unsigned int id;
+					
+					bool has_name;
 
 					ScopeGuard<aiNode> node;
 
 					Reference3D* instance_of;
 
-					Instance3D() : id(0), node(new aiNode()), instance_of(NULL) {}
+					Instance3D() : id(0), has_name(false), node(new aiNode()), instance_of(NULL) {}
 
 				}; // struct Instance3D
 
@@ -295,11 +303,13 @@ namespace Assimp {
 					
 					unsigned int id;
 
+					bool has_name;
+
 					std::string name;
 
 					ReferenceRep* instance_of;
 
-					InstanceRep() : id(0), name(""), instance_of(NULL) {}
+					InstanceRep() : id(0), has_name(false), name(""), instance_of(NULL) {}
 
 				}; // struct InstanceRep
 

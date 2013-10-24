@@ -183,6 +183,9 @@ namespace Assimp {
 
 			unsigned int index = mContent.scene->Meshes.Size();
 			for(std::list<ScopeGuard<aiMesh>>::iterator it_mesh(it_rep->second.meshes.begin()), end_mesh(it_rep->second.meshes.end()); it_mesh != end_mesh; ++it_mesh) {
+				// Set the names of the parsed meshes with this ReferenceRep name
+				(*it_mesh)->mName = it_rep->second.name;
+
 				// Realease the ownership of the mesh to the protected scene
 				mContent.scene->Meshes.Set(index++, it_mesh->dismiss());
 			}
@@ -357,6 +360,11 @@ namespace Assimp {
 					Content::Instance3D& child = it_child->second;
 
 					if(child.node.get() != NULL && child.instance_of != NULL) {
+						// Test if the node name is an id to see if we better take the Reference3D instead
+						if(! child.has_name && child.instance_of->has_name) {
+							child.node->mName = child.instance_of->name;
+						}
+
 						// Construct the hierarchy recursively
 						BuildStructure(*child.instance_of, child.node.get());
 
@@ -524,9 +532,11 @@ namespace Assimp {
 		// Test if the name exist, otherwise use the id as name
 		if(params.name_opt) {
 			ref.name = *(params.name_opt);
+			ref.has_name = true;
 		} else {
 			// No name: take the id as the name
 			ref.name = mReader->ToString(params.id);
+			ref.has_name = false;
 		}
 
 		// Nothing else to do because of the weird indirection scheme of 3DXML
@@ -623,9 +633,11 @@ namespace Assimp {
 		std::string name;
 		if(params.name_opt) {
 			params.instance.node->mName = *(params.name_opt);
+			params.instance.has_name = true;
 		} else {
 			// No name: take the id as the name
 			params.instance.node->mName = mReader->ToString(params.instance.id);
+			params.instance.has_name = false;
 		}
 
 		// Save the information corresponding to this instance
@@ -705,17 +717,13 @@ namespace Assimp {
 		}
 
 		// Test if the name exist, otherwise use the id as name
-		std::string name;
 		if(params.name_opt) {
-			name = *(params.name_opt);
+			rep.name = *(params.name_opt);
+			rep.has_name = true;
 		} else {
 			// No name: take the id as the name
-			name = params.me->mReader->ToString(params.id);
-		}
-
-		// Set the names of the parsed meshes with this ReferenceRep name
-		for(std::list<ScopeGuard<aiMesh>>::const_iterator it(rep.meshes.begin()), end(rep.meshes.end()); it != end; ++it) {
-			(*it)->mName = name;
+			rep.name = params.me->mReader->ToString(params.id);
+			rep.has_name = false;
 		}
 	}
 
