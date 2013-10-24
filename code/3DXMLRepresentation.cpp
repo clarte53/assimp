@@ -302,6 +302,7 @@ namespace Assimp {
 		struct Params {
 			_3DXMLRepresentation* me;
 			unsigned int face_offset;
+			std::vector<std::vector<aiVector3D>> lines;
 		} params;
 
 		static const std::map<std::string, std::function<void(Params&)>> mapping(([](){
@@ -320,7 +321,7 @@ namespace Assimp {
 			map.insert(std::make_pair("Faces", [](Params& params){params.me->ReadFaces(params.face_offset);}));
 			
 			// Parse Edges element
-			map.insert(std::make_pair("Edges", [](Params& params){params.me->ReadEdges();}));
+			map.insert(std::make_pair("Edges", [](Params& params){params.me->ReadEdges(params.lines);}));
 			
 			// Parse VertexBuffer element
 			map.insert(std::make_pair("VertexBuffer", [](Params& params){params.me->ReadVertexBuffer();}));
@@ -332,6 +333,25 @@ namespace Assimp {
 		params.face_offset = mCurrentMesh->Vertices.Size();
 
 		mReader.ParseNode(mapping, params);
+
+		// Add the lines after the faces and vertices have been already added to avoid messing with the vertice indexes
+		for(std::vector<std::vector<aiVector3D>>::iterator it(params.lines.begin()), end(params.lines.end()); it != end; ++it) {
+			if(! it->empty()) {
+				unsigned int index = mCurrentMesh->Vertices.Size();
+
+				mCurrentMesh->Vertices.Set(index++, (*it)[0]);
+
+				for(unsigned int i = 1; i < it->size(); i++, index++) {
+					mCurrentMesh->Vertices.Set(index, (*it)[i]);
+						
+					aiFace face;
+					face.Indices.Set(face.Indices.Size(), index - 1);
+					face.Indices.Set(face.Indices.Size(), index);
+
+					mCurrentMesh->Faces.Set(mCurrentMesh->Faces.Size(), face);
+				}
+			}
+		}
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -429,9 +449,10 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLRepresentation::ReadEdges() {
+	void _3DXMLRepresentation::ReadEdges(std::vector<std::vector<aiVector3D>>& lines) {
 		struct Params {
 			_3DXMLRepresentation* me;
+			std::vector<std::vector<aiVector3D>>* lines;
 		} params;
 
 		static const std::map<std::string, std::function<void(Params&)>> mapping(([](){
@@ -446,31 +467,15 @@ namespace Assimp {
 
 				std::string vertices = *(params.me->mReader.GetAttribute<std::string>("vertices"));
 
-				std::vector<aiVector3D> data;
-				params.me->ParseArray(vertices, data);
-
-				if(! data.empty()) {
-
-					unsigned int index = params.me->mCurrentMesh->Vertices.Size();
-
-					params.me->mCurrentMesh->Vertices.Set(index++, data[0]);
-
-					for(unsigned int i = 1; i < data.size(); i++, index++) {
-						params.me->mCurrentMesh->Vertices.Set(index, data[i]);
-						
-						aiFace face;
-						face.Indices.Set(face.Indices.Size(), index - 1);
-						face.Indices.Set(face.Indices.Size(), index);
-
-						params.me->mCurrentMesh->Faces.Set(params.me->mCurrentMesh->Faces.Size(), face);
-					}
-				}
+				params.lines->push_back(std::vector<aiVector3D>());
+				params.me->ParseArray(vertices, params.lines->back());
 			}));
 			
 			return map;
 		})());
 
 		params.me = this;
+		params.lines = &lines;
 
 		mReader.ParseNode(mapping, params);
 	}

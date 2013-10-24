@@ -95,7 +95,7 @@ namespace Assimp {
 
 			void ReadFaces(unsigned int face_offset);
 
-			void ReadEdges();
+			void ReadEdges(std::vector<std::vector<aiVector3D>>& lines);
 
 			void ReadVertexBuffer();
 
