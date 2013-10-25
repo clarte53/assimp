@@ -241,13 +241,21 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLRepresentation::ParseTriangles(const std::string& content, std::vector<unsigned int>& triangles) const {
+	void _3DXMLRepresentation::ParseTriangles(const std::string& content, std::list<std::vector<unsigned int>>& triangles) const {
 		std::istringstream stream(content);
 		unsigned int value;
+
+		triangles.emplace_back();
+		triangles.back().reserve(128); // better use too much memory than to have multiple reallocations
 
 		while(! stream.eof()) {
 			char next = stream.peek();
 			while(next == ',' || next == ' ') {
+				if(next == ',') {
+					triangles.emplace_back();
+					triangles.back().reserve(128); // better use too much memory than to have multiple reallocations
+				}
+
 				stream.get();
 				next = stream.peek();
 			}
@@ -259,7 +267,7 @@ namespace Assimp {
 					ThrowException("Can not convert face value to \"unsigned int\".");
 				}
 
-				triangles.push_back(value);
+				triangles.back().push_back(value);
 			}
 		}
 	}
@@ -373,7 +381,7 @@ namespace Assimp {
 
 				//TODO: SurfaceAttributes
 
-				std::vector<unsigned int> data;
+				std::list<std::vector<unsigned int>> data;
 
 				unsigned int index = params.me->mCurrentMesh->Faces.Size();
 
@@ -383,17 +391,19 @@ namespace Assimp {
 
 					params.me->ParseTriangles(*triangles, data);
 
-					for(unsigned int i = 0; i < data.size(); i += 3) {
-						aiFace face;
+					for(std::list<std::vector<unsigned int>>::iterator it(data.begin()), end(data.end()); it != end; ++it) {
+						for(unsigned int i = 0; i < it->size(); i += 3) {
+							aiFace face;
 
-						face.mNumIndices = nb_vertices;
-						face.mIndices = new unsigned int[nb_vertices];
+							face.mNumIndices = nb_vertices;
+							face.mIndices = new unsigned int[nb_vertices];
 
-						for(unsigned int j = 0; j < nb_vertices; j++) {
-							face.mIndices[j] = data[i + j] + params.face_offset;
+							for(unsigned int j = 0; j < nb_vertices; j++) {
+								face.mIndices[j] = (*it)[i + j] + params.face_offset;
+							}
+
+							params.me->mCurrentMesh->Faces.Set(index++, face);
 						}
-
-						params.me->mCurrentMesh->Faces.Set(index++, face);
 					}
 				}
 				
@@ -403,24 +413,26 @@ namespace Assimp {
 
 					params.me->ParseTriangles(*strips, data);
 
-					bool inversed = false;
-					for(unsigned int i = 0; i < data.size() - (nb_vertices - 1); i++) {
-						aiFace face;
+					for(std::list<std::vector<unsigned int>>::iterator it(data.begin()), end(data.end()); it != end; ++it) {
+						bool inversed = false;
+						for(unsigned int i = 0; i < it->size() - (nb_vertices - 1); i++) {
+							aiFace face;
 
-						face.mNumIndices = nb_vertices;
-						face.mIndices = new unsigned int[nb_vertices];
+							face.mNumIndices = nb_vertices;
+							face.mIndices = new unsigned int[nb_vertices];
 
-						for(unsigned int j = 0; j < nb_vertices; j++) {
-							if(! inversed) {
-								face.mIndices[j] = data[i + j] + params.face_offset;
-							} else {
-								face.mIndices[j] = data[i + nb_vertices - (j + 1)] + params.face_offset;
+							for(unsigned int j = 0; j < nb_vertices; j++) {
+								if(! inversed) {
+									face.mIndices[j] = (*it)[i + j] + params.face_offset;
+								} else {
+									face.mIndices[j] = (*it)[i + nb_vertices - (j + 1)] + params.face_offset;
+								}
 							}
+
+							inversed = ! inversed;
+
+							params.me->mCurrentMesh->Faces.Set(index++, face);
 						}
-
-						inversed = ! inversed;
-
-						params.me->mCurrentMesh->Faces.Set(index++, face);
 					}
 				}
 				
@@ -430,18 +442,20 @@ namespace Assimp {
 
 					params.me->ParseTriangles(*fans, data);
 
-					for(unsigned int i = 0; i < data.size() - (nb_vertices - 1); i++) {
-						aiFace face;
+					for(std::list<std::vector<unsigned int>>::iterator it(data.begin()), end(data.end()); it != end; ++it) {
+						for(unsigned int i = 0; i < it->size() - (nb_vertices - 1); i++) {
+							aiFace face;
 
-						face.mNumIndices = nb_vertices;
-						face.mIndices = new unsigned int[nb_vertices];
-
-						face.mIndices[0] = data[0];
-						for(unsigned int j = 1; j < nb_vertices; j++) {
-							face.mIndices[j] = data[i + j] + params.face_offset;
+							face.mNumIndices = nb_vertices;
+							face.mIndices = new unsigned int[nb_vertices];
+							
+							face.mIndices[0] = (*it)[0] + params.face_offset;
+							for(unsigned int j = 1; j < nb_vertices; j++) {
+								face.mIndices[j] = (*it)[i + j] + params.face_offset;
+							}
+							
+							params.me->mCurrentMesh->Faces.Set(index++, face);
 						}
-
-						params.me->mCurrentMesh->Faces.Set(index++, face);
 					}
 				}
 			}));

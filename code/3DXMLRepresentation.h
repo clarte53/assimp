@@ -85,7 +85,7 @@ namespace Assimp {
 
 			void ParseMultiArray(const std::string& content, MultiArray<aiVector3D>& array, unsigned int channel, unsigned int start_index, unsigned int dimension) const;
 
-			void ParseTriangles(const std::string& content, std::vector<unsigned int>& triangles) const;
+			void ParseTriangles(const std::string& content, std::list<std::vector<unsigned int>>& triangles) const;
 
 			void ReadVisualizationRep();
 
