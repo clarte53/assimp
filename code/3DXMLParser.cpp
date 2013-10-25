@@ -338,6 +338,11 @@ namespace Assimp {
 	// ------------------------------------------------------------------------------------------------
 	// Add the meshes indices and children nodes into the given node recursively
 	void _3DXMLParser::BuildStructure(Content::Reference3D& ref, aiNode* node) const {
+		// Decrement the counter of instances to this Reference3D (used for memory managment)
+		if(ref.nb_references > 0) {
+			ref.nb_references--;
+		}
+
 		if(node != NULL) {
 			// Copy the indexes of the meshes contained into this instance into the proper aiNode
 			if(node->Meshes.Size() == 0) {
@@ -367,11 +372,6 @@ namespace Assimp {
 
 						// Construct the hierarchy recursively
 						BuildStructure(*child.instance_of, child.node.get());
-
-						// Decrement the counter of instances to this Reference3D (used for memory managment)
-						if(ref.nb_references > 0) {
-							ref.nb_references--;
-						}
 
 						// If the counter of references is null, this mean this instance is the last instance of this Reference3D
 						if(ref.nb_references == 0) {
