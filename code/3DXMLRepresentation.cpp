@@ -396,13 +396,14 @@ namespace Assimp {
 						params.me->mCurrentMesh->Faces.Set(index++, face);
 					}
 				}
-
+				
 				_3DXMLParser::XMLReader::Optional<std::string> strips = params.me->mReader.GetAttribute<std::string>("strips");
 				if(strips) {
 					data.clear();
 
 					params.me->ParseTriangles(*strips, data);
 
+					bool inversed = false;
 					for(unsigned int i = 0; i < data.size() - (nb_vertices - 1); i++) {
 						aiFace face;
 
@@ -410,13 +411,19 @@ namespace Assimp {
 						face.mIndices = new unsigned int[nb_vertices];
 
 						for(unsigned int j = 0; j < nb_vertices; j++) {
-							face.mIndices[j] = data[i + j] + params.face_offset;
+							if(! inversed) {
+								face.mIndices[j] = data[i + j] + params.face_offset;
+							} else {
+								face.mIndices[j] = data[i + nb_vertices - (j + 1)] + params.face_offset;
+							}
 						}
+
+						inversed = ! inversed;
 
 						params.me->mCurrentMesh->Faces.Set(index++, face);
 					}
 				}
-
+				
 				_3DXMLParser::XMLReader::Optional<std::string> fans = params.me->mReader.GetAttribute<std::string>("fans");
 				if(fans) {
 					data.clear();
