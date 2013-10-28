@@ -45,6 +45,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef AI_3DXMLPARSER_H_INC
 #define AI_3DXMLPARSER_H_INC
 
+#include "3DXMLStructure.h"
 #include "irrXMLWrapper.h"
 
 #include <boost/noncopyable.hpp>
@@ -210,125 +211,6 @@ namespace Assimp {
 		
 		protected:
 
-			struct Content {
-
-				struct URI {
-
-					std::string uri;
-
-					bool external;
-
-					bool has_id;
-
-					std::string filename;
-
-					std::string extension;
-
-					unsigned int id;
-
-					URI() : uri(""), external(false), has_id(false), filename(""), extension(""), id(0) {}
-
-				}; // struct URI
-
-				struct ID {
-
-					std::string filename;
-
-					unsigned int id;
-
-					ID(std::string _filename, unsigned int _id) : filename(_filename), id(_id) {}
-
-					inline bool operator<(const ID& other) const {
-						int comp = filename.compare(other.filename);
-						return comp < 0 || (comp == 0 && id < other.id);
-					}
-
-				}; // struct ID
-				
-				struct Instance3D;
-
-				struct InstanceRep;
-
-				struct Reference3D {
-
-					unsigned int id;
-					
-					bool has_name;
-
-					std::string name;
-
-					std::map<ID, Instance3D> instances;
-
-					std::map<ID, InstanceRep> meshes;
-
-					unsigned int nb_references;
-
-					Reference3D() : id(0), has_name(false), name(""), nb_references(0) {}
-
-				}; // struct Reference3D
-
-				struct ReferenceRep {
-					
-					unsigned int id;
-					
-					bool has_name;
-					
-					std::string name;
-
-					std::list<ScopeGuard<aiMesh>> meshes;
-
-					unsigned int index_begin;
-
-					unsigned int index_end;
-
-					ReferenceRep() : id(0), has_name(false), name(""), meshes(), index_begin(0), index_end(0) {}
-
-				}; // struct ReferenceRep
-
-				struct Instance3D {
-					
-					unsigned int id;
-					
-					bool has_name;
-
-					ScopeGuard<aiNode> node;
-
-					Reference3D* instance_of;
-
-					Instance3D() : id(0), has_name(false), node(new aiNode()), instance_of(NULL) {}
-
-				}; // struct Instance3D
-
-				struct InstanceRep {
-					
-					unsigned int id;
-
-					bool has_name;
-
-					std::string name;
-
-					ReferenceRep* instance_of;
-
-					InstanceRep() : id(0), has_name(false), name(""), instance_of(NULL) {}
-
-				}; // struct InstanceRep
-
-				aiScene* scene;
-
-				std::map<ID, Reference3D> references;
-
-				std::map<ID, ReferenceRep> representations;
-
-				std::set<std::string> files_to_parse;
-
-				unsigned int root_index;
-
-				bool has_root_index;
-
-				Content(aiScene* _scene) : scene(_scene), references(), root_index(0), has_root_index(false) {}
-
-			}; // struct Content
-
 			/** The archive containing the 3DXML files */ 
 			std::shared_ptr<Q3BSP::Q3BSPZipArchive> mArchive;
 
@@ -336,7 +218,7 @@ namespace Assimp {
 			ScopeGuard<XMLReader> mReader;
 
 			/** Content of the 3DXML file */
-			Content mContent;
+			_3DXMLStructure mContent;
 
 		public:
 
@@ -352,13 +234,13 @@ namespace Assimp {
 
 			void ParseFile();
 
-			void ParseURI(const std::string& uri, Content::URI& result) const;
+			void ParseURI(const std::string& uri, _3DXMLStructure::URI& result) const;
 
 			static void ParseExtension(const std::string& filename, std::string& extension);
 
 			static void ParseID(const std::string& data, unsigned int& id);
 
-			void BuildStructure(Content::Reference3D& ref, aiNode* node) const;
+			void BuildStructure(_3DXMLStructure::Reference3D& ref, aiNode* node) const;
 
 			void ReadManifest(std::string& main_file);
 

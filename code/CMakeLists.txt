@@ -159,6 +159,8 @@ SET( 3DXML_SRCS
 	3DXMLParser.h
 	3DXMLRepresentation.h
 	3DXMLRepresentation.cpp
+	3DXMLStructure.h
+	3DXMLStructure.cpp
 )
 SOURCE_GROUP(3DXML FILES ${3DXML_SRCS})
 

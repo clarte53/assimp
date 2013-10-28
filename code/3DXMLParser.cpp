@@ -177,7 +177,7 @@ namespace Assimp {
 		}
 			
 		// Add the meshes into the scene
-		for(std::map<Content::ID, Content::ReferenceRep>::iterator it_rep(mContent.representations.begin()), end_rep(mContent.representations.end()); it_rep != end_rep; ++it_rep) {
+		for(std::map<_3DXMLStructure::ID, _3DXMLStructure::ReferenceRep>::iterator it_rep(mContent.representations.begin()), end_rep(mContent.representations.end()); it_rep != end_rep; ++it_rep) {
 			it_rep->second.index_begin = mContent.scene->Meshes.Size();
 			it_rep->second.index_end = it_rep->second.index_begin + it_rep->second.meshes.size() - 1;
 
@@ -193,10 +193,10 @@ namespace Assimp {
 
 		// Create the root node
 		if(mContent.has_root_index) {
-			std::map<Content::ID, Content::Reference3D>::iterator it_root = mContent.references.find(Content::ID(main_file, mContent.root_index));
+			std::map<_3DXMLStructure::ID, _3DXMLStructure::Reference3D>::iterator it_root = mContent.references.find(_3DXMLStructure::ID(main_file, mContent.root_index));
 
 			if(it_root != mContent.references.end()) {
-				Content::Reference3D& root = it_root->second;
+				_3DXMLStructure::Reference3D& root = it_root->second;
 
 				if(root.nb_references == 0) {
 					// mRootNode is contained inside the scene, which is already protected against memory leaks
@@ -275,7 +275,7 @@ namespace Assimp {
 	
 	// ------------------------------------------------------------------------------------------------
 	// Parse one uri and split it into it's different components
-	void _3DXMLParser::ParseURI(const std::string& uri, Content::URI& result) const {
+	void _3DXMLParser::ParseURI(const std::string& uri, _3DXMLStructure::URI& result) const {
 		static const unsigned int size_prefix = 10;
 
 		result.uri = uri;
@@ -337,7 +337,7 @@ namespace Assimp {
 	
 	// ------------------------------------------------------------------------------------------------
 	// Add the meshes indices and children nodes into the given node recursively
-	void _3DXMLParser::BuildStructure(Content::Reference3D& ref, aiNode* node) const {
+	void _3DXMLParser::BuildStructure(_3DXMLStructure::Reference3D& ref, aiNode* node) const {
 		// Decrement the counter of instances to this Reference3D (used for memory managment)
 		if(ref.nb_references > 0) {
 			ref.nb_references--;
@@ -346,8 +346,8 @@ namespace Assimp {
 		if(node != NULL) {
 			// Copy the indexes of the meshes contained into this instance into the proper aiNode
 			if(node->Meshes.Size() == 0) {
-				for(std::map<Content::ID, Content::InstanceRep>::const_iterator it_mesh(ref.meshes.begin()), end_mesh(ref.meshes.end()); it_mesh != end_mesh; ++it_mesh) {
-					const Content::InstanceRep& rep = it_mesh->second;
+				for(std::map<_3DXMLStructure::ID, _3DXMLStructure::InstanceRep>::const_iterator it_mesh(ref.meshes.begin()), end_mesh(ref.meshes.end()); it_mesh != end_mesh; ++it_mesh) {
+					const _3DXMLStructure::InstanceRep& rep = it_mesh->second;
 
 					if(rep.instance_of != NULL) {
 						for(unsigned int i = node->Meshes.Size(), index = rep.instance_of->index_begin; index <= rep.instance_of->index_end; i++, index++) {
@@ -361,8 +361,8 @@ namespace Assimp {
 
 			// Copy the children nodes of this instance into the proper node
 			if(node->Children.Size() == 0) {
-				for(std::map<Content::ID, Content::Instance3D>::iterator it_child(ref.instances.begin()), end_child(ref.instances.end()); it_child != end_child; ++ it_child) {
-					Content::Instance3D& child = it_child->second;
+				for(std::map<_3DXMLStructure::ID, _3DXMLStructure::Instance3D>::iterator it_child(ref.instances.begin()), end_child(ref.instances.end()); it_child != end_child; ++ it_child) {
+					_3DXMLStructure::Instance3D& child = it_child->second;
 
 					if(child.node.get() != NULL && child.instance_of != NULL) {
 						// Test if the node name is an id to see if we better take the Reference3D instead
@@ -524,7 +524,7 @@ namespace Assimp {
 
 		mReader->ParseNode(mapping, params);
 
-		Content::Reference3D& ref = mContent.references[Content::ID(mReader->GetFilename(), params.id)]; // Create the Reference3D if not present.
+		_3DXMLStructure::Reference3D& ref = mContent.references[_3DXMLStructure::ID(mReader->GetFilename(), params.id)]; // Create the Reference3D if not present.
 				
 		// Save id and name for future error / log messages
 		ref.id = params.id;
@@ -549,8 +549,8 @@ namespace Assimp {
 		struct Params {
 			_3DXMLParser* me;
 			XMLReader::Optional<std::string> name_opt;
-			Content::Instance3D instance;
-			Content::URI instance_of;
+			_3DXMLStructure::Instance3D instance;
+			_3DXMLStructure::URI instance_of;
 			unsigned int aggregated_by;
 			bool has_aggregated_by;
 			bool has_instance_of;
@@ -581,7 +581,7 @@ namespace Assimp {
 				// If the reference is on another file and does not already exist, add it to the list of files to parse
 				if(params.instance_of.external && params.instance_of.has_id &&
 						params.instance_of.filename.compare(params.me->mReader->GetFilename()) != 0 &&
-						params.me->mContent.references.find(Content::ID(params.instance_of.filename, params.instance_of.id)) == params.me->mContent.references.end()) {
+						params.me->mContent.references.find(_3DXMLStructure::ID(params.instance_of.filename, params.instance_of.id)) == params.me->mContent.references.end()) {
 
 					params.me->mContent.files_to_parse.insert(params.instance_of.filename);
 				}
@@ -643,7 +643,7 @@ namespace Assimp {
 		// Save the information corresponding to this instance
 		if(params.instance_of.has_id) {
 			// Create the refered Reference3D if necessary
-			params.instance.instance_of = &(mContent.references[Content::ID(params.instance_of.filename, params.instance_of.id)]);
+			params.instance.instance_of = &(mContent.references[_3DXMLStructure::ID(params.instance_of.filename, params.instance_of.id)]);
 
 			// Update the number of instances of this Reference3D
 			params.instance.instance_of->nb_references++;
@@ -652,11 +652,11 @@ namespace Assimp {
 		}
 
 		// Save the reference to the parent Reference3D
-		Content::Reference3D& parent = params.me->mContent.references[Content::ID(params.me->mReader->GetFilename(), params.aggregated_by)];
+		_3DXMLStructure::Reference3D& parent = params.me->mContent.references[_3DXMLStructure::ID(params.me->mReader->GetFilename(), params.aggregated_by)];
 				
 		// Insert the instance into the aggregating Reference3D
 		// The ownership of the node pointer owned by ScopeGuard is automatically transfered to the inserted instance
-		auto result = parent.instances.insert(std::make_pair(Content::ID(params.me->mReader->GetFilename(), params.instance.id), params.instance));
+		auto result = parent.instances.insert(std::make_pair(_3DXMLStructure::ID(params.me->mReader->GetFilename(), params.instance.id), params.instance));
 
 		if(! result.second) {
 			params.me->ThrowException("In Instance3D \"" + params.me->mReader->ToString(params.instance.id) + "\": the instance is already aggregated by the Reference3D \"" + params.me->mReader->ToString(params.aggregated_by) + "\".");
@@ -688,7 +688,7 @@ namespace Assimp {
 		params.id = *(mReader->GetAttribute<unsigned int>("id", true));
 		std::string format = *(mReader->GetAttribute<std::string>("format", true));
 		std::string file = *(mReader->GetAttribute<std::string>("associatedFile", true));
-		Content::URI uri;
+		_3DXMLStructure::URI uri;
 
 		mReader->ParseNode(mapping, params);
 
@@ -699,7 +699,7 @@ namespace Assimp {
 		}
 
 		// Get the container for this representation
-		Content::ReferenceRep& rep = mContent.representations[Content::ID(mReader->GetFilename(), params.id)];
+		_3DXMLStructure::ReferenceRep& rep = mContent.representations[_3DXMLStructure::ID(mReader->GetFilename(), params.id)];
 		rep.id = params.id;
 		rep.index_begin = 0;
 		rep.index_end = 0;
@@ -734,8 +734,8 @@ namespace Assimp {
 			_3DXMLParser* me;
 			XMLReader::Optional<std::string> name_opt;
 			unsigned int id;
-			Content::InstanceRep* mesh;
-			Content::URI instance_of;
+			_3DXMLStructure::InstanceRep* mesh;
+			_3DXMLStructure::URI instance_of;
 		} params;
 
 		static const std::map<std::string, std::function<void(Params&)>> mapping(([](){
@@ -751,8 +751,8 @@ namespace Assimp {
 				unsigned int aggregated_by = *(params.me->mReader->GetContent<unsigned int>(true));
 
 				// Save the reference to the parent Reference3D
-				Content::Reference3D& parent = params.me->mContent.references[Content::ID(params.me->mReader->GetFilename(), aggregated_by)];
-				params.mesh = &(parent.meshes[Content::ID(params.me->mReader->GetFilename(), params.id)]);
+				_3DXMLStructure::Reference3D& parent = params.me->mContent.references[_3DXMLStructure::ID(params.me->mReader->GetFilename(), aggregated_by)];
+				params.mesh = &(parent.meshes[_3DXMLStructure::ID(params.me->mReader->GetFilename(), params.id)]);
 
 				// Save id for future error / log message
 				params.mesh->id = params.id;
@@ -768,7 +768,7 @@ namespace Assimp {
 				// If the reference is on another file and does not already exist, add it to the list of files to parse
 				if(params.instance_of.external && params.instance_of.has_id &&
 						params.instance_of.filename.compare(params.me->mReader->GetFilename()) != 0 &&
-						params.me->mContent.references.find(Content::ID(params.instance_of.filename, params.instance_of.id)) == params.me->mContent.references.end()) {
+						params.me->mContent.references.find(_3DXMLStructure::ID(params.instance_of.filename, params.instance_of.id)) == params.me->mContent.references.end()) {
 
 					params.me->mContent.files_to_parse.insert(params.instance_of.filename);
 				}
@@ -805,7 +805,7 @@ namespace Assimp {
 		}
 
 		// Create the refered ReferenceRep if necessary
-		params.mesh->instance_of = &(mContent.representations[Content::ID(params.instance_of.filename, params.instance_of.id)]);
+		params.mesh->instance_of = &(mContent.representations[_3DXMLStructure::ID(params.instance_of.filename, params.instance_of.id)]);
 	}
 
 } // Namespace Assimp
