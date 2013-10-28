@@ -49,6 +49,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "3DXMLStructure.h"
 
+#include <algorithm>
+
 namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
@@ -59,6 +61,11 @@ namespace Assimp {
 	// ------------------------------------------------------------------------------------------------
 	_3DXMLStructure::ID::ID(std::string _filename, unsigned int _id) : filename(_filename), id(_id) {
 	
+	}
+	
+	// ------------------------------------------------------------------------------------------------
+	bool _3DXMLStructure::ID::operator==(const ID& other) const {
+		return id == other.id && filename.compare(other.filename) == 0;
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -88,20 +95,24 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::MaterialApplication::MaterialApplication() {
+	_3DXMLStructure::MaterialApplication::MaterialApplication() : channel(0), two_sided(false), operation(REPLACE), materials() {
 
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	bool _3DXMLStructure::MaterialApplication::operator==(const MaterialApplication& other) const {
-		// TODO
-		return true;
+		return channel == other.channel && two_sided == other.two_sided && operation == other.operation && std::equal(materials.begin(), materials.end(), other.materials.begin());
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	bool _3DXMLStructure::MaterialApplication::operator<(const MaterialApplication& other) const {
-		// TODO
-		return false;
+		return channel < other.channel || (
+			channel == other.channel && two_sided < other.two_sided || (
+				two_sided == other.two_sided && operation < other.operation || (
+					operation == other.operation && less(materials, other.materials)
+				)
+			)
+		);
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -112,31 +123,7 @@ namespace Assimp {
 	// ------------------------------------------------------------------------------------------------
 	bool _3DXMLStructure::SurfaceAttributes::operator<(const SurfaceAttributes& other) const {
 		return color < other.color || (
-			color == other.color && ([this, &other]() {
-					bool less = false;
-					bool is_smaller = materials.size() < other.materials.size();
-
-					const std::list<MaterialApplication>& min = (is_smaller ? materials : other.materials);
-					const std::list<MaterialApplication>& max = (is_smaller ? other.materials : materials);
-
-					auto match = std::mismatch(min.begin(), min.end(), max.begin());
-
-					if(match.first == min.end()) {
-						// All the common elements are equals, we must use the size to determine which one is "less"
-						less = is_smaller;
-					} else {
-						// We have one element which is "less" than it's conterpart
-						if(is_smaller) {
-							less = *(match.first) < *(match.second);
-						} else {
-							// The lists are inversed, so we must inverse the result
-							less = *(match.second) < *(match.first);
-						}
-					}
-
-					return less;
-				}()
-			)
+			color == other.color && less(materials, other.materials)
 		);
 	}
 

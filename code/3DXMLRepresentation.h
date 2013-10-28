@@ -58,7 +58,7 @@ namespace Assimp {
 		protected:
 
 			/** Current xml reader */
-			_3DXMLParser::XMLReader mReader;
+			XMLParser mReader;
 
 			/** List containing the parsed meshes */
 			std::list<ScopeGuard<aiMesh>>& mMeshes;
@@ -91,7 +91,7 @@ namespace Assimp {
 
 			void ReadBagRep();
 
-			void ReadPolygonRep();
+			void ReadPolygonalRep();
 
 			void ReadFaces(unsigned int face_offset);
 

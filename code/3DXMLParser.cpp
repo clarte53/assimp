@@ -50,7 +50,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "3DXMLParser.h"
 
 #include "3DXMLRepresentation.h"
-#include "ParsingUtils.h"
 #include "Q3BSPZipArchive.h"
 #include "SceneCombiner.h"
 
@@ -58,86 +57,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cctype>
 
 namespace Assimp {
-
-	// ------------------------------------------------------------------------------------------------
-	_3DXMLParser::XMLReader::XMLReader(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& file) : mFileName(file), mArchive(archive), mStream(NULL), mReader(NULL) {
-		Open(file);
-	}
-
-	// ------------------------------------------------------------------------------------------------
-	_3DXMLParser::XMLReader::~XMLReader() {
-		Close();
-	}
-
-	// ------------------------------------------------------------------------------------------------
-	void _3DXMLParser::XMLReader::Open(const std::string& file) {
-		if(mStream == NULL && mReader == NULL) {
-			mFileName = file;
-
-			// Open the manifest files
-			mStream = ScopeGuard<IOStream>(mArchive->Open(mFileName.c_str()));
-			if(mStream == NULL) {
-				// because Q3BSPZipArchive (now) correctly close all open files automatically on destruction,
-				// we do not have to worry about closing the stream explicitly on exceptions
-
-				ThrowException(mFileName + " not found.");
-			}
-
-			// generate a XML reader for it
-			// the pointer is automatically deleted at the end of the function, even if some exceptions are raised
-			ScopeGuard<CIrrXML_IOStreamReader> IOWrapper(new CIrrXML_IOStreamReader(mStream));
-			mReader = ScopeGuard<irr::io::IrrXMLReader>(irr::io::createIrrXMLReader(IOWrapper.get()));
-			if(mReader == NULL) {
-				ThrowException("Unable to create XML reader for file \"" + mFileName + "\".");
-			}
-		}
-	}
-
-	// ------------------------------------------------------------------------------------------------
-	void _3DXMLParser::XMLReader::Close() {
-		mArchive->Close(mStream.dismiss());
-	}
-
-	// ------------------------------------------------------------------------------------------------
-	// Aborts the file reading with an exception
-	void _3DXMLParser::XMLReader::ThrowException(const std::string& error) const {
-		throw DeadlyImportError(boost::str(boost::format("3DXML parser: %s - %s") % mFileName % error));
-	}
-
-	// ------------------------------------------------------------------------------------------------
-	// Skip an element
-	void _3DXMLParser::XMLReader::SkipElement() const {
-		SkipUntilEnd(mReader->getNodeName());
-	}
-
-	// ------------------------------------------------------------------------------------------------
-	// Skip recursively until the end of element "name"
-	void _3DXMLParser::XMLReader::SkipUntilEnd(const std::string& name) const {
-		irr::io::EXML_NODE node_type = mReader->getNodeType();
-		bool is_same_name = name.compare(mReader->getNodeName()) == 0;
-		unsigned int depth = 0;
-
-		// Are we already on the ending element or an <element />?
-		if(! mReader->isEmptyElement() && (node_type != irr::io::EXN_ELEMENT_END || ! is_same_name)) {
-			// If not, parse the next elements...
-			while(mReader->read()) {
-				node_type = mReader->getNodeType();
-				is_same_name = name.compare(mReader->getNodeName()) == 0;
-
-				// ...recursively...
-				if(node_type == irr::io::EXN_ELEMENT && is_same_name) {
-					depth++;
-				} else if(node_type == irr::io::EXN_ELEMENT_END && is_same_name) {
-					// ...until we find the corresponding ending element
-					if(depth == 0) {
-						break;
-					} else {
-						depth--;
-					}
-				}
-			}
-		}
-	}
 
 	// ------------------------------------------------------------------------------------------------
 	// Constructor to be privately used by Importer
@@ -148,14 +67,14 @@ namespace Assimp {
 		}
 
 		// Create a xml parser for the manifest
-		mReader = ScopeGuard<XMLReader>(new XMLReader(mArchive, "Manifest.xml"));
+		mReader = ScopeGuard<XMLParser>(new XMLParser(mArchive, "Manifest.xml"));
 
 		// Read the name of the main XML file in the manifest
 		std::string main_file;
 		ReadManifest(main_file);
 
 		// Create a xml parser for the root file
-		mReader = ScopeGuard<XMLReader>(new XMLReader(mArchive, main_file));
+		mReader = ScopeGuard<XMLParser>(new XMLParser(mArchive, main_file));
 
 		// Parse the main 3DXML file
 		ParseFile();
@@ -166,7 +85,7 @@ namespace Assimp {
 
 			if(it != mContent.files_to_parse.end()) {
 				// Create a xml parser for the file
-				mReader = ScopeGuard<XMLReader>(new XMLReader(mArchive, *it));
+				mReader = ScopeGuard<XMLParser>(new XMLParser(mArchive, *it));
 
 				// Parse the 3DXML file
 				ParseFile();
@@ -233,29 +152,38 @@ namespace Assimp {
 			_3DXMLParser* me;
 		} params;
 
-		static const std::map<std::string, std::function<void(Params&)>> mapping(([](){
-			std::map<std::string, std::function<void(Params&)>> map;
+		static const XMLParser::XSD::Sequence<Params>::type mapping(([](){
+			XMLParser::XSD::Sequence<Params>::type map;
 
 			// Parse Header element
-			map.insert(std::make_pair("Header", [](Params& params){params.me->ReadHeader();}));
+			map.emplace_back("Header", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadHeader();}, 1, 1));
 
 			// Parse ProductStructure element
-			map.insert(std::make_pair("ProductStructure", [](Params& params){params.me->ReadProductStructure();}));
+			map.emplace_back("ProductStructure", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadProductStructure();}, 0, 1));
 
-			//TODO PROCESS
-			//TODO DefaultView
-			//TODO DELFmiFunctionalModelImplementCnx
+			// Parse PROCESS element
+			//map.emplace_back("PROCESS", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadPROCESS();}, 0, 1));
+
+			// Parse DefaultView element
+			//map.emplace_back("DefaultView", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadDefaultView();}, 0, 1));
+
+			// Parse DELFmiFunctionalModelImplementCnx element
+			//map.emplace_back("DELFmiFunctionalModelImplementCnx", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadDELFmiFunctionalModelImplementCnx();}, 0, 1));
 
 			// Parse CATMaterialRef element
-			map.insert(std::make_pair("CATMaterialRef", [](Params& params){params.me->ReadCATMaterialRef();}));
+			map.emplace_back("CATMaterialRef", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadCATMaterialRef();}, 0, 1));
 
-			//TODO CATRepImage
+			// Parse CATRepImage element
+			//map.emplace_back("CATRepImage", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadCATRepImage();}, 0, 1));
 
 			// Parse CATMaterial element
-			map.insert(std::make_pair("CATMaterial", [](Params& params){params.me->ReadCATMaterial();}));
+			map.emplace_back("CATMaterial", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadCATMaterial();}, 0, 1));
 
-			//TODO DELPPRContextModelProcessCnx
-			//TODO DELRmiResourceModelImplCnx
+			// Parse DELPPRContextModelProcessCnx element
+			//map.emplace_back("DELPPRContextModelProcessCnx", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadDELPPRContextModelProcessCnx();}, 0, 1));
+
+			// Parse DELRmiResourceModelImplCnx element
+			//map.emplace_back("DELRmiResourceModelImplCnx", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadDELRmiResourceModelImplCnx();}, 0, 1));
 			
 			return map;
 		})());
@@ -266,7 +194,7 @@ namespace Assimp {
 		// Parse the main 3DXML file
 		while(mReader->Next()) {
 			if(mReader->IsElement("Model_3dxml")) {
-				mReader->ParseNode(mapping, params);
+				mReader->ParseElements(mapping, params);
 			} else {
 				mReader->SkipElement();
 			}
@@ -407,14 +335,14 @@ namespace Assimp {
 			bool found;
 		} params;
 
-		static const std::map<std::string, std::function<void(Params&)>> mapping(([](){
-			std::map<std::string, std::function<void(Params&)>> map;
+		static const XMLParser::XSD::Sequence<Params>::type mapping(([](){
+			XMLParser::XSD::Sequence<Params>::type map;
 
 			// Parse Root element
-			map.insert(std::make_pair("Root", [](Params& params){
+			map.emplace_back("Root", XMLParser::XSD::Element<Params>([](Params& params){
 				*params.file = *(params.me->mReader->GetContent<std::string>(true));
 				params.found = true;
-			}));
+			}, 1, 1));
 			
 			return map;
 		})());
@@ -426,7 +354,7 @@ namespace Assimp {
 		while(! params.found && mReader->Next()) {
 			// handle the root element "Manifest"
 			if(mReader->IsElement("Manifest")) {
-				mReader->ParseNode(mapping, params);
+				mReader->ParseElements(mapping, params);
 			} else {
 				mReader->SkipElement();
 			}
@@ -456,25 +384,25 @@ namespace Assimp {
 			_3DXMLParser* me;
 		} params;
 
-		static const std::map<std::string, std::function<void(Params&)>> mapping(([](){
-			std::map<std::string, std::function<void(Params&)>> map;
+		static const XMLParser::XSD::Choice<Params>::type mapping(([](){
+			XMLParser::XSD::Choice<Params>::type map;
 
 			// Parse Reference3D element
-			map.insert(std::make_pair("Reference3D", [](Params& params){params.me->ReadReference3D();}));
+			map.emplace("Reference3D", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadReference3D();}, 0, XMLParser::XSD::unbounded));
 
 			// Parse Instance3D element
-			map.insert(std::make_pair("Instance3D", [](Params& params){params.me->ReadInstance3D();}));
+			map.emplace("Instance3D", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadInstance3D();}, 0, XMLParser::XSD::unbounded));
 
 			// Parse ReferenceRep element
-			map.insert(std::make_pair("ReferenceRep", [](Params& params){params.me->ReadReferenceRep();}));
+			map.emplace("ReferenceRep", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadReferenceRep();}, 0, XMLParser::XSD::unbounded));
 
 			// Parse InstanceRep element
-			map.insert(std::make_pair("InstanceRep", [](Params& params){params.me->ReadInstanceRep();}));
+			map.emplace("InstanceRep", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadInstanceRep();}, 0, XMLParser::XSD::unbounded));
 			
 			return map;
 		})());
 
-		XMLReader::Optional<unsigned int> root = mReader->GetAttribute<unsigned int>("root");
+		XMLParser::Optional<unsigned int> root = mReader->GetAttribute<unsigned int>("root");
 
 		if(root) {
 			mContent.root_index = *root;
@@ -483,7 +411,7 @@ namespace Assimp {
 
 		params.me = this;
 
-		mReader->ParseNode(mapping, params);
+		mReader->ParseElements(mapping, params);
 	}
 	
 	// ------------------------------------------------------------------------------------------------
@@ -503,17 +431,17 @@ namespace Assimp {
 	void _3DXMLParser::ReadReference3D() {
 		struct Params {
 			_3DXMLParser* me;
-			XMLReader::Optional<std::string> name_opt;
+			XMLParser::Optional<std::string> name_opt;
 			unsigned int id;
 		} params;
 
-		static const std::map<std::string, std::function<void(Params&)>> mapping(([](){
-			std::map<std::string, std::function<void(Params&)>> map;
+		static const XMLParser::XSD::Sequence<Params>::type mapping(([](){
+			XMLParser::XSD::Sequence<Params>::type map;
 
 			// Parse PLM_ExternalID element
-			map.insert(std::make_pair("PLM_ExternalID", [](Params& params){
+			map.emplace_back("PLM_ExternalID", XMLParser::XSD::Element<Params>([](Params& params){
 				params.name_opt = params.me->mReader->GetContent<std::string>(true);
-			}));
+			}, 0, 1));
 			
 			return map;
 		})());
@@ -522,7 +450,7 @@ namespace Assimp {
 		params.name_opt = mReader->GetAttribute<std::string>("name");
 		params.id = *(mReader->GetAttribute<unsigned int>("id", true));
 
-		mReader->ParseNode(mapping, params);
+		mReader->ParseElements(mapping, params);
 
 		_3DXMLStructure::Reference3D& ref = mContent.references[_3DXMLStructure::ID(mReader->GetFilename(), params.id)]; // Create the Reference3D if not present.
 				
@@ -548,7 +476,7 @@ namespace Assimp {
 	void _3DXMLParser::ReadInstance3D() {
 		struct Params {
 			_3DXMLParser* me;
-			XMLReader::Optional<std::string> name_opt;
+			XMLParser::Optional<std::string> name_opt;
 			_3DXMLStructure::Instance3D instance;
 			_3DXMLStructure::URI instance_of;
 			unsigned int aggregated_by;
@@ -556,23 +484,23 @@ namespace Assimp {
 			bool has_instance_of;
 		} params;
 
-		static const std::map<std::string, std::function<void(Params&)>> mapping(([](){
-			std::map<std::string, std::function<void(Params&)>> map;
+		static const XMLParser::XSD::Sequence<Params>::type mapping(([](){
+			XMLParser::XSD::Sequence<Params>::type map;
 
 			// Parse PLM_ExternalID element
-			map.insert(std::make_pair("PLM_ExternalID", [](Params& params){
+			map.emplace_back("PLM_ExternalID", XMLParser::XSD::Element<Params>([](Params& params){
 				params.name_opt = params.me->mReader->GetContent<std::string>(true);		
-			}));
+			}, 0, 1));
 
 			// Parse IsAggregatedBy element
-			map.insert(std::make_pair("IsAggregatedBy", [](Params& params){
+			map.emplace_back("IsAggregatedBy", XMLParser::XSD::Element<Params>([](Params& params){
 				params.aggregated_by = *(params.me->mReader->GetContent<unsigned int>(true));
 
 				params.has_aggregated_by = true;
-			}));
+			}, 1, 1));
 
 			// Parse IsInstanceOf element
-			map.insert(std::make_pair("IsInstanceOf", [](Params& params){
+			map.emplace_back("IsInstanceOf", XMLParser::XSD::Element<Params>([](Params& params){
 				std::string uri = *(params.me->mReader->GetContent<std::string>(true));
 
 				// Parse the URI to get its different components
@@ -587,10 +515,10 @@ namespace Assimp {
 				}
 
 				params.has_instance_of = true;
-			}));
+			}, 1, 1));
 
 			// Parse RelativeMatrix element
-			map.insert(std::make_pair("RelativeMatrix", [](Params& params){
+			map.emplace_back("RelativeMatrix", XMLParser::XSD::Element<Params>([](Params& params){
 				std::string relative_matrix = *(params.me->mReader->GetContent<std::string>(true));
 
 				aiMatrix4x4& transformation = params.instance.node->mTransformation;
@@ -604,7 +532,7 @@ namespace Assimp {
 					>> transformation.a4 >> transformation.b4 >> transformation.c4;
 				transformation.d1 = transformation.d2 = transformation.d3 = 0.0;
 				transformation.d4 = 1.0;
-			}));
+			}, 1, 1));
 
 			return map;
 		})());
@@ -619,7 +547,7 @@ namespace Assimp {
 			ThrowException("In Instance3D \"" + mReader->ToString(params.instance.id) + "\": the instance has no sub elements. It must at least define \"IsAggregatedBy\" and \"IsInstanceOf\" elements.");
 		}
 
-		mReader->ParseNode(mapping, params);
+		mReader->ParseElements(mapping, params);
 		
 		if(! params.has_aggregated_by) {
 			ThrowException("In Instance3D \"" + mReader->ToString(params.instance.id) + "\": the instance has no sub element \"IsAggregatedBy\".");
@@ -668,17 +596,17 @@ namespace Assimp {
 	void _3DXMLParser::ReadReferenceRep() {
 		struct Params {
 			_3DXMLParser* me;
-			XMLReader::Optional<std::string> name_opt;
+			XMLParser::Optional<std::string> name_opt;
 			unsigned int id;
 		} params;
 
-		static const std::map<std::string, std::function<void(Params&)>> mapping(([](){
-			std::map<std::string, std::function<void(Params&)>> map;
+		static const XMLParser::XSD::Sequence<Params>::type mapping(([](){
+			XMLParser::XSD::Sequence<Params>::type map;
 
 			// Parse PLM_ExternalID element
-			map.insert(std::make_pair("PLM_ExternalID", [](Params& params){
+			map.emplace_back("PLM_ExternalID", XMLParser::XSD::Element<Params>([](Params& params){
 				params.name_opt = params.me->mReader->GetContent<std::string>(true);
-			}));
+			}, 0, 1));
 
 			return map;
 		})());
@@ -690,7 +618,7 @@ namespace Assimp {
 		std::string file = *(mReader->GetAttribute<std::string>("associatedFile", true));
 		_3DXMLStructure::URI uri;
 
-		mReader->ParseNode(mapping, params);
+		mReader->ParseElements(mapping, params);
 
 		// Parse the external URI to the file containing the representation
 		ParseURI(file, uri);
@@ -732,22 +660,22 @@ namespace Assimp {
 	void _3DXMLParser::ReadInstanceRep() {
 		struct Params {
 			_3DXMLParser* me;
-			XMLReader::Optional<std::string> name_opt;
+			XMLParser::Optional<std::string> name_opt;
 			unsigned int id;
 			_3DXMLStructure::InstanceRep* mesh;
 			_3DXMLStructure::URI instance_of;
 		} params;
 
-		static const std::map<std::string, std::function<void(Params&)>> mapping(([](){
-			std::map<std::string, std::function<void(Params&)>> map;
+		static const XMLParser::XSD::Sequence<Params>::type mapping(([](){
+			XMLParser::XSD::Sequence<Params>::type map;
 
 			// Parse PLM_ExternalID element
-			map.insert(std::make_pair("PLM_ExternalID", [](Params& params){
+			map.emplace_back("PLM_ExternalID", XMLParser::XSD::Element<Params>([](Params& params){
 				params.name_opt = params.me->mReader->GetContent<std::string>(true);
-			}));
+			}, 0, 1));
 
 			// Parse IsAggregatedBy element
-			map.insert(std::make_pair("IsAggregatedBy", [](Params& params){
+			map.emplace_back("IsAggregatedBy", XMLParser::XSD::Element<Params>([](Params& params){
 				unsigned int aggregated_by = *(params.me->mReader->GetContent<unsigned int>(true));
 
 				// Save the reference to the parent Reference3D
@@ -756,10 +684,10 @@ namespace Assimp {
 
 				// Save id for future error / log message
 				params.mesh->id = params.id;
-			}));
+			}, 1, 1));
 
 			// Parse IsInstanceOf element
-			map.insert(std::make_pair("IsInstanceOf", [](Params& params){
+			map.emplace_back("IsInstanceOf", XMLParser::XSD::Element<Params>([](Params& params){
 				std::string uri = *(params.me->mReader->GetContent<std::string>(true));
 
 				// Parse the URI to get its different components
@@ -772,7 +700,7 @@ namespace Assimp {
 
 					params.me->mContent.files_to_parse.insert(params.instance_of.filename);
 				}
-			}));
+			}, 1, 1));
 
 			return map;
 		})());
@@ -786,7 +714,7 @@ namespace Assimp {
 			ThrowException("In InstanceRep \"" + mReader->ToString(params.id) + "\": the instance has no sub elements. It must at least define \"IsAggregatedBy\" and \"IsInstanceOf\" elements.");
 		}
 
-		mReader->ParseNode(mapping, params);
+		mReader->ParseElements(mapping, params);
 
 		if(params.mesh == NULL) {
 			ThrowException("In InstanceRep \"" + mReader->ToString(params.id) + "\": the instance has no sub element \"IsAggregatedBy\".");

@@ -49,10 +49,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "3DXMLRepresentation.h"
 
-#include "ParsingUtils.h"
 #include "Q3BSPZipArchive.h"
 
 #include <cctype>
+#include <limits>
+#include <tuple>
 
 namespace Assimp {
 
@@ -62,11 +63,11 @@ namespace Assimp {
 			_3DXMLRepresentation* me;
 		} params;
 
-		static const std::map<std::string, std::function<void(Params&)>> mapping(([](){
-			std::map<std::string, std::function<void(Params&)>> map;
+		static const XMLParser::XSD::Sequence<Params>::type mapping(([](){
+			XMLParser::XSD::Sequence<Params>::type map;
 
 			// Parse Root element
-			map.insert(std::make_pair("Root", [](Params& params){
+			map.emplace_back("Root", XMLParser::XSD::Element<Params>([](Params& params){
 				params.me->mCurrentMesh = ScopeGuard<aiMesh>(new aiMesh());
 
 				params.me->ReadVisualizationRep();
@@ -111,7 +112,7 @@ namespace Assimp {
 				}
 				
 				params.me->mMeshes.push_back(processed_mesh);
-			}));
+			}, 1, 1));
 			
 			return map;
 		})());
@@ -122,7 +123,7 @@ namespace Assimp {
 		// Parse the main 3DXML file
 		while(mReader.Next()) {
 			if(mReader.IsElement("XMLRepresentation")) {
-				mReader.ParseNode(mapping, params);
+				mReader.ParseElements(mapping, params);
 			} else {
 				mReader.SkipElement();
 			}
@@ -279,7 +280,7 @@ namespace Assimp {
 		if(type.compare("BagRepType") == 0) {
 			ReadBagRep();
 		} else if(type.compare("PolygonalRepType") == 0) {
-			ReadPolygonRep();
+			ReadPolygonalRep();
 		} else {
 			ThrowException("Unsupported type of VisualizationRep \"" + type + "\".");
 		}
@@ -291,48 +292,48 @@ namespace Assimp {
 			_3DXMLRepresentation* me;
 		} params;
 
-		static const std::map<std::string, std::function<void(Params&)>> mapping(([](){
-			std::map<std::string, std::function<void(Params&)>> map;
+		static const XMLParser::XSD::Sequence<Params>::type mapping(([](){
+			XMLParser::XSD::Sequence<Params>::type map;
 
 			// Parse Rep element
-			map.insert(std::make_pair("Rep", [](Params& params){params.me->ReadVisualizationRep();}));
+			map.emplace_back("Rep", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadVisualizationRep();}, 1, XMLParser::XSD::unbounded));
 			
 			return map;
 		})());
 
 		params.me = this;
 
-		mReader.ParseNode(mapping, params);
+		mReader.ParseElements(mapping, params);
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLRepresentation::ReadPolygonRep() {
+	void _3DXMLRepresentation::ReadPolygonalRep() {
 		struct Params {
 			_3DXMLRepresentation* me;
 			unsigned int face_offset;
 			std::vector<std::vector<aiVector3D>> lines;
 		} params;
 
-		static const std::map<std::string, std::function<void(Params&)>> mapping(([](){
-			std::map<std::string, std::function<void(Params&)>> map;
+		static const XMLParser::XSD::Sequence<Params>::type mapping(([](){
+			XMLParser::XSD::Sequence<Params>::type map;
 
 			// Parse SurfaceAttributes element
-			//map.insert(std::make_pair("SurfaceAttributes", [](Params& params){ }));
+			//map.emplace_back("SurfaceAttributes", XMLParser::XSD::Element<Params>([](Params& params){ }, 0, 1));
 			
 			// Parse LineAttributes element
-			//map.insert(std::make_pair("LineAttributes", [](Params& params){ }));
+			//map.emplace_back("LineAttributes", XMLParser::XSD::Element<Params>([](Params& params){ }, 0, 1));
 			
 			// Parse PolygonalLOD element
-			//map.insert(std::make_pair("PolygonalLOD", [](Params& params){ }));
+			//map.emplace_back("PolygonalLOD", XMLParser::XSD::Element<Params>([](Params& params){ }, 0, XMLParser::XSD::unbounded));
 			
 			// Parse Faces element
-			map.insert(std::make_pair("Faces", [](Params& params){params.me->ReadFaces(params.face_offset);}));
+			map.emplace_back("Faces", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadFaces(params.face_offset);}, 0, XMLParser::XSD::unbounded));
 			
 			// Parse Edges element
-			map.insert(std::make_pair("Edges", [](Params& params){params.me->ReadEdges(params.lines);}));
+			map.emplace_back("Edges", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadEdges(params.lines);}, 0, XMLParser::XSD::unbounded));
 			
 			// Parse VertexBuffer element
-			map.insert(std::make_pair("VertexBuffer", [](Params& params){params.me->ReadVertexBuffer();}));
+			map.emplace_back("VertexBuffer", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadVertexBuffer();}, 0, 1));
 			
 			return map;
 		})());
@@ -340,7 +341,7 @@ namespace Assimp {
 		params.me = this;
 		params.face_offset = mCurrentMesh->Vertices.Size();
 
-		mReader.ParseNode(mapping, params);
+		mReader.ParseElements(mapping, params);
 
 		// Add the lines after the faces and vertices have been already added to avoid messing with the vertice indexes
 		for(std::vector<std::vector<aiVector3D>>::iterator it(params.lines.begin()), end(params.lines.end()); it != end; ++it) {
@@ -369,14 +370,14 @@ namespace Assimp {
 			unsigned int face_offset;
 		} params;
 
-		static const std::map<std::string, std::function<void(Params&)>> mapping(([](){
-			std::map<std::string, std::function<void(Params&)>> map;
+		static const XMLParser::XSD::Sequence<Params>::type mapping(([](){
+			XMLParser::XSD::Sequence<Params>::type map;
 
 			// Parse SurfaceAttributes element
-			//map.insert(std::make_pair("SurfaceAttributes", [](Params& params){ }));
+			//map.emplace_back("SurfaceAttributes", [](Params& params){ }, 0, 1);
 			
 			// Parse Face element
-			map.insert(std::make_pair("Face", [](Params& params){
+			map.emplace_back("Face", XMLParser::XSD::Element<Params>([](Params& params){
 				static const unsigned int nb_vertices = 3;
 
 				//TODO: SurfaceAttributes
@@ -385,7 +386,7 @@ namespace Assimp {
 
 				unsigned int index = params.me->mCurrentMesh->Faces.Size();
 
-				_3DXMLParser::XMLReader::Optional<std::string> triangles = params.me->mReader.GetAttribute<std::string>("triangles");
+				XMLParser::Optional<std::string> triangles = params.me->mReader.GetAttribute<std::string>("triangles");
 				if(triangles) {
 					data.clear();
 
@@ -407,7 +408,7 @@ namespace Assimp {
 					}
 				}
 				
-				_3DXMLParser::XMLReader::Optional<std::string> strips = params.me->mReader.GetAttribute<std::string>("strips");
+				XMLParser::Optional<std::string> strips = params.me->mReader.GetAttribute<std::string>("strips");
 				if(strips) {
 					data.clear();
 
@@ -436,7 +437,7 @@ namespace Assimp {
 					}
 				}
 				
-				_3DXMLParser::XMLReader::Optional<std::string> fans = params.me->mReader.GetAttribute<std::string>("fans");
+				XMLParser::Optional<std::string> fans = params.me->mReader.GetAttribute<std::string>("fans");
 				if(fans) {
 					data.clear();
 
@@ -458,7 +459,7 @@ namespace Assimp {
 						}
 					}
 				}
-			}));
+			}, 1, XMLParser::XSD::unbounded));
 			
 			return map;
 		})());
@@ -466,7 +467,7 @@ namespace Assimp {
 		params.me = this;
 		params.face_offset = face_offset;
 
-		mReader.ParseNode(mapping, params);
+		mReader.ParseElements(mapping, params);
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -476,21 +477,21 @@ namespace Assimp {
 			std::vector<std::vector<aiVector3D>>* lines;
 		} params;
 
-		static const std::map<std::string, std::function<void(Params&)>> mapping(([](){
-			std::map<std::string, std::function<void(Params&)>> map;
+		static const XMLParser::XSD::Sequence<Params>::type mapping(([](){
+			XMLParser::XSD::Sequence<Params>::type map;
 
 			// Parse LineAttributes element
-			//map.insert(std::make_pair("LineAttributes", [](Params& params){ }));
+			//map.emplace_back("LineAttributes", XMLParser::XSD::Element<Params>([](Params& params){ }, 0, 1));
 
 			// Parse Polyline element
-			map.insert(std::make_pair("Polyline", [](Params& params){
+			map.emplace_back("Polyline", XMLParser::XSD::Element<Params>([](Params& params){
 				//TODO: LineAttributes
 
 				std::string vertices = *(params.me->mReader.GetAttribute<std::string>("vertices"));
 
 				params.lines->push_back(std::vector<aiVector3D>());
 				params.me->ParseArray(vertices, params.lines->back());
-			}));
+			}, 1, XMLParser::XSD::unbounded));
 			
 			return map;
 		})());
@@ -498,7 +499,7 @@ namespace Assimp {
 		params.me = this;
 		params.lines = &lines;
 
-		mReader.ParseNode(mapping, params);
+		mReader.ParseElements(mapping, params);
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -508,26 +509,26 @@ namespace Assimp {
 			unsigned int start_index;
 		} params;
 
-		static const std::map<std::string, std::function<void(Params&)>> mapping(([](){
-			std::map<std::string, std::function<void(Params&)>> map;
+		static const XMLParser::XSD::Sequence<Params>::type mapping(([](){
+			XMLParser::XSD::Sequence<Params>::type map;
 
 			// Parse Positions element
-			map.insert(std::make_pair("Positions", [](Params& params){
+			map.emplace_back("Positions", XMLParser::XSD::Element<Params>([](Params& params){
 				std::string vertices = *(params.me->mReader.GetContent<std::string>(true));
 
 				params.me->ParseArray(vertices, params.me->mCurrentMesh->Vertices, params.start_index);
-			}));
+			}, 1, 1));
 			
 			// Parse Normals element
-			map.insert(std::make_pair("Normals", [](Params& params){
+			map.emplace_back("Normals", XMLParser::XSD::Element<Params>([](Params& params){
 				std::string normals = *(params.me->mReader.GetContent<std::string>(true));
 
 				params.me->ParseArray(normals, params.me->mCurrentMesh->Normals, params.start_index);
-			}));
+			}, 0, 1));
 			
 			// Parse TextureCoordinates element
-			map.insert(std::make_pair("TextureCoordinates", [](Params& params){
-				_3DXMLParser::XMLReader::Optional<unsigned int> channel_opt = params.me->mReader.GetAttribute<unsigned int>("channel");
+			map.emplace_back("TextureCoordinates", XMLParser::XSD::Element<Params>([](Params& params){
+				XMLParser::Optional<unsigned int> channel_opt = params.me->mReader.GetAttribute<unsigned int>("channel");
 				std::string format = *(params.me->mReader.GetAttribute<std::string>("dimension", true));
 				std::string coordinates = *(params.me->mReader.GetContent<std::string>(true));
 
@@ -550,10 +551,10 @@ namespace Assimp {
 				}
 
 				params.me->ParseMultiArray(coordinates, params.me->mCurrentMesh->TextureCoords, channel, params.start_index, dimension);
-			}));
+			}, 0, XMLParser::XSD::unbounded));
 			
 			// Parse DiffuseColors element
-			map.insert(std::make_pair("DiffuseColors", [](Params& params){
+			map.emplace_back("DiffuseColors", XMLParser::XSD::Element<Params>([](Params& params){
 				std::string format = *(params.me->mReader.GetAttribute<std::string>("format", true));
 				std::string color = *(params.me->mReader.GetContent<std::string>(true));
 
@@ -564,10 +565,10 @@ namespace Assimp {
 				} else {
 					params.me->ThrowException("Unsupported color format \"" + format + "\".");
 				}
-			}));
+			}, 0, 1));
 			
 			// Parse SpecularColors element
-			map.insert(std::make_pair("SpecularColors", [](Params& params){
+			map.emplace_back("SpecularColors", XMLParser::XSD::Element<Params>([](Params& params){
 				std::string format = *(params.me->mReader.GetAttribute<std::string>("format", true));
 				std::string color = *(params.me->mReader.GetContent<std::string>(true));
 
@@ -578,7 +579,7 @@ namespace Assimp {
 				} else {
 					params.me->ThrowException("Unsupported color format \"" + format + "\".");
 				}
-			}));
+			}, 0, 1));
 			
 			return map;
 		})());
@@ -586,7 +587,7 @@ namespace Assimp {
 		params.me = this;
 		params.start_index = mCurrentMesh->Vertices.Size();
 
-		mReader.ParseNode(mapping, params);
+		mReader.ParseElements(mapping, params);
 
 		if(mCurrentMesh->Vertices.Size() == 0) {
 			ThrowException("The vertex buffer does not contain any vertex.");

@@ -53,6 +53,9 @@ namespace Assimp {
 
 	struct _3DXMLStructure {
 
+		template<typename T>
+		static bool less(const std::list<T>& l1, const std::list<T>& l2);
+
 		struct URI {
 
 			std::string uri;
@@ -78,6 +81,8 @@ namespace Assimp {
 			unsigned int id;
 
 			ID(std::string _filename, unsigned int _id);
+			
+			bool operator==(const ID& other) const;
 
 			bool operator<(const ID& other) const;
 
@@ -153,6 +158,16 @@ namespace Assimp {
 
 		struct MaterialApplication {
 
+			enum Operation { REPLACE, ADD, ALPHA_TRANSPARENCY };
+
+			unsigned int channel;
+
+			bool two_sided;
+
+			Operation operation;
+
+			std::list<ID> materials;
+
 			MaterialApplication();
 
 			bool operator==(const MaterialApplication& other) const;
@@ -160,7 +175,6 @@ namespace Assimp {
 			bool operator<(const MaterialApplication& other) const;
 
 		}; // struct MaterialApplication
-
 
 		struct SurfaceAttributes {
 
@@ -189,6 +203,32 @@ namespace Assimp {
 		_3DXMLStructure(aiScene* _scene);
 
 	}; // struct _3DXMLStructure
+
+	template<typename T>
+	bool _3DXMLStructure::less(const std::list<T>& l1, const std::list<T>& l2) {
+		bool less = false;
+		bool is_smaller = l1.size() < l2.size();
+
+		const std::list<T>& min = (is_smaller ? l1 : l2);
+		const std::list<T>& max = (is_smaller ? l2 : l1);
+
+		auto match = std::mismatch(min.begin(), min.end(), max.begin());
+
+		if(match.first == min.end()) {
+			// All the common elements are equals, we must use the size to determine which one is "less"
+			less = is_smaller;
+		} else {
+			// We have one element which is "less" than it's conterpart
+			if(is_smaller) {
+				less = *(match.first) < *(match.second);
+			} else {
+				// The lists are inversed, so we must inverse the result
+				less = *(match.second) < *(match.first);
+			}
+		}
+
+		return less;
+	}
 
 } // end of namespace Assimp
 
