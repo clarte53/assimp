@@ -83,6 +83,7 @@ configure_file( ${CMAKE_CURRENT_SOURCE_DIR}/zlib.pc.cmakein
 		${ZLIB_PC} @ONLY)
 configure_file(	${CMAKE_CURRENT_SOURCE_DIR}/zconf.h.cmakein
 		${CMAKE_CURRENT_BINARY_DIR}/zconf.h @ONLY)
+		
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_SOURCE_DIR})
 
 
@@ -201,7 +202,6 @@ add_library(zlibstatic STATIC ${ZLIB_SRCS} ${ZLIB_ASMS} ${ZLIB_PUBLIC_HDRS} ${ZL
 
 #if(UNIX)
     # On unix-like platforms the library is almost always called libz
-
    #set_target_properties(zlib zlibstatic PROPERTIES OUTPUT_NAME z)
    #if(NOT APPLE)
    #  set_target_properties(zlib PROPERTIES LINK_FLAGS "-Wl,--version-script,\"${CMAKE_CURRENT_SOURCE_DIR}/zlib.map\"")
@@ -226,3 +226,4 @@ add_library(zlibstatic STATIC ${ZLIB_SRCS} ${ZLIB_ASMS} ${ZLIB_PUBLIC_HDRS} ${ZL
 #if(NOT SKIP_INSTALL_FILES AND NOT SKIP_INSTALL_ALL )
 #    install(FILES ${ZLIB_PC} DESTINATION "${INSTALL_PKGCONFIG_DIR}")
 #endif()
+
