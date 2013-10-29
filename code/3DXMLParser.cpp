@@ -480,8 +480,6 @@ namespace Assimp {
 			_3DXMLStructure::Instance3D instance;
 			_3DXMLStructure::URI instance_of;
 			unsigned int aggregated_by;
-			bool has_aggregated_by;
-			bool has_instance_of;
 		} params;
 
 		static const XMLParser::XSD::Sequence<Params>::type mapping(([](){
@@ -495,8 +493,6 @@ namespace Assimp {
 			// Parse IsAggregatedBy element
 			map.emplace_back("IsAggregatedBy", XMLParser::XSD::Element<Params>([](Params& params){
 				params.aggregated_by = *(params.me->mReader->GetContent<unsigned int>(true));
-
-				params.has_aggregated_by = true;
 			}, 1, 1));
 
 			// Parse IsInstanceOf element
@@ -513,8 +509,6 @@ namespace Assimp {
 
 					params.me->mContent.files_to_parse.insert(params.instance_of.filename);
 				}
-
-				params.has_instance_of = true;
 			}, 1, 1));
 
 			// Parse RelativeMatrix element
@@ -540,22 +534,8 @@ namespace Assimp {
 		params.me = this;
 		params.name_opt = mReader->GetAttribute<std::string>("name");
 		params.instance.id = *(mReader->GetAttribute<unsigned int>("id", true));
-		params.has_aggregated_by = false;
-		params.has_instance_of = false;
-
-		if(! mReader->HasElements()) {
-			ThrowException("In Instance3D \"" + mReader->ToString(params.instance.id) + "\": the instance has no sub elements. It must at least define \"IsAggregatedBy\" and \"IsInstanceOf\" elements.");
-		}
 
 		mReader->ParseElements(mapping, params);
-		
-		if(! params.has_aggregated_by) {
-			ThrowException("In Instance3D \"" + mReader->ToString(params.instance.id) + "\": the instance has no sub element \"IsAggregatedBy\".");
-		}
-		
-		if(! params.has_instance_of) {
-			ThrowException("In Instance3D \"" + mReader->ToString(params.instance.id) + "\": the instance has no sub element \"IsInstanceOf\".");
-		}
 
 		// Test if the name exist, otherwise use the id as name
 		std::string name;
@@ -710,19 +690,7 @@ namespace Assimp {
 		params.id = *(mReader->GetAttribute<unsigned int>("id", true));
 		params.mesh = NULL;
 
-		if(! mReader->HasElements()) {
-			ThrowException("In InstanceRep \"" + mReader->ToString(params.id) + "\": the instance has no sub elements. It must at least define \"IsAggregatedBy\" and \"IsInstanceOf\" elements.");
-		}
-
 		mReader->ParseElements(mapping, params);
-
-		if(params.mesh == NULL) {
-			ThrowException("In InstanceRep \"" + mReader->ToString(params.id) + "\": the instance has no sub element \"IsAggregatedBy\".");
-		}
-		
-		if(params.instance_of.uri.compare("") == 0) {
-			ThrowException("In InstanceRep \"" + mReader->ToString(params.id) + "\": the instance has no sub element \"IsInstanceOf\".");
-		}
 
 		// Test if the name exist, otherwise use the id as name
 		if(params.name_opt) {

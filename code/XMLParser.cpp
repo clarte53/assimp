@@ -87,7 +87,7 @@ namespace Assimp {
 			ScopeGuard<CIrrXML_IOStreamReader> IOWrapper(new CIrrXML_IOStreamReader(mStream));
 			mReader = ScopeGuard<irr::io::IrrXMLReader>(irr::io::createIrrXMLReader(IOWrapper.get()));
 			if(mReader == NULL) {
-				ThrowException("Unable to create XML reader for file \"" + mFileName + "\".");
+				ThrowException("Unable to create XML parser for file \"" + mFileName + "\".");
 			}
 		}
 	}
@@ -100,7 +100,7 @@ namespace Assimp {
 	// ------------------------------------------------------------------------------------------------
 	// Aborts the file reading with an exception
 	void XMLParser::ThrowException(const std::string& error) const {
-		throw DeadlyImportError(boost::str(boost::format("3DXML parser: %s - %s") % mFileName % error));
+		throw DeadlyImportError(boost::str(boost::format("XML parser: %s - %s") % mFileName % error));
 	}
 
 	// ------------------------------------------------------------------------------------------------

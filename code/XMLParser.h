@@ -319,9 +319,9 @@ namespace Assimp {
 							unsigned int occurs = check[it->first];
 
 							if(occurs < it->second.minOccurs) {
-								ThrowException("The element \"" + it->first + "\" is not present enough times in element \"" + name + "\" to validate the 3DXML schema.");
+								ThrowException("The element \"" + it->first + "\" is not present enough times (" + ToString(occurs) + " times instead of min " + ToString(it->second.minOccurs) + ") in element \"" + name + "\" to validate the schema.");
 							} else if(occurs > it->second.maxOccurs) {
-								ThrowException("The element \"" + it->first + "\" is present too many times in element \"" + name + "\" to validate the 3DXML schema.");
+								ThrowException("The element \"" + it->first + "\" is present too many times (" + ToString(occurs) + " times instead of max " + ToString(it->second.maxOccurs) + ") in element \"" + name + "\" to validate the schema.");
 							}
 						}
 
@@ -394,9 +394,9 @@ namespace Assimp {
 							unsigned int occurs = check[it->first];
 
 							if(occurs < it->second.minOccurs) {
-								ThrowException("The element \"" + it->first + "\" is not present enough times in element \"" + name + "\" to validate the 3DXML schema.");
+								ThrowException("The element \"" + it->first + "\" is not present enough times (" + ToString(occurs) + " times instead of min. " + ToString(it->second.minOccurs) + ") in element \"" + name + "\" to validate the schema.");
 							} else if(occurs > it->second.maxOccurs) {
-								ThrowException("The element \"" + it->first + "\" is present too many times in element \"" + name + "\" to validate the 3DXML schema.");
+								ThrowException("The element \"" + it->first + "\" is present too many times (" + ToString(occurs) + " times instead of max. " + ToString(it->second.maxOccurs) + ") in element \"" + name + "\" to validate the schema.");
 							}
 						}
 
