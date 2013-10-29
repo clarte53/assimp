@@ -282,6 +282,14 @@ namespace Assimp {
 			// Save the current node name for checking closing of elements
 			std::string name = mReader->getNodeName();
 
+			// Save the count for each type of element
+			std::map<std::string, unsigned int> check;
+
+			// Initialize all the counters to 0
+			for(typename XSD::Choice<T>::type::const_iterator it(map.begin()), end(map.end()); it != end; ++it) {
+				check[it->first] = 0;
+			}
+
 			while(mReader->read()) {
 				node_type = mReader->getNodeType();
 				node_name = mReader->getNodeName();
@@ -290,13 +298,14 @@ namespace Assimp {
 				if(node_type == irr::io::EXN_ELEMENT) {
 					typename XSD::Choice<T>::type::const_iterator it = map.find(node_name);
 
-					//TODO test minOccurs & maxOccurs of the XSD schema
-
 					// Is the element mapped?
 					if(it != map.end()) {
 						(it->second.parser)(params);
 
 						SkipUntilEnd(it->first);
+
+						// Increment the counter for this type of element
+						(check[it->first])++;
 					} else {
 						// Ignore elements that are not mapped
 						SkipElement();
@@ -305,6 +314,17 @@ namespace Assimp {
 					}
 				} else if(node_type == irr::io::EXN_ELEMENT_END) {
 					if(name.compare(node_name) == 0) {
+						// check if the minOccurs & maxOccurs conditions where satisfied
+						for(typename XSD::Choice<T>::type::const_iterator it(map.begin()), end(map.end()); it != end; ++it) {
+							unsigned int occurs = check[it->first];
+
+							if(occurs < it->second.minOccurs) {
+								ThrowException("The element \"" + it->first + "\" is not present enough times in element \"" + name + "\" to validate the 3DXML schema.");
+							} else if(occurs > it->second.maxOccurs) {
+								ThrowException("The element \"" + it->first + "\" is present too many times in element \"" + name + "\" to validate the 3DXML schema.");
+							}
+						}
+
 						// Ok, we can stop the loop
 						break;
 					} else {
@@ -326,6 +346,14 @@ namespace Assimp {
 		if(! mReader->isEmptyElement()) {
 			// Save the current node name for checking closing of elements
 			std::string name = mReader->getNodeName();
+			
+			// Save the count for each type of element
+			std::map<std::string, unsigned int> check;
+
+			// Initialize all the counters to 0
+			for(typename XSD::Sequence<T>::type::const_iterator it(map.begin()), end(map.end()); it != end; ++it) {
+				check[it->first] = 0;
+			}
 
 			typename XSD::Sequence<T>::type::const_iterator position = map.begin();
 
@@ -337,17 +365,19 @@ namespace Assimp {
 				if(node_type == irr::io::EXN_ELEMENT) {
 					typename XSD::Sequence<T>::type::const_iterator it = position;
 
+					// Move to the position of the current element in the sequence
 					while(it != map.end() && it->first.compare(node_name) != 0) {
 						++it;
 					}
 					
-					//TODO test minOccurs & maxOccurs of the XSD schema
-
 					// Is the element mapped?
 					if(it != map.end()) {
 						(it->second.parser)(params);
 
 						SkipUntilEnd(it->first);
+
+						// Increment the counter for this type of element
+						(check[it->first])++;
 
 						// Save the new position in the map
 						position = it;
@@ -359,6 +389,17 @@ namespace Assimp {
 					}
 				} else if(node_type == irr::io::EXN_ELEMENT_END) {
 					if(name.compare(node_name) == 0) {
+						// check if the minOccurs & maxOccurs conditions where satisfied
+						for(typename XSD::Sequence<T>::type::const_iterator it(map.begin()), end(map.end()); it != end; ++it) {
+							unsigned int occurs = check[it->first];
+
+							if(occurs < it->second.minOccurs) {
+								ThrowException("The element \"" + it->first + "\" is not present enough times in element \"" + name + "\" to validate the 3DXML schema.");
+							} else if(occurs > it->second.maxOccurs) {
+								ThrowException("The element \"" + it->first + "\" is present too many times in element \"" + name + "\" to validate the 3DXML schema.");
+							}
+						}
+
 						// Ok, we can stop the loop
 						break;
 					} else {
