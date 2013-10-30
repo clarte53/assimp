@@ -49,6 +49,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <map>
 #include <string>
 
+#pragma warning (disable:4503)
+
 namespace Assimp {
 
 	struct _3DXMLStructure {
@@ -87,7 +89,39 @@ namespace Assimp {
 			bool operator<(const ID& other) const;
 
 		}; // struct ID
-				
+		
+		struct MaterialApplication {
+
+			enum Operation { REPLACE, ADD, ALPHA_TRANSPARENCY };
+
+			unsigned int channel;
+
+			bool two_sided;
+
+			Operation operation;
+
+			std::list<ID> materials;
+
+			MaterialApplication();
+
+			bool operator==(const MaterialApplication& other) const;
+
+			bool operator<(const MaterialApplication& other) const;
+
+		}; // struct MaterialApplication
+
+		struct SurfaceAttributes {
+
+			aiColor3D color;
+
+			std::list<MaterialApplication> materials;
+
+			SurfaceAttributes();
+
+			bool operator<(const SurfaceAttributes& other) const;
+
+		}; // struct SurfaceAttributes
+
 		struct Instance3D;
 
 		struct InstanceRep;
@@ -111,6 +145,18 @@ namespace Assimp {
 		}; // struct Reference3D
 
 		struct ReferenceRep {
+
+			template<typename T>
+			struct shared_less {
+
+				bool operator()(const std::shared_ptr<T>& lhs, const std::shared_ptr<T>& rhs) const {
+					return (lhs && rhs ? (*lhs) < (*rhs) : (bool) rhs);
+				}
+
+			}; // struct shared_less
+
+			typedef std::shared_ptr<_3DXMLStructure::SurfaceAttributes> MatID;
+			typedef std::map<MatID, ScopeGuard<aiMesh>, shared_less<_3DXMLStructure::SurfaceAttributes>> Meshes;
 					
 			unsigned int id;
 					
@@ -118,7 +164,7 @@ namespace Assimp {
 					
 			std::string name;
 
-			std::list<ScopeGuard<aiMesh>> meshes;
+			Meshes meshes;
 
 			unsigned int index_begin;
 
@@ -155,38 +201,6 @@ namespace Assimp {
 			InstanceRep();
 
 		}; // struct InstanceRep
-
-		struct MaterialApplication {
-
-			enum Operation { REPLACE, ADD, ALPHA_TRANSPARENCY };
-
-			unsigned int channel;
-
-			bool two_sided;
-
-			Operation operation;
-
-			std::list<ID> materials;
-
-			MaterialApplication();
-
-			bool operator==(const MaterialApplication& other) const;
-
-			bool operator<(const MaterialApplication& other) const;
-
-		}; // struct MaterialApplication
-
-		struct SurfaceAttributes {
-
-			aiColor3D color;
-
-			std::list<MaterialApplication> materials;
-
-			SurfaceAttributes();
-
-			bool operator<(const SurfaceAttributes& other) const;
-
-		}; // struct SurfaceAttributes
 
 		aiScene* scene;
 

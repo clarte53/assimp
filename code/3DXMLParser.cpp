@@ -101,12 +101,12 @@ namespace Assimp {
 			it_rep->second.index_end = it_rep->second.index_begin + it_rep->second.meshes.size() - 1;
 
 			unsigned int index = mContent.scene->Meshes.Size();
-			for(std::list<ScopeGuard<aiMesh>>::iterator it_mesh(it_rep->second.meshes.begin()), end_mesh(it_rep->second.meshes.end()); it_mesh != end_mesh; ++it_mesh) {
+			for(_3DXMLStructure::ReferenceRep::Meshes::iterator it_mesh(it_rep->second.meshes.begin()), end_mesh(it_rep->second.meshes.end()); it_mesh != end_mesh; ++it_mesh) {
 				// Set the names of the parsed meshes with this ReferenceRep name
-				(*it_mesh)->mName = it_rep->second.name;
+				it_mesh->second->mName = it_rep->second.name;
 
 				// Realease the ownership of the mesh to the protected scene
-				mContent.scene->Meshes.Set(index++, it_mesh->dismiss());
+				mContent.scene->Meshes.Set(index++, it_mesh->second.dismiss());
 			}
 		}
 

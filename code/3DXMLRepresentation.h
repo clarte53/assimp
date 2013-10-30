@@ -49,6 +49,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "../include/assimp/mesh.h"
 
 #include <list>
+#include <memory>
 #include <sstream>
 
 namespace Assimp {
@@ -61,14 +62,14 @@ namespace Assimp {
 			XMLParser mReader;
 
 			/** List containing the parsed meshes */
-			std::list<ScopeGuard<aiMesh>>& mMeshes;
+			_3DXMLStructure::ReferenceRep::Meshes& mMeshes;
 
-			/** The mesh currently parsed */
-			ScopeGuard<aiMesh> mCurrentMesh;
+			/** The material of the mesh currently parsed */
+			_3DXMLStructure::ReferenceRep::MatID mCurrentSurface;
 
 		public: 
 
-			_3DXMLRepresentation(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, std::list<ScopeGuard<aiMesh>>& meshes);
+			_3DXMLRepresentation(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, _3DXMLStructure::ReferenceRep::Meshes& meshes);
 
 			virtual ~_3DXMLRepresentation();
 
@@ -76,6 +77,8 @@ namespace Assimp {
 
 			/** Aborts the file reading with an exception */
 			void ThrowException(const std::string& error) const;
+
+			ScopeGuard<aiMesh>& GetMesh(const _3DXMLStructure::ReferenceRep::MatID& material) const;
 
 			void ParseArray(const std::string& content, std::vector<aiVector3D>& array) const;
 
@@ -93,7 +96,7 @@ namespace Assimp {
 
 			void ReadPolygonalRep();
 
-			void ReadFaces(unsigned int face_offset);
+			void ReadFaces();
 
 			void ReadEdges(std::vector<std::vector<aiVector3D>>& lines);
 

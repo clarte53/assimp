@@ -145,7 +145,7 @@ namespace Assimp {
 				
 				template<typename T>
 				struct Finder {
-					typedef std::function<typename T::const_iterator(typename T::const_iterator, const std::string& name)> type;
+					typedef std::function<typename T::const_iterator(const T& map, typename T::const_iterator, const std::string& name)> type;
 				}; // struct Finder
 				
 				template<typename T>
@@ -286,7 +286,7 @@ namespace Assimp {
 	// Parse a XSD choice
 	template<typename T>
 	void XMLParser::ParseElements(const typename XSD::Choice<T>::type& map, T& params) const {
-		ParseElements<typename XSD::Choice<T>::type, T>([&map](typename XSD::Choice<T>::type::const_iterator /*position*/, const std::string& name) {
+		ParseElements<typename XSD::Choice<T>::type, T>([](const typename XSD::Choice<T>::type& map, typename XSD::Choice<T>::type::const_iterator /*position*/, const std::string& name) {
 			return map.find(name);
 		}, map, params);
 	}
@@ -295,7 +295,7 @@ namespace Assimp {
 	// Parse a XSD sequence
 	template<typename T>
 	void XMLParser::ParseElements(const typename XSD::Sequence<T>::type& map, T& params) const {
-		ParseElements<typename XSD::Sequence<T>::type, T>([&map](typename XSD::Sequence<T>::type::const_iterator position, const std::string& name) {
+		ParseElements<typename XSD::Sequence<T>::type, T>([](const typename XSD::Sequence<T>::type& map, typename XSD::Sequence<T>::type::const_iterator position, const std::string& name) {
 			// Move to the position of the current element in the sequence
 			while(position != map.end() && position->first.compare(name) != 0) {
 				++position;
@@ -437,7 +437,7 @@ namespace Assimp {
 				// Test if we have an opening element
 				if(node_type == irr::io::EXN_ELEMENT) {
 					// Get the position of the current element
-					typename T::const_iterator it = find(position, node_name);
+					typename T::const_iterator it = find(map, position, node_name);
 					
 					// Is the element mapped?
 					if(it != map.end()) {
