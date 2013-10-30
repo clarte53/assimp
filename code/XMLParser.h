@@ -129,18 +129,25 @@ namespace Assimp {
 				template<typename T>
 				struct Element {
 
-					std::function<void(T&)> parser;
+					typedef std::function<void(T&)> Parser;
+
+					Parser parser;
 
 					unsigned int minOccurs;
 
 					unsigned int maxOccurs;
 
-					Element(const std::function<void(T&)>& p, unsigned int min = 1, unsigned int max = 1);
+					Element(const Parser& p, unsigned int min = 1, unsigned int max = 1);
 
-					Element(std::function<void(T&)>&& p, unsigned int min = 1, unsigned int max = 1);
+					Element(Parser&& p, unsigned int min = 1, unsigned int max = 1);
 
 				}; // struct Element
-
+				
+				template<typename T>
+				struct Finder {
+					typedef std::function<typename T::const_iterator(typename T::const_iterator, const std::string& name)> type;
+				}; // struct Finder
+				
 				template<typename T>
 				struct Choice {
 					typedef std::map<std::string, Element<T>> type;
@@ -232,17 +239,22 @@ namespace Assimp {
 			template<>
 			std::string FromString(const std::string& string) const;
 
+		protected:
+
+			template<typename T, typename U>
+			void ParseElements(const typename XSD::Finder<T>::type& find, const T& map, U& params) const;
+
 	}; // end of class XMLParser
 	
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
-	XMLParser::XSD::Element<T>::Element(const std::function<void(T&)>& p, unsigned int min, unsigned int max) : parser(p), minOccurs(min), maxOccurs(max) {
+	XMLParser::XSD::Element<T>::Element(const Parser& p, unsigned int min, unsigned int max) : parser(p), minOccurs(min), maxOccurs(max) {
 	
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
-	XMLParser::XSD::Element<T>::Element(std::function<void(T&)>&& p, unsigned int min, unsigned int max) : parser(std::move(p)), minOccurs(min), maxOccurs(max) {
+	XMLParser::XSD::Element<T>::Element(Parser&& p, unsigned int min, unsigned int max) : parser(std::move(p)), minOccurs(min), maxOccurs(max) {
 	
 	}
 
@@ -274,140 +286,23 @@ namespace Assimp {
 	// Parse a XSD choice
 	template<typename T>
 	void XMLParser::ParseElements(const typename XSD::Choice<T>::type& map, T& params) const {
-		irr::io::EXML_NODE node_type;
-		std::string node_name;
-
-		// Test if it's not an <element />
-		if(! mReader->isEmptyElement()) {
-			// Save the current node name for checking closing of elements
-			std::string name = mReader->getNodeName();
-
-			// Save the count for each type of element
-			std::map<std::string, unsigned int> check;
-
-			// Initialize all the counters to 0
-			for(typename XSD::Choice<T>::type::const_iterator it(map.begin()), end(map.end()); it != end; ++it) {
-				check[it->first] = 0;
-			}
-
-			while(mReader->read()) {
-				node_type = mReader->getNodeType();
-				node_name = mReader->getNodeName();
-
-				// Test if we have an opening element
-				if(node_type == irr::io::EXN_ELEMENT) {
-					typename XSD::Choice<T>::type::const_iterator it = map.find(node_name);
-
-					// Is the element mapped?
-					if(it != map.end()) {
-						(it->second.parser)(params);
-
-						SkipUntilEnd(it->first);
-
-						// Increment the counter for this type of element
-						(check[it->first])++;
-					} else {
-						// Ignore elements that are not mapped
-						SkipElement();
-
-						DefaultLogger::get()->warn("Skipping parsing of element \"" + node_name + "\".");
-					}
-				} else if(node_type == irr::io::EXN_ELEMENT_END) {
-					if(name.compare(node_name) == 0) {
-						// check if the minOccurs & maxOccurs conditions where satisfied
-						for(typename XSD::Choice<T>::type::const_iterator it(map.begin()), end(map.end()); it != end; ++it) {
-							unsigned int occurs = check[it->first];
-
-							if(occurs < it->second.minOccurs) {
-								ThrowException("The element \"" + it->first + "\" is not present enough times (" + ToString(occurs) + " times instead of min " + ToString(it->second.minOccurs) + ") in element \"" + name + "\" to validate the schema.");
-							} else if(occurs > it->second.maxOccurs) {
-								ThrowException("The element \"" + it->first + "\" is present too many times (" + ToString(occurs) + " times instead of max " + ToString(it->second.maxOccurs) + ") in element \"" + name + "\" to validate the schema.");
-							}
-						}
-
-						// Ok, we can stop the loop
-						break;
-					} else {
-						ThrowException("Expected end of <" + name + "> element.");
-					}
-				}
-			}
-		}
+		ParseElements<typename XSD::Choice<T>::type, T>([&map](typename XSD::Choice<T>::type::const_iterator /*position*/, const std::string& name) {
+			return map.find(name);
+		}, map, params);
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	// Parse a XSD sequence
 	template<typename T>
 	void XMLParser::ParseElements(const typename XSD::Sequence<T>::type& map, T& params) const {
-		irr::io::EXML_NODE node_type;
-		std::string node_name;
-
-		// Test if it's not an <element />
-		if(! mReader->isEmptyElement()) {
-			// Save the current node name for checking closing of elements
-			std::string name = mReader->getNodeName();
-			
-			// Save the count for each type of element
-			std::map<std::string, unsigned int> check;
-
-			// Initialize all the counters to 0
-			for(typename XSD::Sequence<T>::type::const_iterator it(map.begin()), end(map.end()); it != end; ++it) {
-				check[it->first] = 0;
+		ParseElements<typename XSD::Sequence<T>::type, T>([&map](typename XSD::Sequence<T>::type::const_iterator position, const std::string& name) {
+			// Move to the position of the current element in the sequence
+			while(position != map.end() && position->first.compare(name) != 0) {
+				++position;
 			}
 
-			typename XSD::Sequence<T>::type::const_iterator position = map.begin();
-
-			while(mReader->read()) {
-				node_type = mReader->getNodeType();
-				node_name = mReader->getNodeName();
-
-				// Test if we have an opening element
-				if(node_type == irr::io::EXN_ELEMENT) {
-					typename XSD::Sequence<T>::type::const_iterator it = position;
-
-					// Move to the position of the current element in the sequence
-					while(it != map.end() && it->first.compare(node_name) != 0) {
-						++it;
-					}
-					
-					// Is the element mapped?
-					if(it != map.end()) {
-						(it->second.parser)(params);
-
-						SkipUntilEnd(it->first);
-
-						// Increment the counter for this type of element
-						(check[it->first])++;
-
-						// Save the new position in the map
-						position = it;
-					} else {
-						// Ignore elements that are not mapped
-						SkipElement();
-						
-						DefaultLogger::get()->warn("Skipping parsing of element \"" + node_name + "\".");
-					}
-				} else if(node_type == irr::io::EXN_ELEMENT_END) {
-					if(name.compare(node_name) == 0) {
-						// check if the minOccurs & maxOccurs conditions where satisfied
-						for(typename XSD::Sequence<T>::type::const_iterator it(map.begin()), end(map.end()); it != end; ++it) {
-							unsigned int occurs = check[it->first];
-
-							if(occurs < it->second.minOccurs) {
-								ThrowException("The element \"" + it->first + "\" is not present enough times (" + ToString(occurs) + " times instead of min. " + ToString(it->second.minOccurs) + ") in element \"" + name + "\" to validate the schema.");
-							} else if(occurs > it->second.maxOccurs) {
-								ThrowException("The element \"" + it->first + "\" is present too many times (" + ToString(occurs) + " times instead of max. " + ToString(it->second.maxOccurs) + ") in element \"" + name + "\" to validate the schema.");
-							}
-						}
-
-						// Ok, we can stop the loop
-						break;
-					} else {
-						ThrowException("Expected end of <" + name + "> element.");
-					}
-				}
-			}
-		}
+			return position;
+		}, map, params);
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -512,6 +407,76 @@ namespace Assimp {
 	template<>
 	std::string XMLParser::FromString(const std::string& string) const {
 		return string;
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	template<typename T, typename U>
+	void XMLParser::ParseElements(const typename XSD::Finder<T>::type& find, const T& map, U& params) const {
+		irr::io::EXML_NODE node_type;
+		std::string node_name;
+
+		// Test if it's not an <element />
+		if(! mReader->isEmptyElement()) {
+			// Save the current node name for checking closing of elements
+			std::string name = mReader->getNodeName();
+			
+			// Save the count for each type of element
+			std::map<std::string, unsigned int> check;
+
+			// Initialize all the counters to 0
+			for(typename T::const_iterator it(map.begin()), end(map.end()); it != end; ++it) {
+				check[it->first] = 0;
+			}
+
+			typename T::const_iterator position = map.begin();
+
+			while(mReader->read()) {
+				node_type = mReader->getNodeType();
+				node_name = mReader->getNodeName();
+
+				// Test if we have an opening element
+				if(node_type == irr::io::EXN_ELEMENT) {
+					// Get the position of the current element
+					typename T::const_iterator it = find(position, node_name);
+					
+					// Is the element mapped?
+					if(it != map.end()) {
+						(it->second.parser)(params);
+
+						SkipUntilEnd(it->first);
+
+						// Increment the counter for this type of element
+						(check[it->first])++;
+
+						// Save the new position in the map
+						position = it;
+					} else {
+						// Ignore elements that are not mapped
+						SkipElement();
+						
+						DefaultLogger::get()->warn("Skipping parsing of element \"" + node_name + "\".");
+					}
+				} else if(node_type == irr::io::EXN_ELEMENT_END) {
+					if(name.compare(node_name) == 0) {
+						// check if the minOccurs & maxOccurs conditions where satisfied
+						for(typename T::const_iterator it(map.begin()), end(map.end()); it != end; ++it) {
+							unsigned int occurs = check[it->first];
+
+							if(occurs < it->second.minOccurs) {
+								ThrowException("The element \"" + it->first + "\" is not present enough times (" + ToString(occurs) + " times instead of min. " + ToString(it->second.minOccurs) + ") in element \"" + name + "\" to validate the schema.");
+							} else if(occurs > it->second.maxOccurs) {
+								ThrowException("The element \"" + it->first + "\" is present too many times (" + ToString(occurs) + " times instead of max. " + ToString(it->second.maxOccurs) + ") in element \"" + name + "\" to validate the schema.");
+							}
+						}
+
+						// Ok, we can stop the loop
+						break;
+					} else {
+						ThrowException("Expected end of <" + name + "> element.");
+					}
+				}
+			}
+		}
 	}
 
 } // end of namespace Assimp
