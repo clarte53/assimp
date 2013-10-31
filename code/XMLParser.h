@@ -147,7 +147,7 @@ namespace Assimp {
 
 						Element(parser&& p, unsigned int min = 1, unsigned int max = 1);
 
-						typename parser& GetParser() const;
+						const typename Element<T>::parser& GetParser() const;
 
 						unsigned int GetMin() const;
 
@@ -174,31 +174,39 @@ namespace Assimp {
 
 						Container(typename Container<T>::type&& map, unsigned int min = 1, unsigned int max = 1);
 						
-						typename type& GetMap() const;
+						const typename Container<T>::type& GetMap() const;
 
 						unsigned int GetMin() const;
 
 						unsigned int GetMax() const;
 
-						virtual typename type::const_iterator find(const typename type& map, typename type::const_iterator position, const std::string& name) = 0;
+						virtual typename Container<T>::type::const_iterator find(const typename Container<T>::type& map, typename Container<T>::type::const_iterator position, const std::string& name) const = 0;
 
 				}; // class Container
 
 				template<typename T>
 				class Choice : public Container<std::map<std::string, Element<T>>> {
+					
+					public:
 
-					Choice(typename Choice<T>::type&& map, unsigned int min = 1, unsigned int max = 1);
+						typedef typename Container<std::map<std::string, Element<T>>>::type type;
 
-					virtual typename type::const_iterator find(const typename type& map, typename type::const_iterator position, const std::string& name);
+						Choice(typename Choice<T>::type&& map, unsigned int min = 1, unsigned int max = 1);
+
+						virtual typename Choice<T>::type::const_iterator find(const typename Choice<T>::type& map, typename Choice<T>::type::const_iterator position, const std::string& name) const;
 
 				}; // class Choice
 
 				template<typename T>
 				class Sequence : public Container<std::list<std::pair<std::string, Element<T>>>> {
-					
-					Sequence(typename Sequence<T>::type&& map, unsigned int min = 1, unsigned int max = 1);
 
-					virtual typename type::const_iterator find(const typename type& map, typename type::const_iterator position, const std::string& name);
+					public:
+
+						typedef typename Container<std::list<std::pair<std::string, Element<T>>>>::type type;
+
+						Sequence(typename Sequence<T>::type&& map, unsigned int min = 1, unsigned int max = 1);
+
+						virtual typename Sequence<T>::type::const_iterator find(const typename Sequence<T>::type& map, typename Sequence<T>::type::const_iterator position, const std::string& name) const;
 
 				}; // class Sequence
 				
@@ -296,7 +304,7 @@ namespace Assimp {
 	
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
-	inline typename XMLParser::XSD::Element<T>::parser& XMLParser::XSD::Element<T>::GetParser() const {
+	inline const typename XMLParser::XSD::Element<T>::parser& XMLParser::XSD::Element<T>::GetParser() const {
 		return mParser;
 	}
 
@@ -320,7 +328,7 @@ namespace Assimp {
 						
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
-	inline typename XMLParser::XSD::Container<T>::type& XMLParser::XSD::Container<T>::GetMap() const {
+	inline const typename XMLParser::XSD::Container<T>::type& XMLParser::XSD::Container<T>::GetMap() const {
 		return mMap;
 	}
 
@@ -338,25 +346,25 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
-	XMLParser::XSD::Choice<T>::Choice(typename XMLParser::XSD::Choice<T>::type&& map, unsigned int min, unsigned int max) : Container(map, min, max) {
+	XMLParser::XSD::Choice<T>::Choice(typename XMLParser::XSD::Choice<T>::type&& map, unsigned int min, unsigned int max) : Container<std::map<std::string, Element<T>>>(std::move(map), min, max) {
 	
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
-	typename XMLParser::XSD::Choice<T>::type::const_iterator XMLParser::XSD::Choice<T>::find(const typename XMLParser::XSD::Choice<T>::type& map, typename XMLParser::XSD::Choice<T>::type::const_iterator /*position*/, const std::string& name) {
+	typename XMLParser::XSD::Choice<T>::type::const_iterator XMLParser::XSD::Choice<T>::find(const typename XMLParser::XSD::Choice<T>::type& map, typename XMLParser::XSD::Choice<T>::type::const_iterator /*position*/, const std::string& name) const {
 		return map.find(name);
 	}
 	
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
-	XMLParser::XSD::Sequence<T>::Sequence(typename XMLParser::XSD::Sequence<T>::type&& map, unsigned int min, unsigned int max) : Container(map, min, max) {
+	XMLParser::XSD::Sequence<T>::Sequence(typename XMLParser::XSD::Sequence<T>::type&& map, unsigned int min, unsigned int max) : Container<std::list<std::pair<std::string, Element<T>>>>(std::move(map), min, max) {
 	
 	}
 	
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
-	typename XMLParser::XSD::Sequence<T>::type::const_iterator XMLParser::XSD::Sequence<T>::find(const typename XMLParser::XSD::Sequence<T>::type& map, typename XMLParser::XSD::Sequence<T>::type::const_iterator position, const std::string& name) {
+	typename XMLParser::XSD::Sequence<T>::type::const_iterator XMLParser::XSD::Sequence<T>::find(const typename XMLParser::XSD::Sequence<T>::type& map, typename XMLParser::XSD::Sequence<T>::type::const_iterator position, const std::string& name) const {
 		// Move to the position of the current element in the sequence
 		while(position != map.end() && position->first.compare(name) != 0) {
 			++position;
@@ -401,7 +409,7 @@ namespace Assimp {
 			std::string name = mReader->getNodeName();
 			
 			// Get a reference to the map
-			typename XSD::Container<T>::type& map = schema->GetMap();
+			const typename XSD::Container<T>::type& map = schema->GetMap();
 
 			// Save the count for each type of element
 			std::map<std::string, unsigned int> check;
