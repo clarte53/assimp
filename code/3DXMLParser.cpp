@@ -194,7 +194,7 @@ namespace Assimp {
 		// Parse the main 3DXML file
 		while(mReader->Next()) {
 			if(mReader->IsElement("Model_3dxml")) {
-				mReader->ParseElements(mapping, params);
+				mReader->ParseElements(&mapping, params);
 			} else {
 				mReader->SkipElement();
 			}
@@ -354,7 +354,7 @@ namespace Assimp {
 		while(! params.found && mReader->Next()) {
 			// handle the root element "Manifest"
 			if(mReader->IsElement("Manifest")) {
-				mReader->ParseElements(mapping, params);
+				mReader->ParseElements(&mapping, params);
 			} else {
 				mReader->SkipElement();
 			}
@@ -411,7 +411,7 @@ namespace Assimp {
 
 		params.me = this;
 
-		mReader->ParseElements(mapping, params);
+		mReader->ParseElements(&mapping, params);
 	}
 	
 	// ------------------------------------------------------------------------------------------------
@@ -450,7 +450,7 @@ namespace Assimp {
 		params.name_opt = mReader->GetAttribute<std::string>("name");
 		params.id = *(mReader->GetAttribute<unsigned int>("id", true));
 
-		mReader->ParseElements(mapping, params);
+		mReader->ParseElements(&mapping, params);
 
 		_3DXMLStructure::Reference3D& ref = mContent.references[_3DXMLStructure::ID(mReader->GetFilename(), params.id)]; // Create the Reference3D if not present.
 				
@@ -543,7 +543,7 @@ namespace Assimp {
 		params.name_opt = mReader->GetAttribute<std::string>("name");
 		params.instance.id = *(mReader->GetAttribute<unsigned int>("id", true));
 
-		mReader->ParseElements(mapping, params);
+		mReader->ParseElements(&mapping, params);
 
 		// Test if the name exist, otherwise use the id as name
 		std::string name;
@@ -606,7 +606,7 @@ namespace Assimp {
 		std::string file = *(mReader->GetAttribute<std::string>("associatedFile", true));
 		_3DXMLStructure::URI uri;
 
-		mReader->ParseElements(mapping, params);
+		mReader->ParseElements(&mapping, params);
 
 		// Parse the external URI to the file containing the representation
 		ParseURI(file, uri);
@@ -698,7 +698,7 @@ namespace Assimp {
 		params.id = *(mReader->GetAttribute<unsigned int>("id", true));
 		params.mesh = NULL;
 
-		mReader->ParseElements(mapping, params);
+		mReader->ParseElements(&mapping, params);
 
 		// Test if the name exist, otherwise use the id as name
 		if(params.name_opt) {

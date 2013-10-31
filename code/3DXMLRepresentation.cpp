@@ -124,7 +124,7 @@ namespace Assimp {
 		// Parse the main 3DXML file
 		while(mReader.Next()) {
 			if(mReader.IsElement("XMLRepresentation")) {
-				mReader.ParseElements(mapping, params);
+				mReader.ParseElements(&mapping, params);
 			} else {
 				mReader.SkipElement();
 			}
@@ -321,7 +321,7 @@ namespace Assimp {
 
 		params.me = this;
 
-		mReader.ParseElements(mapping, params);
+		mReader.ParseElements(&mapping, params);
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -357,7 +357,7 @@ namespace Assimp {
 
 		params.me = this;
 
-		mReader.ParseElements(mapping, params);
+		mReader.ParseElements(&mapping, params);
 
 		// Add the lines after the faces and vertices have been already added to avoid messing with the vertice indexes
 		for(std::vector<std::vector<aiVector3D>>::iterator it(params.lines.begin()), end(params.lines.end()); it != end; ++it) {
@@ -486,7 +486,7 @@ namespace Assimp {
 
 		params.me = this;
 
-		mReader.ParseElements(mapping, params);
+		mReader.ParseElements(&mapping, params);
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -518,7 +518,7 @@ namespace Assimp {
 		params.me = this;
 		params.lines = &lines;
 
-		mReader.ParseElements(mapping, params);
+		mReader.ParseElements(&mapping, params);
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -608,7 +608,7 @@ namespace Assimp {
 		params.mesh = params.me->GetMesh(params.me->mCurrentSurface).get();
 		params.start_index = params.mesh->Vertices.Size();
 
-		mReader.ParseElements(mapping, params);
+		mReader.ParseElements(&mapping, params);
 
 		if(params.mesh->Vertices.Size() == 0) {
 			ThrowException("The vertex buffer does not contain any vertex.");
@@ -636,7 +636,7 @@ namespace Assimp {
 
 		params.me = this;
 
-		mReader.ParseElements(mapping, params);
+		mReader.ParseElements(&mapping, params);
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -658,7 +658,7 @@ namespace Assimp {
 
 		params.me = this;
 
-		mReader.ParseElements(mapping, params);
+		mReader.ParseElements(&mapping, params);
 	}
 
 } // Namespace Assimp

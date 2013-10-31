@@ -180,7 +180,7 @@ namespace Assimp {
 
 						unsigned int GetMax() const;
 
-						virtual typename Container<T>::type::const_iterator find(const typename Container<T>::type& map, typename Container<T>::type::const_iterator position, const std::string& name) = 0;
+						virtual typename type::const_iterator find(const typename type& map, typename type::const_iterator position, const std::string& name) = 0;
 
 				}; // class Container
 
@@ -189,7 +189,7 @@ namespace Assimp {
 
 					Choice(typename Choice<T>::type&& map, unsigned int min = 1, unsigned int max = 1);
 
-					virtual typename Choice<T>::type::const_iterator find(const typename Choice<T>::type& map, typename Choice<T>::type::const_iterator position, const std::string& name);
+					virtual typename type::const_iterator find(const typename type& map, typename type::const_iterator position, const std::string& name);
 
 				}; // class Choice
 
@@ -198,7 +198,7 @@ namespace Assimp {
 					
 					Sequence(typename Sequence<T>::type&& map, unsigned int min = 1, unsigned int max = 1);
 
-					virtual typename Sequence<T>::type::const_iterator find(const typename Sequence<T>::type& map, typename Sequence<T>::type::const_iterator position, const std::string& name);
+					virtual typename type::const_iterator find(const typename type& map, typename type::const_iterator position, const std::string& name);
 
 				}; // class Sequence
 				
@@ -247,7 +247,7 @@ namespace Assimp {
 			void SkipUntilEnd(const std::string& name) const;
 
 			template<typename T, typename U>
-			void ParseElements(const T& schema, U& params) const;
+			void ParseElements(const XSD::Container<T>* schema, U& params) const;
 
 			/** Return the name of a node */
 			std::string GetNodeName() const;
@@ -284,13 +284,13 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
-	XMLParser::XSD::Element<T>::Element(const typename XMLParser::XSD::Element<T>::parser& parser, unsigned int min, unsigned int max) : mParser(parser), minOccurs(min), maxOccurs(max) {
+	XMLParser::XSD::Element<T>::Element(const typename XMLParser::XSD::Element<T>::parser& parser, unsigned int min, unsigned int max) : mParser(parser), mMinOccurs(min), mMaxOccurs(max) {
 	
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
-	XMLParser::XSD::Element<T>::Element(typename XMLParser::XSD::Element<T>::parser&& parser, unsigned int min, unsigned int max) : mParser(parser), minOccurs(min), maxOccurs(max) {
+	XMLParser::XSD::Element<T>::Element(typename XMLParser::XSD::Element<T>::parser&& parser, unsigned int min, unsigned int max) : mParser(parser), mMinOccurs(min), mMaxOccurs(max) {
 	
 	}
 	
@@ -391,7 +391,7 @@ namespace Assimp {
 	
 	// ------------------------------------------------------------------------------------------------
 	template<typename T, typename U>
-	void XMLParser::ParseElements(const T& schema, U& params) const {
+	void XMLParser::ParseElements(const XSD::Container<T>* schema, U& params) const {
 		irr::io::EXML_NODE node_type;
 		std::string node_name;
 
@@ -401,17 +401,17 @@ namespace Assimp {
 			std::string name = mReader->getNodeName();
 			
 			// Get a reference to the map
-			typename T::type& map = schema.GetMap();
+			typename XSD::Container<T>::type& map = schema->GetMap();
 
 			// Save the count for each type of element
 			std::map<std::string, unsigned int> check;
 
 			// Initialize all the counters to 0
-			for(typename T::const_iterator it(map.begin()), end(map.end()); it != end; ++it) {
+			for(typename XSD::Container<T>::const_iterator it(map.begin()), end(map.end()); it != end; ++it) {
 				check[it->first] = 0;
 			}
 
-			typename T::const_iterator position = map.begin();
+			typename XSD::Container<T>::const_iterator position = map.begin();
 
 			while(mReader->read()) {
 				node_type = mReader->getNodeType();
@@ -420,7 +420,7 @@ namespace Assimp {
 				// Test if we have an opening element
 				if(node_type == irr::io::EXN_ELEMENT) {
 					// Get the position of the current element
-					typename T::const_iterator it = schema.find(map, position, node_name);
+					typename XSD::Container<T>::const_iterator it = schema->find(map, position, node_name);
 					
 					// Is the element mapped?
 					if(it != map.end()) {
@@ -442,7 +442,7 @@ namespace Assimp {
 				} else if(node_type == irr::io::EXN_ELEMENT_END) {
 					if(name.compare(node_name) == 0) {
 						// check if the minOccurs & maxOccurs conditions where satisfied
-						for(typename T::const_iterator it(map.begin()), end(map.end()); it != end; ++it) {
+						for(typename XSD::Container<T>::const_iterator it(map.begin()), end(map.end()); it != end; ++it) {
 							unsigned int occurs = check[it->first];
 
 							if(occurs < it->second.GetMin()) {
