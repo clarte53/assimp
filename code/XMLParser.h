@@ -407,11 +407,11 @@ namespace Assimp {
 			std::map<std::string, unsigned int> check;
 
 			// Initialize all the counters to 0
-			for(typename XSD::Container<T>::const_iterator it(map.begin()), end(map.end()); it != end; ++it) {
+			for(typename XSD::Container<T>::type::const_iterator it(map.begin()), end(map.end()); it != end; ++it) {
 				check[it->first] = 0;
 			}
 
-			typename XSD::Container<T>::const_iterator position = map.begin();
+			typename XSD::Container<T>::type::const_iterator position = map.begin();
 
 			while(mReader->read()) {
 				node_type = mReader->getNodeType();
@@ -420,7 +420,7 @@ namespace Assimp {
 				// Test if we have an opening element
 				if(node_type == irr::io::EXN_ELEMENT) {
 					// Get the position of the current element
-					typename XSD::Container<T>::const_iterator it = schema->find(map, position, node_name);
+					typename XSD::Container<T>::type::const_iterator it = schema->find(map, position, node_name);
 					
 					// Is the element mapped?
 					if(it != map.end()) {
@@ -442,7 +442,7 @@ namespace Assimp {
 				} else if(node_type == irr::io::EXN_ELEMENT_END) {
 					if(name.compare(node_name) == 0) {
 						// check if the minOccurs & maxOccurs conditions where satisfied
-						for(typename XSD::Container<T>::const_iterator it(map.begin()), end(map.end()); it != end; ++it) {
+						for(typename XSD::Container<T>::type::const_iterator it(map.begin()), end(map.end()); it != end; ++it) {
 							unsigned int occurs = check[it->first];
 
 							if(occurs < it->second.GetMin()) {
