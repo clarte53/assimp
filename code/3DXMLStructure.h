@@ -49,7 +49,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <map>
 #include <string>
 
+#if (defined _MSC_VER)
 #pragma warning (disable:4503)
+#endif
 
 namespace Assimp {
 

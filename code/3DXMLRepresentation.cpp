@@ -76,7 +76,7 @@ namespace Assimp {
 					unsigned int vertice_index = 0;
 
 					for(unsigned int i = 0; i < it->second->Faces.Size(); i++) {
-						aiFace& face = it->second->Faces.Get(i);
+						aiFace face = it->second->Faces.Get(i);
 
 						aiFace processed_face;
 						for(unsigned int j = 0; j < face.Indices.Size(); j++) {

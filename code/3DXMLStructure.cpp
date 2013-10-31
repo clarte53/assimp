@@ -107,9 +107,15 @@ namespace Assimp {
 	// ------------------------------------------------------------------------------------------------
 	bool _3DXMLStructure::MaterialApplication::operator<(const MaterialApplication& other) const {
 		return channel < other.channel || (
-			channel == other.channel && two_sided < other.two_sided || (
-				two_sided == other.two_sided && operation < other.operation || (
-					operation == other.operation && less(materials, other.materials)
+			channel == other.channel && (
+				two_sided < other.two_sided || (
+					two_sided == other.two_sided && (
+						operation < other.operation || (
+							operation == other.operation && (
+								less(materials, other.materials)
+							)
+						)
+					)
 				)
 			)
 		);

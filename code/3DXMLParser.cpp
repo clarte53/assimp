@@ -230,7 +230,7 @@ namespace Assimp {
 				result.id = 0;
 				result.filename = uri.substr(begin + 1, uri.npos);
 			}
-		} else if(std::count_if(uri.begin(), uri.end(), std::isdigit) == uri.size()) {
+		} else if((std::size_t) std::count_if(uri.begin(), uri.end(), ::isdigit) == uri.size()) {
 			result.external = false;
 			result.has_id = true;
 			result.filename = mReader->GetFilename();
@@ -519,11 +519,19 @@ namespace Assimp {
 
 				// Save the transformation matrix
 				std::istringstream matrix(relative_matrix);
-				matrix
-					>> transformation.a1 >> transformation.b1 >> transformation.c1
-					>> transformation.a2 >> transformation.b2 >> transformation.c2
-					>> transformation.a3 >> transformation.b3 >> transformation.c3
-					>> transformation.a4 >> transformation.b4 >> transformation.c4;
+				float value;
+				matrix >> value; transformation.a1 = value;
+				matrix >> value; transformation.b1 = value;
+				matrix >> value; transformation.c1 = value;
+				matrix >> value; transformation.a2 = value;
+				matrix >> value; transformation.b2 = value;
+				matrix >> value; transformation.c2 = value;
+				matrix >> value; transformation.a3 = value;
+				matrix >> value; transformation.b3 = value;
+				matrix >> value; transformation.c3 = value;
+				matrix >> value; transformation.a4 = value;
+				matrix >> value; transformation.b4 = value;
+				matrix >> value; transformation.c4 = value;
 				transformation.d1 = transformation.d2 = transformation.d3 = 0.0;
 				transformation.d4 = 1.0;
 			}, 1, 1));

@@ -137,6 +137,18 @@ namespace Assimp {
 			}
 		}
 	}
+	
+	// ------------------------------------------------------------------------------------------------
+	template<>
+	std::string XMLParser::ToString(const std::string& value) const {
+		return value;
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	template<>
+	std::string XMLParser::FromString(const std::string& string) const {
+		return string;
+	}
 
 } // Namespace Assimp
 

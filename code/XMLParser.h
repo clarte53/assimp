@@ -230,15 +230,9 @@ namespace Assimp {
 			template<typename T>
 			std::string ToString(const T& value) const;
 
-			template<>
-			std::string ToString(const std::string& value) const;
-
 			template<typename T>
 			T FromString(const std::string& string) const;
-
-			template<>
-			std::string FromString(const std::string& string) const;
-
+			
 		protected:
 
 			template<typename T, typename U>
@@ -246,6 +240,12 @@ namespace Assimp {
 
 	}; // end of class XMLParser
 	
+	template<>
+	std::string XMLParser::ToString(const std::string& value) const;
+			
+	template<>
+	std::string XMLParser::FromString(const std::string& string) const;
+
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
 	XMLParser::XSD::Element<T>::Element(const Parser& p, unsigned int min, unsigned int max) : parser(p), minOccurs(min), maxOccurs(max) {
@@ -384,11 +384,6 @@ namespace Assimp {
 		return stream.str();
 	}
 
-	template<>
-	std::string XMLParser::ToString(const std::string& value) const {
-		return value;
-	}
-
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
 	T XMLParser::FromString(const std::string& string) const {
@@ -402,11 +397,6 @@ namespace Assimp {
 		}
 
 		return value;
-	}
-
-	template<>
-	std::string XMLParser::FromString(const std::string& string) const {
-		return string;
 	}
 
 	// ------------------------------------------------------------------------------------------------
