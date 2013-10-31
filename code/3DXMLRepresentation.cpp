@@ -63,7 +63,7 @@ namespace Assimp {
 			_3DXMLRepresentation* me;
 		} params;
 
-		static const XMLParser::XSD::Sequence<Params>::type mapping(([](){
+		static const XMLParser::XSD::Sequence<Params> mapping(([](){
 			XMLParser::XSD::Sequence<Params>::type map;
 
 			// Parse Root element
@@ -115,8 +115,8 @@ namespace Assimp {
 				}
 			}, 1, 1));
 			
-			return map;
-		})());
+			return std::move(map);
+		})(), 1, 1);
 
 
 		params.me = this;
@@ -310,14 +310,14 @@ namespace Assimp {
 			_3DXMLRepresentation* me;
 		} params;
 
-		static const XMLParser::XSD::Sequence<Params>::type mapping(([](){
+		static const XMLParser::XSD::Sequence<Params> mapping(([](){
 			XMLParser::XSD::Sequence<Params>::type map;
 
 			// Parse Rep element
 			map.emplace_back("Rep", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadVisualizationRep();}, 1, XMLParser::XSD::unbounded));
 			
-			return map;
-		})());
+			return std::move(map);
+		})(), 1, 1);
 
 		params.me = this;
 
@@ -331,7 +331,7 @@ namespace Assimp {
 			std::vector<std::vector<aiVector3D>> lines;
 		} params;
 
-		static const XMLParser::XSD::Sequence<Params>::type mapping(([](){
+		static const XMLParser::XSD::Sequence<Params> mapping(([](){
 			XMLParser::XSD::Sequence<Params>::type map;
 
 			// Parse SurfaceAttributes element
@@ -352,8 +352,8 @@ namespace Assimp {
 			// Parse VertexBuffer element
 			map.emplace_back("VertexBuffer", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadVertexBuffer();}, 0, 1));
 			
-			return map;
-		})());
+			return std::move(map);
+		})(), 0, XMLParser::XSD::unbounded);
 
 		params.me = this;
 
@@ -387,7 +387,7 @@ namespace Assimp {
 			_3DXMLRepresentation* me;
 		} params;
 
-		static const XMLParser::XSD::Sequence<Params>::type mapping(([](){
+		static const XMLParser::XSD::Sequence<Params> mapping(([](){
 			XMLParser::XSD::Sequence<Params>::type map;
 
 			// Parse SurfaceAttributes element
@@ -479,10 +479,10 @@ namespace Assimp {
 						}
 					}
 				}
-			}, 1, XMLParser::XSD::unbounded));
+			}, 1, 1));
 			
-			return map;
-		})());
+			return std::move(map);
+		})(), 1, XMLParser::XSD::unbounded);
 
 		params.me = this;
 
@@ -496,7 +496,7 @@ namespace Assimp {
 			std::vector<std::vector<aiVector3D>>* lines;
 		} params;
 
-		static const XMLParser::XSD::Sequence<Params>::type mapping(([](){
+		static const XMLParser::XSD::Sequence<Params> mapping(([](){
 			XMLParser::XSD::Sequence<Params>::type map;
 
 			// Parse LineAttributes element
@@ -512,8 +512,8 @@ namespace Assimp {
 				params.me->ParseArray(vertices, params.lines->back());
 			}, 1, XMLParser::XSD::unbounded));
 			
-			return map;
-		})());
+			return std::move(map);
+		})(), 1, 1);
 
 		params.me = this;
 		params.lines = &lines;
@@ -529,7 +529,7 @@ namespace Assimp {
 			unsigned int start_index;
 		} params;
 
-		static const XMLParser::XSD::Sequence<Params>::type mapping(([](){
+		static const XMLParser::XSD::Sequence<Params> mapping(([](){
 			XMLParser::XSD::Sequence<Params>::type map;
 
 			// Parse Positions element
@@ -601,8 +601,8 @@ namespace Assimp {
 				}
 			}, 0, 1));
 			
-			return map;
-		})());
+			return std::move(map);
+		})(), 1, 1);
 
 		params.me = this;
 		params.mesh = params.me->GetMesh(params.me->mCurrentSurface).get();
@@ -613,6 +613,52 @@ namespace Assimp {
 		if(params.mesh->Vertices.Size() == 0) {
 			ThrowException("The vertex buffer does not contain any vertex.");
 		}
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	void _3DXMLRepresentation::ReadSurfaceAttributes() {
+		struct Params {
+			_3DXMLRepresentation* me;
+		} params;
+
+		static const XMLParser::XSD::Choice<Params> mapping(([](){
+			XMLParser::XSD::Choice<Params>::type map;
+
+			// Parse Color element
+			map.emplace("Color", XMLParser::XSD::Element<Params>([](Params& params){
+				
+			}, 1, 1));
+
+			// /!\ MaterialMaterialApplication is a sequence in {1, unbounded}
+			
+			return std::move(map);
+		})(), 1, 1);
+
+		params.me = this;
+
+		mReader.ParseElements(mapping, params);
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	void _3DXMLRepresentation::ReadMaterialApplication() {
+		struct Params {
+			_3DXMLRepresentation* me;
+		} params;
+
+		static const XMLParser::XSD::Sequence<Params> mapping(([](){
+			XMLParser::XSD::Sequence<Params>::type map;
+
+			// Parse Color element
+			//map.emplace_back("Color", XMLParser::XSD::Element<Params>([](Params& params){
+				
+			//}, 1, 1));
+			
+			return std::move(map);
+		})(), 1, 1);
+
+		params.me = this;
+
+		mReader.ParseElements(mapping, params);
 	}
 
 } // Namespace Assimp

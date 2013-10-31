@@ -102,6 +102,10 @@ namespace Assimp {
 
 			void ReadVertexBuffer();
 
+			void ReadSurfaceAttributes();
+
+			void ReadMaterialApplication();
+
 	}; // class _3DXMLRepresentation
 
 } // end of namespace Assimp

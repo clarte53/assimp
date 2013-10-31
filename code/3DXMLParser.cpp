@@ -152,7 +152,7 @@ namespace Assimp {
 			_3DXMLParser* me;
 		} params;
 
-		static const XMLParser::XSD::Sequence<Params>::type mapping(([](){
+		static const XMLParser::XSD::Sequence<Params> mapping(([](){
 			XMLParser::XSD::Sequence<Params>::type map;
 
 			// Parse Header element
@@ -185,8 +185,8 @@ namespace Assimp {
 			// Parse DELRmiResourceModelImplCnx element
 			//map.emplace_back("DELRmiResourceModelImplCnx", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadDELRmiResourceModelImplCnx();}, 0, 1));
 			
-			return map;
-		})());
+			return std::move(map);
+		})(), 1, 1);
 
 
 		params.me = this;
@@ -335,7 +335,7 @@ namespace Assimp {
 			bool found;
 		} params;
 
-		static const XMLParser::XSD::Sequence<Params>::type mapping(([](){
+		static const XMLParser::XSD::Sequence<Params> mapping(([](){
 			XMLParser::XSD::Sequence<Params>::type map;
 
 			// Parse Root element
@@ -344,8 +344,8 @@ namespace Assimp {
 				params.found = true;
 			}, 1, 1));
 			
-			return map;
-		})());
+			return std::move(map);
+		})(), 1, 1);
 
 		params.me = this;
 		params.file = &main_file;
@@ -384,7 +384,7 @@ namespace Assimp {
 			_3DXMLParser* me;
 		} params;
 
-		static const XMLParser::XSD::Choice<Params>::type mapping(([](){
+		static const XMLParser::XSD::Choice<Params> mapping(([](){
 			XMLParser::XSD::Choice<Params>::type map;
 
 			// Parse Reference3D element
@@ -399,8 +399,8 @@ namespace Assimp {
 			// Parse InstanceRep element
 			map.emplace("InstanceRep", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadInstanceRep();}, 0, XMLParser::XSD::unbounded));
 			
-			return map;
-		})());
+			return std::move(map);
+		})(), 1, XMLParser::XSD::unbounded);
 
 		XMLParser::Optional<unsigned int> root = mReader->GetAttribute<unsigned int>("root");
 
@@ -435,7 +435,7 @@ namespace Assimp {
 			unsigned int id;
 		} params;
 
-		static const XMLParser::XSD::Sequence<Params>::type mapping(([](){
+		static const XMLParser::XSD::Sequence<Params> mapping(([](){
 			XMLParser::XSD::Sequence<Params>::type map;
 
 			// Parse PLM_ExternalID element
@@ -443,8 +443,8 @@ namespace Assimp {
 				params.name_opt = params.me->mReader->GetContent<std::string>(true);
 			}, 0, 1));
 			
-			return map;
-		})());
+			return std::move(map);
+		})(), 1, 1);
 
 		params.me = this;
 		params.name_opt = mReader->GetAttribute<std::string>("name");
@@ -482,7 +482,7 @@ namespace Assimp {
 			unsigned int aggregated_by;
 		} params;
 
-		static const XMLParser::XSD::Sequence<Params>::type mapping(([](){
+		static const XMLParser::XSD::Sequence<Params> mapping(([](){
 			XMLParser::XSD::Sequence<Params>::type map;
 
 			// Parse PLM_ExternalID element
@@ -536,8 +536,8 @@ namespace Assimp {
 				transformation.d4 = 1.0;
 			}, 1, 1));
 
-			return map;
-		})());
+			return std::move(map);
+		})(), 1, 1);
 
 		params.me = this;
 		params.name_opt = mReader->GetAttribute<std::string>("name");
@@ -588,7 +588,7 @@ namespace Assimp {
 			unsigned int id;
 		} params;
 
-		static const XMLParser::XSD::Sequence<Params>::type mapping(([](){
+		static const XMLParser::XSD::Sequence<Params> mapping(([](){
 			XMLParser::XSD::Sequence<Params>::type map;
 
 			// Parse PLM_ExternalID element
@@ -596,8 +596,8 @@ namespace Assimp {
 				params.name_opt = params.me->mReader->GetContent<std::string>(true);
 			}, 0, 1));
 
-			return map;
-		})());
+			return std::move(map);
+		})(), 1, 1);
 
 		params.me = this;
 		params.name_opt = mReader->GetAttribute<std::string>("name");
@@ -654,7 +654,7 @@ namespace Assimp {
 			_3DXMLStructure::URI instance_of;
 		} params;
 
-		static const XMLParser::XSD::Sequence<Params>::type mapping(([](){
+		static const XMLParser::XSD::Sequence<Params> mapping(([](){
 			XMLParser::XSD::Sequence<Params>::type map;
 
 			// Parse PLM_ExternalID element
@@ -690,8 +690,8 @@ namespace Assimp {
 				}
 			}, 1, 1));
 
-			return map;
-		})());
+			return std::move(map);
+		})(), 1, 1);
 
 		params.me = this;
 		params.name_opt = mReader->GetAttribute<std::string>("name");
