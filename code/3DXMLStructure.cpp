@@ -185,12 +185,12 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::_3DXMLStructure(aiScene* _scene) : scene(_scene), ref_root_index(), references(), representations(), files_to_parse() {
+	_3DXMLStructure::_3DXMLStructure(aiScene* _scene) : scene(_scene), ref_root_index(), references_node(), references_mat(), representations(), files_to_parse() {
 	
 	}
 	
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::_3DXMLStructure(_3DXMLStructure&& other) : scene(other.scene), ref_root_index(std::move(other.ref_root_index)), references(std::move(other.references)), representations(std::move(other.representations)), files_to_parse(std::move(other.files_to_parse)) {
+	_3DXMLStructure::_3DXMLStructure(_3DXMLStructure&& other) : scene(other.scene), ref_root_index(std::move(other.ref_root_index)), references_node(std::move(other.references_node)), references_mat(std::move(other.references_mat)), representations(std::move(other.representations)), files_to_parse(std::move(other.files_to_parse)) {
 		other.scene = nullptr;
 	}
 

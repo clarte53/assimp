@@ -145,6 +145,20 @@ namespace Assimp {
 
 		}; // struct MaterialDomain
 
+		struct CATMaterialRef : public boost::noncopyable {
+
+			unsigned int id;
+					
+			bool has_name;
+
+			std::string name;
+
+			CATMaterialRef();
+
+			CATMaterialRef(CATMaterialRef&& other);
+
+		}; // struct CATMaterialRef
+
 		struct Instance3D;
 
 		struct InstanceRep;
@@ -239,7 +253,9 @@ namespace Assimp {
 
 		Optional<unsigned int> mat_root_index;
 
-		std::map<ID, Reference3D> references;
+		std::map<ID, Reference3D> references_node;
+
+		std::map<ID, CATMaterialRef> references_mat;
 
 		std::map<ID, ReferenceRep> representations;
 
