@@ -81,13 +81,11 @@ namespace Assimp {
 			/** Aborts the file reading with an exception */
 			void ThrowException(const std::string& error) const;
 
-			void ParseFile();
-
 			void BuildStructure(_3DXMLStructure::Reference3D& ref, aiNode* node) const;
 
 			void ReadManifest(std::string& main_file);
 
-			void ReadModel_3dxml();
+			void ReadFile();
 
 			void ReadHeader();
 

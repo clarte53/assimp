@@ -85,7 +85,7 @@ namespace Assimp {
 				mReader.reset(new XMLParser(mArchive, *it));
 
 				// Parse the 3DXML file
-				ParseFile();
+				ReadFile();
 
 				// Remove the file from the list of files to parse
 				it = mContent.files_to_parse.erase(it);
@@ -205,62 +205,6 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	// Parse a 3DXML file
-	void _3DXMLParser::ParseFile() {
-		struct Params {
-			_3DXMLParser* me;
-		} params;
-
-		static const XMLParser::XSD::Sequence<Params> mapping(([](){
-			XMLParser::XSD::Sequence<Params>::type map;
-
-			// Parse Header element
-			map.emplace_back("Header", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadHeader();}, 1, 1));
-
-			// Parse ProductStructure element
-			map.emplace_back("ProductStructure", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadProductStructure();}, 0, 1));
-
-			// Parse PROCESS element
-			//map.emplace_back("PROCESS", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadPROCESS();}, 0, 1));
-
-			// Parse DefaultView element
-			//map.emplace_back("DefaultView", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadDefaultView();}, 0, 1));
-
-			// Parse DELFmiFunctionalModelImplementCnx element
-			//map.emplace_back("DELFmiFunctionalModelImplementCnx", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadDELFmiFunctionalModelImplementCnx();}, 0, 1));
-
-			// Parse CATMaterialRef element
-			map.emplace_back("CATMaterialRef", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadCATMaterialRef();}, 0, 1));
-
-			// Parse CATRepImage element
-			//map.emplace_back("CATRepImage", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadCATRepImage();}, 0, 1));
-
-			// Parse CATMaterial element
-			map.emplace_back("CATMaterial", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadCATMaterial();}, 0, 1));
-
-			// Parse DELPPRContextModelProcessCnx element
-			//map.emplace_back("DELPPRContextModelProcessCnx", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadDELPPRContextModelProcessCnx();}, 0, 1));
-
-			// Parse DELRmiResourceModelImplCnx element
-			//map.emplace_back("DELRmiResourceModelImplCnx", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadDELRmiResourceModelImplCnx();}, 0, 1));
-			
-			return std::move(map);
-		})(), 1, 1);
-
-
-		params.me = this;
-
-		// Parse the main 3DXML file
-		while(mReader->Next()) {
-			if(mReader->IsElement("Model_3dxml")) {
-				mReader->ParseElements(&mapping, params);
-			} else {
-				mReader->SkipElement();
-			}
-		}
-	}
-	
-	// ------------------------------------------------------------------------------------------------
 	// Add the meshes indices and children nodes into the given node recursively
 	void _3DXMLParser::BuildStructure(_3DXMLStructure::Reference3D& ref, aiNode* node) const {
 		// Decrement the counter of instances to this Reference3D (used for memory managment)
@@ -361,13 +305,63 @@ namespace Assimp {
 			ThrowException("Unable to find the name of the main XML file in the manifest.");
 		}
 	}
-
+	
 	// ------------------------------------------------------------------------------------------------
-	// Read 3DXML file
-	void _3DXMLParser::ReadModel_3dxml() {
-		// Nothing specific to do, everything is already done by ParseElement()
-	}
+	// Parse a 3DXML file
+	void _3DXMLParser::ReadFile() {
+		struct Params {
+			_3DXMLParser* me;
+		} params;
 
+		static const XMLParser::XSD::Sequence<Params> mapping(([](){
+			XMLParser::XSD::Sequence<Params>::type map;
+
+			// Parse Header element
+			map.emplace_back("Header", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadHeader();}, 1, 1));
+
+			// Parse ProductStructure element
+			map.emplace_back("ProductStructure", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadProductStructure();}, 0, 1));
+
+			// Parse PROCESS element
+			//map.emplace_back("PROCESS", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadPROCESS();}, 0, 1));
+
+			// Parse DefaultView element
+			//map.emplace_back("DefaultView", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadDefaultView();}, 0, 1));
+
+			// Parse DELFmiFunctionalModelImplementCnx element
+			//map.emplace_back("DELFmiFunctionalModelImplementCnx", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadDELFmiFunctionalModelImplementCnx();}, 0, 1));
+
+			// Parse CATMaterialRef element
+			map.emplace_back("CATMaterialRef", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadCATMaterialRef();}, 0, 1));
+
+			// Parse CATRepImage element
+			//map.emplace_back("CATRepImage", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadCATRepImage();}, 0, 1));
+
+			// Parse CATMaterial element
+			map.emplace_back("CATMaterial", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadCATMaterial();}, 0, 1));
+
+			// Parse DELPPRContextModelProcessCnx element
+			//map.emplace_back("DELPPRContextModelProcessCnx", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadDELPPRContextModelProcessCnx();}, 0, 1));
+
+			// Parse DELRmiResourceModelImplCnx element
+			//map.emplace_back("DELRmiResourceModelImplCnx", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadDELRmiResourceModelImplCnx();}, 0, 1));
+			
+			return std::move(map);
+		})(), 1, 1);
+
+
+		params.me = this;
+
+		// Parse the main 3DXML file
+		while(mReader->Next()) {
+			if(mReader->IsElement("Model_3dxml")) {
+				mReader->ParseElements(&mapping, params);
+			} else {
+				mReader->SkipElement();
+			}
+		}
+	}
+	
 	// ------------------------------------------------------------------------------------------------
 	// Read the header section
 	void _3DXMLParser::ReadHeader() {
