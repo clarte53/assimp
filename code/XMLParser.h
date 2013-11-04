@@ -454,11 +454,11 @@ namespace Assimp {
 							unsigned int occurs = check[it->first];
 
 							//TODO: FIXME
-							//if(occurs < it->second.GetMin()) {
-							//	ThrowException("The element \"" + it->first + "\" is not present enough times (" + ToString(occurs) + " times instead of min. " + ToString(it->second.GetMin()) + ") in element \"" + name + "\" to validate the schema.");
-							//} else if(occurs > it->second.GetMax()) {
-							//	ThrowException("The element \"" + it->first + "\" is present too many times (" + ToString(occurs) + " times instead of max. " + ToString(it->second.GetMax()) + ") in element \"" + name + "\" to validate the schema.");
-							//}
+							if(occurs < it->second.GetMin()) {
+								ThrowException("The element \"" + it->first + "\" is not present enough times (" + ToString(occurs) + " times instead of min. " + ToString(it->second.GetMin()) + ") in element \"" + name + "\" to validate the schema.");
+							} else if(occurs > it->second.GetMax()) {
+								ThrowException("The element \"" + it->first + "\" is present too many times (" + ToString(occurs) + " times instead of max. " + ToString(it->second.GetMax()) + ") in element \"" + name + "\" to validate the schema.");
+							}
 						}
 
 						// Ok, we can stop the loop

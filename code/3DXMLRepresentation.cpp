@@ -479,10 +479,10 @@ namespace Assimp {
 						}
 					}
 				}
-			}, 1, 1));
+			}, 1, XMLParser::XSD::unbounded));
 			
 			return std::move(map);
-		})(), 1, XMLParser::XSD::unbounded);
+		})(), 1, 1);
 
 		params.me = this;
 
