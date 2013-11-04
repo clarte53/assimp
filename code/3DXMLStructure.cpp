@@ -54,12 +54,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::URI::URI() : uri(""), external(false), has_id(false), filename(""), extension(""), id(0) {
+	_3DXMLStructure::URI::URI() : uri(""), filename(""), extension(""), id(), external(false) {
 	
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::URI::URI(URI&& other) : uri(std::move(other.uri)), external(other.external), has_id(other.has_id), filename(std::move(other.filename)), extension(std::move(other.extension)), id(other.id) {
+	_3DXMLStructure::URI::URI(URI&& other) : uri(std::move(other.uri)), filename(std::move(other.filename)), extension(std::move(other.extension)), id(std::move(other.id)), external(other.external) {
 	
 	}
 
@@ -144,12 +144,12 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::Reference3D::Reference3D() : id(0), has_name(false), name(""), nb_references(0) {
+	_3DXMLStructure::Reference3D::Reference3D() : id(0), name(), nb_references(0) {
 	
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::Reference3D::Reference3D(Reference3D&& other) : id(other.id), has_name(other.has_name), name(std::move(other.name)), nb_references(other.nb_references) {
+	_3DXMLStructure::Reference3D::Reference3D(Reference3D&& other) : id(other.id), name(std::move(other.name)), nb_references(other.nb_references) {
 	
 	}
 
@@ -185,12 +185,12 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::_3DXMLStructure(aiScene* _scene) : scene(_scene), root_index(0), has_root_index(false), references(), representations(), files_to_parse() {
+	_3DXMLStructure::_3DXMLStructure(aiScene* _scene) : scene(_scene), root_index(), references(), representations(), files_to_parse() {
 	
 	}
 	
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::_3DXMLStructure(_3DXMLStructure&& other) : scene(other.scene), root_index(other.root_index), has_root_index(other.has_root_index), references(std::move(other.references)), representations(std::move(other.representations)), files_to_parse(std::move(other.files_to_parse)) {
+	_3DXMLStructure::_3DXMLStructure(_3DXMLStructure&& other) : scene(other.scene), root_index(std::move(other.root_index)), references(std::move(other.references)), representations(std::move(other.representations)), files_to_parse(std::move(other.files_to_parse)) {
 		other.scene = nullptr;
 	}
 

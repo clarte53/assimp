@@ -108,8 +108,8 @@ namespace Assimp {
 		}
 
 		// Create the root node
-		if(mContent.has_root_index) {
-			std::map<_3DXMLStructure::ID, _3DXMLStructure::Reference3D>::iterator it_root = mContent.references.find(_3DXMLStructure::ID(main_file, mContent.root_index));
+		if(mContent.root_index) {
+			std::map<_3DXMLStructure::ID, _3DXMLStructure::Reference3D>::iterator it_root = mContent.references.find(_3DXMLStructure::ID(main_file, *(mContent.root_index)));
 
 			if(it_root != mContent.references.end()) {
 				_3DXMLStructure::Reference3D& root = it_root->second;
@@ -124,7 +124,7 @@ namespace Assimp {
 					ThrowException("The root Reference3D should not be instantiated.");
 				}
 			} else {
-				ThrowException("Unresolved root Reference3D \"" + mReader->ToString(mContent.root_index) + "\".");
+				ThrowException("Unresolved root Reference3D \"" + mReader->ToString(*(mContent.root_index)) + "\".");
 			}
 		} else {
 			// TODO: no root node specifically named -> we must analyze the node structure to find the root or create an artificial root node
@@ -154,23 +154,25 @@ namespace Assimp {
 			}
 
 			if(end != uri.npos) {
-				result.has_id = true;
+				std::string id_str = uri.substr(end + 1, uri.npos);
+				unsigned int id;
 
-				std::string id = uri.substr(end + 1, uri.npos);
-				ParseID(id, result.id);
+				ParseID(id_str, id);
+				result.id = Optional<unsigned int>(id);
 
 				result.filename = uri.substr(begin + 1, end - (begin + 1));
 			} else {
-				result.has_id = false;
-				result.id = 0;
+				result.id = Optional<unsigned int>();
 				result.filename = uri.substr(begin + 1, uri.npos);
 			}
 		} else if((std::size_t) std::count_if(uri.begin(), uri.end(), ::isdigit) == uri.size()) {
-			result.external = false;
-			result.has_id = true;
-			result.filename = parser->GetFilename();
+			unsigned int id;
 
-			ParseID(uri, result.id);
+			ParseID(uri, id);
+
+			result.external = false;
+			result.id = Optional<unsigned int>(id);
+			result.filename = parser->GetFilename();
 		} else {
 			parser->ThrowException("The URI \"" + uri + "\" has an invalid format.");
 		}
@@ -393,12 +395,7 @@ namespace Assimp {
 			return std::move(map);
 		})(), 1, XMLParser::XSD::unbounded);
 
-		XMLParser::Optional<unsigned int> root = mReader->GetAttribute<unsigned int>("root");
-
-		if(root) {
-			mContent.root_index = *root;
-			mContent.has_root_index = true;
-		}
+		mContent.root_index = mReader->GetAttribute<unsigned int>("root");
 
 		params.me = this;
 
@@ -408,7 +405,36 @@ namespace Assimp {
 	// ------------------------------------------------------------------------------------------------
 	// Read the CATMaterialRef section
 	void _3DXMLParser::ReadCATMaterialRef() {
+		struct Params {
+			_3DXMLParser* me;
+		} params;
+
+		static const XMLParser::XSD::Choice<Params> mapping(([](){
+			XMLParser::XSD::Choice<Params>::type map;
+
+			// Parse CATMatReference element
+			//map.emplace("CATMatReference", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadCATMatReference();}, 0, XMLParser::XSD::unbounded));
+
+			// Parse MaterialDomain element
+			//map.emplace("MaterialDomain", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadMaterialDomain();}, 0, XMLParser::XSD::unbounded));
+
+			// Parse MaterialDomainInstance element
+			//map.emplace("MaterialDomainInstance", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadMaterialDomainInstance();}, 0, XMLParser::XSD::unbounded));
+
+			return std::move(map);
+		})(), 1, XMLParser::XSD::unbounded);
+
+		Optional<unsigned int> root = mReader->GetAttribute<unsigned int>("root");
+
 		//TODO
+		/*if(root) {
+			mContent.root_index = *root;
+			mContent.has_root_index = true;
+		}*/
+
+		params.me = this;
+
+		mReader->ParseElements(&mapping, params);
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -422,7 +448,7 @@ namespace Assimp {
 	void _3DXMLParser::ReadReference3D() {
 		struct Params {
 			_3DXMLParser* me;
-			XMLParser::Optional<std::string> name_opt;
+			Optional<std::string> name_opt;
 			unsigned int id;
 		} params;
 
@@ -467,7 +493,7 @@ namespace Assimp {
 	void _3DXMLParser::ReadInstance3D() {
 		struct Params {
 			_3DXMLParser* me;
-			XMLParser::Optional<std::string> name_opt;
+			Optional<std::string> name_opt;
 			_3DXMLStructure::Instance3D instance;
 			_3DXMLStructure::URI instance_of;
 			unsigned int aggregated_by;
@@ -494,9 +520,9 @@ namespace Assimp {
 				params.me->ParseURI(params.me->mReader.get(), uri, params.instance_of);
 
 				// If the reference is on another file and does not already exist, add it to the list of files to parse
-				if(params.instance_of.external && params.instance_of.has_id &&
+				if(params.instance_of.external && params.instance_of.id &&
 						params.instance_of.filename.compare(params.me->mReader->GetFilename()) != 0 &&
-						params.me->mContent.references.find(_3DXMLStructure::ID(params.instance_of.filename, params.instance_of.id)) == params.me->mContent.references.end()) {
+						params.me->mContent.references.find(_3DXMLStructure::ID(params.instance_of.filename, *(params.instance_of.id))) == params.me->mContent.references.end()) {
 
 					params.me->mContent.files_to_parse.emplace(params.instance_of.filename);
 				}
@@ -548,9 +574,9 @@ namespace Assimp {
 		}
 
 		// Save the information corresponding to this instance
-		if(params.instance_of.has_id) {
+		if(params.instance_of.id) {
 			// Create the refered Reference3D if necessary
-			params.instance.instance_of = &(mContent.references[_3DXMLStructure::ID(params.instance_of.filename, params.instance_of.id)]);
+			params.instance.instance_of = &(mContent.references[_3DXMLStructure::ID(params.instance_of.filename, *(params.instance_of.id))]);
 
 			// Update the number of instances of this Reference3D
 			params.instance.instance_of->nb_references++;
@@ -575,7 +601,7 @@ namespace Assimp {
 	void _3DXMLParser::ReadReferenceRep() {
 		struct Params {
 			_3DXMLParser* me;
-			XMLParser::Optional<std::string> name_opt;
+			Optional<std::string> name_opt;
 			unsigned int id;
 		} params;
 
@@ -652,7 +678,7 @@ namespace Assimp {
 	void _3DXMLParser::ReadInstanceRep() {
 		struct Params {
 			_3DXMLParser* me;
-			XMLParser::Optional<std::string> name_opt;
+			Optional<std::string> name_opt;
 			unsigned int id;
 			_3DXMLStructure::InstanceRep* mesh;
 			_3DXMLStructure::URI instance_of;
@@ -686,9 +712,9 @@ namespace Assimp {
 				params.me->ParseURI(params.me->mReader.get(), uri, params.instance_of);
 
 				// If the reference is on another file and does not already exist, add it to the list of files to parse
-				if(params.instance_of.external && params.instance_of.has_id &&
+				if(params.instance_of.external && params.instance_of.id &&
 						params.instance_of.filename.compare(params.me->mReader->GetFilename()) != 0 &&
-						params.me->mContent.references.find(_3DXMLStructure::ID(params.instance_of.filename, params.instance_of.id)) == params.me->mContent.references.end()) {
+						params.me->mContent.references.find(_3DXMLStructure::ID(params.instance_of.filename, *(params.instance_of.id))) == params.me->mContent.references.end()) {
 
 					params.me->mContent.files_to_parse.emplace(params.instance_of.filename);
 				}

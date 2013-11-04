@@ -46,6 +46,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define AI_XMLPARSER_H_INC
 
 #include "irrXMLWrapper.h"
+#include "Optional.h"
 #include "ParsingUtils.h"
 
 #include <boost/noncopyable.hpp>
@@ -63,64 +64,6 @@ namespace Assimp {
 	class XMLParser {
 
 		public:
-
-			template<typename T>
-			class Optional {
-
-				protected:
-
-					bool mDefined;
-
-					T mValue;
-
-				public:
-
-					Optional() : mDefined(false), mValue() {}
-
-					Optional(const Optional& other) : mDefined(other.mDefined), mValue(other.mValue) {}
-
-					Optional(const T& value) : mDefined(true), mValue(value) {}
-
-					inline operator bool() const {return mDefined;}
-
-					inline const T* operator->() const {return &mValue;}
-
-					inline T* operator->() {return &mValue;}
-
-					inline const T& operator*() const {return mValue;}
-
-					inline T& operator*() {return mValue;}
-
-			}; // class Optional<T>
-
-			template<typename T>
-			class Optional<T*> : public boost::noncopyable {
-
-				protected:
-
-					bool mDefined;
-
-					T* mValue;
-
-				public:
-
-					Optional() : mDefined(false), mValue(NULL) {}
-
-					Optional(const T* value) : mDefined(true), mValue(value) {}
-
-					virtual ~Optional() {if(mDefined && mValue != NULL) {delete mValue;}}
-
-					inline operator bool() const {return mDefined;}
-
-					inline const T* operator->() const {return mValue;}
-
-					inline T* operator->() {return mValue;}
-
-					inline const T& operator*() const {return *mValue;}
-
-					inline T& operator*() {return *mValue;}
-
-			}; // class Optional<T*>
 
 			struct XSD {
 
@@ -479,29 +422,29 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
-	XMLParser::Optional<T> XMLParser::GetAttribute(int pIndex, bool mandatory) const {
+	Optional<T> XMLParser::GetAttribute(int pIndex, bool mandatory) const {
 		return GetAttribute<T>(mReader->getAttributeName(pIndex) , mandatory);
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
-	XMLParser::Optional<T> XMLParser::GetAttribute(const std::string& name, bool mandatory) const {
+	Optional<T> XMLParser::GetAttribute(const std::string& name, bool mandatory) const {
 		std::string value = mReader->getAttributeValueSafe(name.c_str());
 
 		if(value == "") {
 			if(mandatory) {
 				ThrowException("Attribute \"" + name + "\" not found.");
 			} else {
-				return XMLParser::Optional<T>();
+				return Optional<T>();
 			}
 		}
 
-		return XMLParser::Optional<T>(FromString<T>(value));
+		return Optional<T>(FromString<T>(value));
 	}
 	
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
-	XMLParser::Optional<T> XMLParser::GetContent(bool mandatory) const {
+	Optional<T> XMLParser::GetContent(bool mandatory) const {
 		// present node should be the beginning of an element
 		if(mReader->getNodeType() != irr::io::EXN_ELEMENT) {
 			ThrowException("The current node is not an xml element.");
@@ -512,7 +455,7 @@ namespace Assimp {
 			if(mandatory) {
 				ThrowException("Can not get content of the empty element \"" + std::string(mReader->getNodeName()) + "\".");
 			} else {
-				return XMLParser::Optional<T>();
+				return Optional<T>();
 			}
 		}
 
@@ -529,11 +472,11 @@ namespace Assimp {
 			if(mandatory) {
 				ThrowException("Invalid content in element \"" + std::string(mReader->getNodeName()) + "\".");
 			} else {
-				return XMLParser::Optional<T>();
+				return Optional<T>();
 			}
 		}
 
-		return XMLParser::Optional<T>(FromString<T>(text));
+		return Optional<T>(FromString<T>(text));
 	}
 	
 	// ------------------------------------------------------------------------------------------------

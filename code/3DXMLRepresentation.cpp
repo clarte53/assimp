@@ -417,7 +417,7 @@ namespace Assimp {
 				unsigned int face_offset = mesh->Vertices.Size();
 				unsigned int index = mesh->Faces.Size();
 
-				XMLParser::Optional<std::string> triangles = params.me->mReader.GetAttribute<std::string>("triangles");
+				Optional<std::string> triangles = params.me->mReader.GetAttribute<std::string>("triangles");
 				if(triangles) {
 					data.clear();
 
@@ -439,7 +439,7 @@ namespace Assimp {
 					}
 				}
 				
-				XMLParser::Optional<std::string> strips = params.me->mReader.GetAttribute<std::string>("strips");
+				Optional<std::string> strips = params.me->mReader.GetAttribute<std::string>("strips");
 				if(strips) {
 					data.clear();
 
@@ -468,7 +468,7 @@ namespace Assimp {
 					}
 				}
 				
-				XMLParser::Optional<std::string> fans = params.me->mReader.GetAttribute<std::string>("fans");
+				Optional<std::string> fans = params.me->mReader.GetAttribute<std::string>("fans");
 				if(fans) {
 					data.clear();
 
@@ -572,7 +572,7 @@ namespace Assimp {
 			
 			// Parse TextureCoordinates element
 			map.emplace_back("TextureCoordinates", XMLParser::XSD::Element<Params>([](Params& params){
-				XMLParser::Optional<unsigned int> channel_opt = params.me->mReader.GetAttribute<unsigned int>("channel");
+				Optional<unsigned int> channel_opt = params.me->mReader.GetAttribute<unsigned int>("channel");
 				std::string format = *(params.me->mReader.GetAttribute<std::string>("dimension", true));
 				std::string coordinates = *(params.me->mReader.GetContent<std::string>(true));
 
@@ -654,7 +654,7 @@ namespace Assimp {
 				float red = *(params.me->mReader.GetAttribute<float>("red", true));
 				float green = *(params.me->mReader.GetAttribute<float>("green", true));
 				float blue = *(params.me->mReader.GetAttribute<float>("blue", true));
-				XMLParser::Optional<float> alpha = params.me->mReader.GetAttribute<float>("alpha");
+				Optional<float> alpha = params.me->mReader.GetAttribute<float>("alpha");
 
 				aiColor4D& color = params.me->mCurrentSurface->color;
 				color.r = red;
@@ -702,14 +702,14 @@ namespace Assimp {
 				_3DXMLStructure::URI uri;
 				_3DXMLParser::ParseURI(&params.me->mReader, uri_str, uri);
 
-				if(! uri.has_id) {
+				if(! uri.id) {
 					params.me->ThrowException("The MaterialId refers to an invalid reference \"" + uri.uri + "\" without id.");
 				}
 
 				params.application->materials.emplace_back(uri.filename, uri.id);
 
 				// If the reference is on another file and does not already exist, add it to the list of files to parse
-				if(uri.external && uri.has_id && uri.filename.compare(params.me->mReader.GetFilename()) != 0 &&
+				if(uri.external && uri.id && uri.filename.compare(params.me->mReader.GetFilename()) != 0 &&
 						params.me->mDependencies.find(params.application->materials.back()) == params.me->mDependencies.end()) {
 
 					params.me->mDependencies.emplace(params.application->materials.back());
@@ -728,7 +728,7 @@ namespace Assimp {
 		params.application->channel = *(mReader.GetAttribute<unsigned int>("mappingChannel", true));
 
 		// Get the side of the material
-		XMLParser::Optional<std::string> side = mReader.GetAttribute<std::string>("mappingSide");
+		Optional<std::string> side = mReader.GetAttribute<std::string>("mappingSide");
 		if(side) {
 			params.application->two_sided = (side->compare("FRONT") != 0);
 		} else {
@@ -736,7 +736,7 @@ namespace Assimp {
 		}
 
 		// Get the blending function
-		XMLParser::Optional<std::string> blend = mReader.GetAttribute<std::string>("blendType");
+		Optional<std::string> blend = mReader.GetAttribute<std::string>("blendType");
 		if(blend) {
 			static const std::map<std::string, _3DXMLStructure::MaterialApplication::Operation> operations([]() {
 				std::map<std::string, _3DXMLStructure::MaterialApplication::Operation> map;
@@ -778,7 +778,7 @@ namespace Assimp {
 				float red = *(params.me->mReader.GetAttribute<float>("red", true));
 				float green = *(params.me->mReader.GetAttribute<float>("green", true));
 				float blue = *(params.me->mReader.GetAttribute<float>("blue", true));
-				XMLParser::Optional<float> alpha = params.me->mReader.GetAttribute<float>("alpha");
+				Optional<float> alpha = params.me->mReader.GetAttribute<float>("alpha");
 
 				aiColor4D& color = params.me->mCurrentLine->color;
 				color.r = red;

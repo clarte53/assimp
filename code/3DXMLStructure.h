@@ -45,6 +45,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef AI_3DXMLSTRUCTURE_H_INC
 #define AI_3DXMLSTRUCTURE_H_INC
 
+#include "Optional.h"
+
 #include <boost/noncopyable.hpp>
 #include <list>
 #include <map>
@@ -65,15 +67,13 @@ namespace Assimp {
 
 			std::string uri;
 
-			bool external;
-
-			bool has_id;
-
 			std::string filename;
 
 			std::string extension;
 
-			unsigned int id;
+			Optional<unsigned int> id;
+
+			bool external;
 
 			URI();
 
@@ -123,14 +123,6 @@ namespace Assimp {
 
 		}; // struct MaterialApplication
 
-		struct MaterialDomain : public boost::noncopyable {
-
-			MaterialDomain();
-
-			MaterialDomain(MaterialDomain&& other);
-
-		}; // struct MaterialDomain
-
 		struct SurfaceAttributes : public boost::noncopyable {
 
 			aiColor4D color;
@@ -144,6 +136,14 @@ namespace Assimp {
 			bool operator<(const SurfaceAttributes& other) const;
 
 		}; // struct SurfaceAttributes
+		
+		struct MaterialDomain : public boost::noncopyable {
+
+			MaterialDomain();
+
+			MaterialDomain(MaterialDomain&& other);
+
+		}; // struct MaterialDomain
 
 		struct Instance3D;
 
@@ -235,9 +235,7 @@ namespace Assimp {
 
 		aiScene* scene;
 
-		unsigned int root_index;
-
-		bool has_root_index;
+		Optional<unsigned int> root_index;
 
 		std::map<ID, Reference3D> references;
 
