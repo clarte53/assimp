@@ -60,21 +60,21 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Constructor to be privately used by Importer
-	_3DXMLParser::_3DXMLParser(const std::string& file, aiScene* scene) : mArchive(new Q3BSP::Q3BSPZipArchive(file)), mReader(NULL), mContent(scene) {
+	_3DXMLParser::_3DXMLParser(const std::string& file, aiScene* scene) : mArchive(new Q3BSP::Q3BSPZipArchive(file)), mReader(nullptr), mContent(scene) {
 		// Load the compressed archive
 		if (! mArchive->isOpen()) {
 			ThrowException("Failed to open file " + file + "." );
 		}
 
 		// Create a xml parser for the manifest
-		mReader = ScopeGuard<XMLParser>(new XMLParser(mArchive, "Manifest.xml"));
+		mReader.reset(new XMLParser(mArchive, "Manifest.xml"));
 
 		// Read the name of the main XML file in the manifest
 		std::string main_file;
 		ReadManifest(main_file);
 
 		// Create a xml parser for the root file
-		mReader = ScopeGuard<XMLParser>(new XMLParser(mArchive, main_file));
+		mReader.reset(new XMLParser(mArchive, main_file));
 
 		// Parse the main 3DXML file
 		ParseFile();
@@ -85,7 +85,7 @@ namespace Assimp {
 
 			if(it != mContent.files_to_parse.end()) {
 				// Create a xml parser for the file
-				mReader = ScopeGuard<XMLParser>(new XMLParser(mArchive, *it));
+				mReader.reset(new XMLParser(mArchive, *it));
 
 				// Parse the 3DXML file
 				ParseFile();
@@ -106,7 +106,7 @@ namespace Assimp {
 				it_mesh->second->mName = it_rep->second.name;
 
 				// Realease the ownership of the mesh to the protected scene
-				mContent.scene->Meshes.Set(index++, it_mesh->second.dismiss());
+				mContent.scene->Meshes.Set(index++, it_mesh->second.release());
 			}
 		}
 
@@ -305,13 +305,13 @@ namespace Assimp {
 						if(ref.nb_references == 0) {
 							// Therefore we can copy the child node directly into the children array
 							child.node->mParent = node;
-							node->Children.Set(node->Children.Size(), child.node.dismiss());
+							node->Children.Set(node->Children.Size(), child.node.release());
 						} else {
 							// Otherwise we need to make a deep copy of the child node in order to avoid duplicate nodes in the scene hierarchy
 							// (which would cause assimp to deallocate them multiple times, therefore making the application crash)
 							aiNode* copy_node = NULL;
 
-							SceneCombiner::Copy(&copy_node, child.node);
+							SceneCombiner::Copy(&copy_node, child.node.get());
 
 							copy_node->mParent = node;
 							node->Children.Set(node->Children.Size(), copy_node);
@@ -507,7 +507,7 @@ namespace Assimp {
 						params.instance_of.filename.compare(params.me->mReader->GetFilename()) != 0 &&
 						params.me->mContent.references.find(_3DXMLStructure::ID(params.instance_of.filename, params.instance_of.id)) == params.me->mContent.references.end()) {
 
-					params.me->mContent.files_to_parse.insert(params.instance_of.filename);
+					params.me->mContent.files_to_parse.emplace(params.instance_of.filename);
 				}
 			}, 1, 1));
 
@@ -571,8 +571,8 @@ namespace Assimp {
 		_3DXMLStructure::Reference3D& parent = params.me->mContent.references[_3DXMLStructure::ID(params.me->mReader->GetFilename(), params.aggregated_by)];
 				
 		// Insert the instance into the aggregating Reference3D
-		// The ownership of the node pointer owned by ScopeGuard is automatically transfered to the inserted instance
-		auto result = parent.instances.insert(std::make_pair(_3DXMLStructure::ID(params.me->mReader->GetFilename(), params.instance.id), params.instance));
+		// The ownership of the node pointer owned by std::unique_ptr is automatically transfered to the inserted instance
+		auto result = parent.instances.emplace(_3DXMLStructure::ID(params.me->mReader->GetFilename(), params.instance.id), std::move(params.instance));
 
 		if(! result.second) {
 			params.me->ThrowException("In Instance3D \"" + params.me->mReader->ToString(params.instance.id) + "\": the instance is already aggregated by the Reference3D \"" + params.me->mReader->ToString(params.aggregated_by) + "\".");
@@ -686,7 +686,7 @@ namespace Assimp {
 						params.instance_of.filename.compare(params.me->mReader->GetFilename()) != 0 &&
 						params.me->mContent.references.find(_3DXMLStructure::ID(params.instance_of.filename, params.instance_of.id)) == params.me->mContent.references.end()) {
 
-					params.me->mContent.files_to_parse.insert(params.instance_of.filename);
+					params.me->mContent.files_to_parse.emplace(params.instance_of.filename);
 				}
 			}, 1, 1));
 

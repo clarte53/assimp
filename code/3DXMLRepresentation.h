@@ -78,7 +78,7 @@ namespace Assimp {
 			/** Aborts the file reading with an exception */
 			void ThrowException(const std::string& error) const;
 
-			ScopeGuard<aiMesh>& GetMesh(const _3DXMLStructure::ReferenceRep::MatID& material) const;
+			aiMesh* GetMesh(const _3DXMLStructure::ReferenceRep::MatID& material) const;
 
 			void ParseArray(const std::string& content, std::vector<aiVector3D>& array) const;
 

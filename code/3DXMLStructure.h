@@ -45,6 +45,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef AI_3DXMLSTRUCTURE_H_INC
 #define AI_3DXMLSTRUCTURE_H_INC
 
+#include <boost/noncopyable.hpp>
 #include <list>
 #include <map>
 #include <string>
@@ -55,7 +56,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace Assimp {
 
-	struct _3DXMLStructure {
+	struct _3DXMLStructure : boost::noncopyable {
 
 		template<typename T>
 		static bool less(const std::list<T>& l1, const std::list<T>& l2);
@@ -92,7 +93,7 @@ namespace Assimp {
 
 		}; // struct ID
 		
-		struct MaterialApplication {
+		struct MaterialApplication : public boost::noncopyable {
 
 			enum Operation { REPLACE, ADD, ALPHA_TRANSPARENCY };
 
@@ -106,19 +107,23 @@ namespace Assimp {
 
 			MaterialApplication();
 
+			MaterialApplication(MaterialApplication&& other);
+
 			bool operator==(const MaterialApplication& other) const;
 
 			bool operator<(const MaterialApplication& other) const;
 
 		}; // struct MaterialApplication
 
-		struct SurfaceAttributes {
+		struct SurfaceAttributes : public boost::noncopyable {
 
 			aiColor3D color;
 
 			std::list<MaterialApplication> materials;
 
 			SurfaceAttributes();
+
+			SurfaceAttributes(SurfaceAttributes&& other);
 
 			bool operator<(const SurfaceAttributes& other) const;
 
@@ -128,7 +133,7 @@ namespace Assimp {
 
 		struct InstanceRep;
 
-		struct Reference3D {
+		struct Reference3D : public boost::noncopyable {
 
 			unsigned int id;
 					
@@ -144,9 +149,11 @@ namespace Assimp {
 
 			Reference3D();
 
+			Reference3D(Reference3D&& other);
+
 		}; // struct Reference3D
 
-		struct ReferenceRep {
+		struct ReferenceRep : public boost::noncopyable {
 
 			template<typename T>
 			struct shared_less {
@@ -158,7 +165,7 @@ namespace Assimp {
 			}; // struct shared_less
 
 			typedef std::shared_ptr<_3DXMLStructure::SurfaceAttributes> MatID;
-			typedef std::map<MatID, ScopeGuard<aiMesh>, shared_less<_3DXMLStructure::SurfaceAttributes>> Meshes;
+			typedef std::map<MatID, std::unique_ptr<aiMesh>, shared_less<_3DXMLStructure::SurfaceAttributes>> Meshes;
 					
 			unsigned int id;
 					
@@ -174,23 +181,27 @@ namespace Assimp {
 
 			ReferenceRep();
 
+			ReferenceRep(ReferenceRep&& other);
+
 		}; // struct ReferenceRep
 
-		struct Instance3D {
+		struct Instance3D : public boost::noncopyable {
 					
 			unsigned int id;
 					
 			bool has_name;
 
-			ScopeGuard<aiNode> node;
+			std::unique_ptr<aiNode> node;
 
 			Reference3D* instance_of;
 
 			Instance3D();
 
+			Instance3D(Instance3D&& other);
+
 		}; // struct Instance3D
 
-		struct InstanceRep {
+		struct InstanceRep : public boost::noncopyable {
 					
 			unsigned int id;
 
@@ -202,9 +213,15 @@ namespace Assimp {
 
 			InstanceRep();
 
+			InstanceRep(InstanceRep&& other);
+
 		}; // struct InstanceRep
 
 		aiScene* scene;
+
+		unsigned int root_index;
+
+		bool has_root_index;
 
 		std::map<ID, Reference3D> references;
 
@@ -212,11 +229,9 @@ namespace Assimp {
 
 		std::set<std::string> files_to_parse;
 
-		unsigned int root_index;
-
-		bool has_root_index;
-
 		_3DXMLStructure(aiScene* _scene);
+
+		_3DXMLStructure(_3DXMLStructure&& other);
 
 	}; // struct _3DXMLStructure
 

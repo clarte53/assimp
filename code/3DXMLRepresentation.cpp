@@ -72,7 +72,7 @@ namespace Assimp {
 				
 				// Duplicate the vertices to avoid different faces sharing the same (and to pass the ValidateDataStructure test...)
 				for(_3DXMLStructure::ReferenceRep::Meshes::iterator it(params.me->mMeshes.begin()), end(params.me->mMeshes.end()); it != end; ++it) {
-					ScopeGuard<aiMesh> processed_mesh(new aiMesh());
+					std::unique_ptr<aiMesh> processed_mesh(new aiMesh());
 					unsigned int vertice_index = 0;
 
 					for(unsigned int i = 0; i < it->second->Faces.Size(); i++) {
@@ -111,7 +111,7 @@ namespace Assimp {
 						processed_mesh->Faces.Set(i, processed_face);
 					}
 				
-					it->second = processed_mesh;
+					it->second.reset(processed_mesh.release());
 				}
 			}, 1, 1));
 			
@@ -145,11 +145,11 @@ namespace Assimp {
 	}
 	
 	// ------------------------------------------------------------------------------------------------
-	ScopeGuard<aiMesh>& _3DXMLRepresentation::GetMesh(const _3DXMLStructure::ReferenceRep::MatID& material) const {
+	aiMesh* _3DXMLRepresentation::GetMesh(const _3DXMLStructure::ReferenceRep::MatID& material) const {
 		auto position = mMeshes.find(material);
 
 		if(position == mMeshes.end()) {
-			auto insert = mMeshes.insert(std::make_pair(material, ScopeGuard<aiMesh>(new aiMesh())));
+			auto insert = mMeshes.emplace(material, std::unique_ptr<aiMesh>(new aiMesh()));
 
 			if(! insert.second) {
 				ThrowException("Impossible to create a new mesh for the new material.");
@@ -158,7 +158,7 @@ namespace Assimp {
 			position = insert.first;
 		}
 
-		return position->second;
+		return position->second.get();
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -362,7 +362,7 @@ namespace Assimp {
 		// Add the lines after the faces and vertices have been already added to avoid messing with the vertice indexes
 		for(std::vector<std::vector<aiVector3D>>::iterator it(params.lines.begin()), end(params.lines.end()); it != end; ++it) {
 			if(! it->empty()) {
-				ScopeGuard<aiMesh>& mesh = GetMesh(mCurrentSurface);
+				aiMesh* mesh = GetMesh(mCurrentSurface);
 
 				unsigned int index = mesh->Vertices.Size();
 
@@ -401,7 +401,7 @@ namespace Assimp {
 
 				std::list<std::vector<unsigned int>> data;
 
-				ScopeGuard<aiMesh>& mesh = params.me->GetMesh(params.me->mCurrentSurface);
+				aiMesh* mesh = params.me->GetMesh(params.me->mCurrentSurface);
 
 				unsigned int face_offset = mesh->Vertices.Size();
 				unsigned int index = mesh->Faces.Size();
@@ -605,7 +605,7 @@ namespace Assimp {
 		})(), 1, 1);
 
 		params.me = this;
-		params.mesh = params.me->GetMesh(params.me->mCurrentSurface).get();
+		params.mesh = params.me->GetMesh(params.me->mCurrentSurface);
 		params.start_index = params.mesh->Vertices.Size();
 
 		mReader.ParseElements(&mapping, params);

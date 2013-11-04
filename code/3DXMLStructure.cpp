@@ -73,29 +73,14 @@ namespace Assimp {
 		int comp = filename.compare(other.filename);
 		return comp < 0 || (comp == 0 && id < other.id);
 	}
-
-	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::Reference3D::Reference3D() : id(0), has_name(false), name(""), nb_references(0) {
 	
-	}
-
-	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::ReferenceRep::ReferenceRep() : id(0), has_name(false), name(""), meshes(), index_begin(0), index_end(0) {
-	
-	}
-
-	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::Instance3D::Instance3D() : id(0), has_name(false), node(new aiNode()), instance_of(NULL) {
-	
-	}
-
-	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::InstanceRep::InstanceRep() : id(0), has_name(false), name(""), instance_of(NULL) {
-	
-	}
-
 	// ------------------------------------------------------------------------------------------------
 	_3DXMLStructure::MaterialApplication::MaterialApplication() : channel(0), two_sided(false), operation(REPLACE), materials() {
+
+	}
+	
+	// ------------------------------------------------------------------------------------------------
+	_3DXMLStructure::MaterialApplication::MaterialApplication(MaterialApplication&& other) : channel(other.channel), two_sided(other.two_sided), operation(other.operation), materials(std::move(other.materials)) {
 
 	}
 
@@ -125,6 +110,11 @@ namespace Assimp {
 	_3DXMLStructure::SurfaceAttributes::SurfaceAttributes() : color(), materials() {
 	
 	}
+	
+	// ------------------------------------------------------------------------------------------------
+	_3DXMLStructure::SurfaceAttributes::SurfaceAttributes(SurfaceAttributes&& other) : color(other.color), materials(std::move(other.materials)) {
+	
+	}
 
 	// ------------------------------------------------------------------------------------------------
 	bool _3DXMLStructure::SurfaceAttributes::operator<(const SurfaceAttributes& other) const {
@@ -134,8 +124,54 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::_3DXMLStructure(aiScene* _scene) : scene(_scene), references(), root_index(0), has_root_index(false) {
+	_3DXMLStructure::Reference3D::Reference3D() : id(0), has_name(false), name(""), nb_references(0) {
 	
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	_3DXMLStructure::Reference3D::Reference3D(Reference3D&& other) : id(other.id), has_name(other.has_name), name(std::move(other.name)), nb_references(other.nb_references) {
+	
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	_3DXMLStructure::ReferenceRep::ReferenceRep() : id(0), has_name(false), name(""), meshes(), index_begin(0), index_end(0) {
+	
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	_3DXMLStructure::ReferenceRep::ReferenceRep(ReferenceRep&& other) : id(other.id), has_name(other.has_name), name(std::move(other.name)), meshes(std::move(other.meshes)), index_begin(other.index_begin), index_end(other.index_end) {
+
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	_3DXMLStructure::Instance3D::Instance3D() : id(0), has_name(false), node(new aiNode()), instance_of(NULL) {
+	
+	}
+	
+	// ------------------------------------------------------------------------------------------------
+	_3DXMLStructure::Instance3D::Instance3D(Instance3D&& other) : id(other.id), has_name(other.has_name), node(std::move(other.node)), instance_of(other.instance_of) {
+		other.node = nullptr;
+		other.instance_of = nullptr;
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	_3DXMLStructure::InstanceRep::InstanceRep() : id(0), has_name(false), name(""), instance_of(NULL) {
+	
+	}
+	
+	// ------------------------------------------------------------------------------------------------
+	_3DXMLStructure::InstanceRep::InstanceRep(InstanceRep&& other) : id(other.id), has_name(other.has_name), name(std::move(other.name)), instance_of(other.instance_of) {
+		other.instance_of = nullptr;
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	_3DXMLStructure::_3DXMLStructure(aiScene* _scene) : scene(_scene), root_index(0), has_root_index(false), references(), representations(), files_to_parse() {
+	
+	}
+	
+	// ------------------------------------------------------------------------------------------------
+	_3DXMLStructure::_3DXMLStructure(_3DXMLStructure&& other) : scene(other.scene), root_index(other.root_index), has_root_index(other.has_root_index), references(std::move(other.references)), representations(std::move(other.representations)), files_to_parse(std::move(other.files_to_parse)) {
+		other.scene = nullptr;
 	}
 
 } // Namespace Assimp

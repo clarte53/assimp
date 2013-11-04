@@ -58,7 +58,7 @@ namespace Assimp {
 			std::shared_ptr<Q3BSP::Q3BSPZipArchive> mArchive;
 
 			/** Current xml reader */
-			ScopeGuard<XMLParser> mReader;
+			std::unique_ptr<XMLParser> mReader;
 
 			/** Content of the 3DXML file */
 			_3DXMLStructure mContent;

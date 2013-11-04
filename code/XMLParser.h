@@ -221,10 +221,10 @@ namespace Assimp {
 			std::shared_ptr<Q3BSP::Q3BSPZipArchive> mArchive;
 
 			/** Stream to the content of a file in the zip archive */
-			ScopeGuard<IOStream> mStream;
+			IOStream* mStream;
 
 			/** XML reader, member for everyday use */
-			ScopeGuard<irr::io::IrrXMLReader> mReader;
+			irr::io::IrrXMLReader* mReader;
 
 		public:
 

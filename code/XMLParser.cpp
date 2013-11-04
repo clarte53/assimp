@@ -59,7 +59,7 @@ namespace Assimp {
 	const unsigned int XMLParser::XSD::unbounded = std::numeric_limits<unsigned int>::max();
 
 	// ------------------------------------------------------------------------------------------------
-	XMLParser::XMLParser(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& file) : mFileName(file), mArchive(archive), mStream(NULL), mReader(NULL) {
+	XMLParser::XMLParser(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& file) : mFileName(file), mArchive(archive), mStream(nullptr), mReader(nullptr) {
 		Open(file);
 	}
 
@@ -70,12 +70,12 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	void XMLParser::Open(const std::string& file) {
-		if(mStream == NULL && mReader == NULL) {
+		if(mStream == nullptr && mReader == nullptr) {
 			mFileName = file;
 
 			// Open the manifest files
-			mStream = ScopeGuard<IOStream>(mArchive->Open(mFileName.c_str()));
-			if(mStream == NULL) {
+			mStream = mArchive->Open(mFileName.c_str());
+			if(mStream == nullptr) {
 				// because Q3BSPZipArchive (now) correctly close all open files automatically on destruction,
 				// we do not have to worry about closing the stream explicitly on exceptions
 
@@ -84,9 +84,9 @@ namespace Assimp {
 
 			// generate a XML reader for it
 			// the pointer is automatically deleted at the end of the function, even if some exceptions are raised
-			ScopeGuard<CIrrXML_IOStreamReader> IOWrapper(new CIrrXML_IOStreamReader(mStream));
-			mReader = ScopeGuard<irr::io::IrrXMLReader>(irr::io::createIrrXMLReader(IOWrapper.get()));
-			if(mReader == NULL) {
+			std::unique_ptr<CIrrXML_IOStreamReader> IOWrapper(new CIrrXML_IOStreamReader(mStream));
+			mReader = irr::io::createIrrXMLReader(IOWrapper.get());
+			if(mReader == nullptr) {
 				ThrowException("Unable to create XML parser for file \"" + mFileName + "\".");
 			}
 		}
@@ -94,7 +94,15 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	void XMLParser::Close() {
-		mArchive->Close(mStream.dismiss());
+		if(mStream != nullptr) {
+			mArchive->Close(mStream);
+			mStream = nullptr;
+		}
+
+		if(mReader != nullptr) {
+			delete mReader;
+			mReader = nullptr;
+		}
 	}
 
 	// ------------------------------------------------------------------------------------------------
