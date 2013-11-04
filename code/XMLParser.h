@@ -464,7 +464,7 @@ namespace Assimp {
 						// Ok, we can stop the loop
 						break;
 					} else {
-						ThrowException("Expected end of <" + name + "> element.");
+						ThrowException("Expected end of \"" + name + "\" element.");
 					}
 				}
 			}

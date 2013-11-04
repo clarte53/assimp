@@ -138,7 +138,69 @@ namespace Assimp {
 	_3DXMLParser::~_3DXMLParser() {
 
 	}
+	
+	// ------------------------------------------------------------------------------------------------
+	// Parse one uri and split it into it's different components
+	void _3DXMLParser::ParseURI(const XMLParser* parser, const std::string& uri, _3DXMLStructure::URI& result) {
+		static const unsigned int size_prefix = 10;
 
+		result.uri = uri;
+
+		if(uri.substr(0, size_prefix).compare("urn:3DXML:") == 0) {
+			result.external = true;
+
+			std::size_t begin = uri.find_last_of(':');
+			std::size_t end = uri.find_last_of('#');
+
+			if(begin == uri.npos) {
+				parser->ThrowException("The URI \"" + uri + "\" has an invalid format.");
+			}
+
+			if(end != uri.npos) {
+				result.has_id = true;
+
+				std::string id = uri.substr(end + 1, uri.npos);
+				ParseID(id, result.id);
+
+				result.filename = uri.substr(begin + 1, end - (begin + 1));
+			} else {
+				result.has_id = false;
+				result.id = 0;
+				result.filename = uri.substr(begin + 1, uri.npos);
+			}
+		} else if((std::size_t) std::count_if(uri.begin(), uri.end(), ::isdigit) == uri.size()) {
+			result.external = false;
+			result.has_id = true;
+			result.filename = parser->GetFilename();
+
+			ParseID(uri, result.id);
+		} else {
+			parser->ThrowException("The URI \"" + uri + "\" has an invalid format.");
+		}
+
+		ParseExtension(result.filename, result.extension);
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	// Parse one the extension part of a filename
+	void _3DXMLParser::ParseExtension(const std::string& filename, std::string& extension) {
+		std::size_t pos = filename.find_last_of('.');
+
+		if(pos != filename.npos) {
+			extension = filename.substr(pos + 1, filename.npos);
+		} else {
+			extension = "";
+		}
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	// Parse one numerical id from a string
+	void _3DXMLParser::ParseID(const std::string& data, unsigned int& id) {
+		std::istringstream stream(data);
+
+		stream >> id;
+	}
+	
 	// ------------------------------------------------------------------------------------------------
 	// Aborts the file reading with an exception
 	void _3DXMLParser::ThrowException(const std::string& error) const {
@@ -199,68 +261,6 @@ namespace Assimp {
 				mReader->SkipElement();
 			}
 		}
-	}
-	
-	// ------------------------------------------------------------------------------------------------
-	// Parse one uri and split it into it's different components
-	void _3DXMLParser::ParseURI(const std::string& uri, _3DXMLStructure::URI& result) const {
-		static const unsigned int size_prefix = 10;
-
-		result.uri = uri;
-
-		if(uri.substr(0, size_prefix).compare("urn:3DXML:") == 0) {
-			result.external = true;
-
-			std::size_t begin = uri.find_last_of(':');
-			std::size_t end = uri.find_last_of('#');
-
-			if(begin == uri.npos) {
-				ThrowException("The URI \"" + uri + "\" has an invalid format.");
-			}
-
-			if(end != uri.npos) {
-				result.has_id = true;
-
-				std::string id = uri.substr(end + 1, uri.npos);
-				ParseID(id, result.id);
-
-				result.filename = uri.substr(begin + 1, end - (begin + 1));
-			} else {
-				result.has_id = false;
-				result.id = 0;
-				result.filename = uri.substr(begin + 1, uri.npos);
-			}
-		} else if((std::size_t) std::count_if(uri.begin(), uri.end(), ::isdigit) == uri.size()) {
-			result.external = false;
-			result.has_id = true;
-			result.filename = mReader->GetFilename();
-
-			ParseID(uri, result.id);
-		} else {
-			ThrowException("The URI \"" + uri + "\" has an invalid format.");
-		}
-
-		ParseExtension(result.filename, result.extension);
-	}
-
-	// ------------------------------------------------------------------------------------------------
-	// Parse one the extension part of a filename
-	void _3DXMLParser::ParseExtension(const std::string& filename, std::string& extension) {
-		std::size_t pos = filename.find_last_of('.');
-
-		if(pos != filename.npos) {
-			extension = filename.substr(pos + 1, filename.npos);
-		} else {
-			extension = "";
-		}
-	}
-
-	// ------------------------------------------------------------------------------------------------
-	// Parse one numerical id from a string
-	void _3DXMLParser::ParseID(const std::string& data, unsigned int& id) {
-		std::istringstream stream(data);
-
-		stream >> id;
 	}
 	
 	// ------------------------------------------------------------------------------------------------
@@ -500,7 +500,7 @@ namespace Assimp {
 				std::string uri = *(params.me->mReader->GetContent<std::string>(true));
 
 				// Parse the URI to get its different components
-				params.me->ParseURI(uri, params.instance_of);
+				params.me->ParseURI(params.me->mReader.get(), uri, params.instance_of);
 
 				// If the reference is on another file and does not already exist, add it to the list of files to parse
 				if(params.instance_of.external && params.instance_of.has_id &&
@@ -609,7 +609,7 @@ namespace Assimp {
 		mReader->ParseElements(&mapping, params);
 
 		// Parse the external URI to the file containing the representation
-		ParseURI(file, uri);
+		ParseURI(mReader.get(), file, uri);
 		if(! uri.external) {
 			ThrowException("In ReferenceRep \"" + mReader->ToString(params.id) + "\": invalid associated file \"" + file + "\". The field must reference another file in the same archive.");
 		}
@@ -679,7 +679,7 @@ namespace Assimp {
 				std::string uri = *(params.me->mReader->GetContent<std::string>(true));
 
 				// Parse the URI to get its different components
-				params.me->ParseURI(uri, params.instance_of);
+				params.me->ParseURI(params.me->mReader.get(), uri, params.instance_of);
 
 				// If the reference is on another file and does not already exist, add it to the list of files to parse
 				if(params.instance_of.external && params.instance_of.has_id &&

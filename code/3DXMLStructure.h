@@ -61,7 +61,7 @@ namespace Assimp {
 		template<typename T>
 		static bool less(const std::list<T>& l1, const std::list<T>& l2);
 
-		struct URI {
+		struct URI : public boost::noncopyable {
 
 			std::string uri;
 
@@ -77,6 +77,12 @@ namespace Assimp {
 
 			URI();
 
+			URI(URI&& other);
+
+			bool operator==(const URI& other) const;
+
+			bool operator<(const URI& other) const;
+
 		}; // struct URI
 
 		struct ID {
@@ -86,6 +92,8 @@ namespace Assimp {
 			unsigned int id;
 
 			ID(std::string _filename, unsigned int _id);
+
+			ID(ID&& other);
 			
 			bool operator==(const ID& other) const;
 
@@ -103,7 +111,7 @@ namespace Assimp {
 
 			Operation operation;
 
-			std::list<ID> materials;
+			std::list<URI> materials;
 
 			MaterialApplication();
 
@@ -117,7 +125,7 @@ namespace Assimp {
 
 		struct SurfaceAttributes : public boost::noncopyable {
 
-			aiColor3D color;
+			aiColor4D color;
 
 			std::list<MaterialApplication> materials;
 

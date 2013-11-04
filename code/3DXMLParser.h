@@ -69,6 +69,12 @@ namespace Assimp {
 			_3DXMLParser(const std::string& file, aiScene* scene);
 
 			virtual ~_3DXMLParser();
+			
+			static void ParseURI(const XMLParser* parser, const std::string& uri, _3DXMLStructure::URI& result);
+
+			static void ParseExtension(const std::string& filename, std::string& extension);
+
+			static void ParseID(const std::string& data, unsigned int& id);
 
 		protected:
 			
@@ -76,12 +82,6 @@ namespace Assimp {
 			void ThrowException(const std::string& error) const;
 
 			void ParseFile();
-
-			void ParseURI(const std::string& uri, _3DXMLStructure::URI& result) const;
-
-			static void ParseExtension(const std::string& filename, std::string& extension);
-
-			static void ParseID(const std::string& data, unsigned int& id);
 
 			void BuildStructure(_3DXMLStructure::Reference3D& ref, aiNode* node) const;
 

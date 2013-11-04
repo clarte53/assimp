@@ -67,6 +67,9 @@ namespace Assimp {
 			/** The material of the mesh currently parsed */
 			_3DXMLStructure::ReferenceRep::MatID mCurrentSurface;
 
+			/** The material of the lines currently parsed */
+			_3DXMLStructure::ReferenceRep::MatID mCurrentLine;
+
 		public: 
 
 			_3DXMLRepresentation(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, _3DXMLStructure::ReferenceRep::Meshes& meshes);
@@ -98,13 +101,15 @@ namespace Assimp {
 
 			void ReadFaces();
 
-			void ReadEdges(std::vector<std::vector<aiVector3D>>& lines);
+			void ReadEdges(std::vector<std::pair<_3DXMLStructure::ReferenceRep::MatID, std::vector<aiVector3D>>>& lines);
 
 			void ReadVertexBuffer();
 
 			void ReadSurfaceAttributes();
 
 			void ReadMaterialApplication();
+
+			void ReadLineAttributes();
 
 	}; // class _3DXMLRepresentation
 

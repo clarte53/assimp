@@ -59,7 +59,27 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
+	_3DXMLStructure::URI::URI(URI&& other) : uri(std::move(other.uri)), external(other.external), has_id(other.has_id), filename(std::move(other.filename)), extension(std::move(other.extension)), id(other.id) {
+	
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	bool _3DXMLStructure::URI::operator==(const URI& other) const {
+		return (uri.compare(other.uri) == 0);
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	bool _3DXMLStructure::URI::operator<(const URI& other) const {
+		return (uri.compare(other.uri) < 0);
+	}
+
+	// ------------------------------------------------------------------------------------------------
 	_3DXMLStructure::ID::ID(std::string _filename, unsigned int _id) : filename(_filename), id(_id) {
+	
+	}
+	
+	// ------------------------------------------------------------------------------------------------
+	_3DXMLStructure::ID::ID(ID&& other) : filename(std::move(other.filename)), id(other.id) {
 	
 	}
 	
