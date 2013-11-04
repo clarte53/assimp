@@ -91,7 +91,7 @@ namespace Assimp {
 
 			unsigned int id;
 
-			ID(std::string _filename, unsigned int _id);
+			ID(const std::string& _filename, unsigned int _id);
 
 			ID(ID&& other);
 			
@@ -111,7 +111,7 @@ namespace Assimp {
 
 			Operation operation;
 
-			std::list<URI> materials;
+			std::list<ID> materials;
 
 			MaterialApplication();
 
@@ -122,6 +122,14 @@ namespace Assimp {
 			bool operator<(const MaterialApplication& other) const;
 
 		}; // struct MaterialApplication
+
+		struct MaterialDomain : public boost::noncopyable {
+
+			MaterialDomain();
+
+			MaterialDomain(MaterialDomain&& other);
+
+		}; // struct MaterialDomain
 
 		struct SurfaceAttributes : public boost::noncopyable {
 
@@ -234,6 +242,8 @@ namespace Assimp {
 		std::map<ID, Reference3D> references;
 
 		std::map<ID, ReferenceRep> representations;
+
+		std::map<ID, MaterialDomain> materials;
 
 		std::set<std::string> files_to_parse;
 

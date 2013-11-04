@@ -58,7 +58,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLRepresentation::_3DXMLRepresentation(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, _3DXMLStructure::ReferenceRep::Meshes& meshes) : mReader(archive, filename), mMeshes(meshes), mCurrentSurface(nullptr), mCurrentLine(nullptr) {
+	_3DXMLRepresentation::_3DXMLRepresentation(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, _3DXMLStructure::ReferenceRep::Meshes& meshes) : mReader(archive, filename), mMeshes(meshes), mCurrentSurface(nullptr), mCurrentLine(nullptr), mDependencies() {
 		struct Params {
 			_3DXMLRepresentation* me;
 		} params;
@@ -136,6 +136,10 @@ namespace Assimp {
 	// ------------------------------------------------------------------------------------------------
 	_3DXMLRepresentation::~_3DXMLRepresentation() {
 
+	}
+
+	const std::set<_3DXMLStructure::ID>& _3DXMLRepresentation::GetDependencies() const {
+		return mDependencies;
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -693,11 +697,23 @@ namespace Assimp {
 
 			// Parse MaterialId element
 			map.emplace_back("MaterialId", XMLParser::XSD::Element<Params>([](Params& params){
-				std::string id = *(params.me->mReader.GetAttribute<std::string>("id", true));
+				std::string uri_str = *(params.me->mReader.GetAttribute<std::string>("id", true));
 
-				params.application->materials.emplace_back();
+				_3DXMLStructure::URI uri;
+				_3DXMLParser::ParseURI(&params.me->mReader, uri_str, uri);
 
-				_3DXMLParser::ParseURI(&params.me->mReader, id, params.application->materials.back());
+				if(! uri.has_id) {
+					params.me->ThrowException("The MaterialId refers to an invalid reference \"" + uri.uri + "\" without id.");
+				}
+
+				params.application->materials.emplace_back(uri.filename, uri.id);
+
+				// If the reference is on another file and does not already exist, add it to the list of files to parse
+				if(uri.external && uri.has_id && uri.filename.compare(params.me->mReader.GetFilename()) != 0 &&
+						params.me->mDependencies.find(params.application->materials.back()) == params.me->mDependencies.end()) {
+
+					params.me->mDependencies.emplace(params.application->materials.back());
+				}
 			}, 1, 1));
 			
 			return std::move(map);

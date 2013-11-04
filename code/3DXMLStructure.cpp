@@ -74,7 +74,7 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::ID::ID(std::string _filename, unsigned int _id) : filename(_filename), id(_id) {
+	_3DXMLStructure::ID::ID(const std::string& _filename, unsigned int _id) : filename(_filename), id(_id) {
 	
 	}
 	

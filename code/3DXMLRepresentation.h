@@ -70,11 +70,15 @@ namespace Assimp {
 			/** The material of the lines currently parsed */
 			_3DXMLStructure::ReferenceRep::MatID mCurrentLine;
 
+			std::set<_3DXMLStructure::ID> mDependencies;
+
 		public: 
 
 			_3DXMLRepresentation(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, _3DXMLStructure::ReferenceRep::Meshes& meshes);
 
 			virtual ~_3DXMLRepresentation();
+
+			const std::set<_3DXMLStructure::ID>& GetDependencies() const;
 
 		protected:
 

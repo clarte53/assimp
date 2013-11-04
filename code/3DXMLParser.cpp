@@ -73,11 +73,8 @@ namespace Assimp {
 		std::string main_file;
 		ReadManifest(main_file);
 
-		// Create a xml parser for the root file
-		mReader.reset(new XMLParser(mArchive, main_file));
-
-		// Parse the main 3DXML file
-		ParseFile();
+		// Add the main file to the list of files to parse
+		mContent.files_to_parse.insert(main_file);
 
 		// Parse other referenced 3DXML files until all references are resolved
 		while(mContent.files_to_parse.size() != 0) {
@@ -624,7 +621,20 @@ namespace Assimp {
 		// Check the representation format and call the correct parsing function accordingly
 		if(format.compare("TESSELLATED") == 0) {
 			if(uri.extension.compare("3DRep") == 0) {
+				// Parse the geometry representation
 				_3DXMLRepresentation representation(mArchive, uri.filename, rep.meshes);
+
+				// Get the dependencies for this geometry
+				const std::set<_3DXMLStructure::ID>& dependencies = representation.GetDependencies();
+
+				// Add the dependencies to the list of files to parse if necessary
+				for(std::set<_3DXMLStructure::ID>::const_iterator it(dependencies.begin()), end(dependencies.end()); it != end; ++it) {
+					auto found = mContent.materials.find(*it);
+
+					if(found == mContent.materials.end()) {
+						mContent.files_to_parse.emplace(it->filename);
+					}
+				}
 			} else {
 				ThrowException("In ReferenceRep \"" + mReader->ToString(params.id) + "\": unsupported extension \"" + uri.extension + "\" for associated file.");
 			}
