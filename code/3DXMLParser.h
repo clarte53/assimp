@@ -91,10 +91,6 @@ namespace Assimp {
 
 			void ReadProductStructure();
 
-			void ReadCATMaterialRef();
-
-			void ReadCATMaterial();
-			
 			void ReadReference3D();
 
 			void ReadInstance3D();
@@ -103,8 +99,16 @@ namespace Assimp {
 
 			void ReadInstanceRep();
 
-			void Read3DRep(const std::string& filename, std::list<aiMesh*>& meshes);
+			void ReadCATMaterialRef();
 
+			void ReadCATMatReference();
+
+			void ReadMaterialDomain();
+
+			void ReadMaterialDomainInstance();
+			
+			void ReadCATMaterial();
+			
 	}; // end of class _3DXMLParser
 
 } // end of namespace Assimp

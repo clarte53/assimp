@@ -235,7 +235,9 @@ namespace Assimp {
 
 		aiScene* scene;
 
-		Optional<unsigned int> root_index;
+		Optional<unsigned int> ref_root_index;
+
+		Optional<unsigned int> mat_root_index;
 
 		std::map<ID, Reference3D> references;
 

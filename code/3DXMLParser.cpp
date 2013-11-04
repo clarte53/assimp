@@ -108,8 +108,8 @@ namespace Assimp {
 		}
 
 		// Create the root node
-		if(mContent.root_index) {
-			std::map<_3DXMLStructure::ID, _3DXMLStructure::Reference3D>::iterator it_root = mContent.references.find(_3DXMLStructure::ID(main_file, *(mContent.root_index)));
+		if(mContent.ref_root_index) {
+			std::map<_3DXMLStructure::ID, _3DXMLStructure::Reference3D>::iterator it_root = mContent.references.find(_3DXMLStructure::ID(main_file, *(mContent.ref_root_index)));
 
 			if(it_root != mContent.references.end()) {
 				_3DXMLStructure::Reference3D& root = it_root->second;
@@ -124,7 +124,7 @@ namespace Assimp {
 					ThrowException("The root Reference3D should not be instantiated.");
 				}
 			} else {
-				ThrowException("Unresolved root Reference3D \"" + mReader->ToString(*(mContent.root_index)) + "\".");
+				ThrowException("Unresolved root Reference3D \"" + mReader->ToString(*(mContent.ref_root_index)) + "\".");
 			}
 		} else {
 			// TODO: no root node specifically named -> we must analyze the node structure to find the root or create an artificial root node
@@ -395,52 +395,11 @@ namespace Assimp {
 			return std::move(map);
 		})(), 1, XMLParser::XSD::unbounded);
 
-		mContent.root_index = mReader->GetAttribute<unsigned int>("root");
+		mContent.ref_root_index = mReader->GetAttribute<unsigned int>("root");
 
 		params.me = this;
 
 		mReader->ParseElements(&mapping, params);
-	}
-	
-	// ------------------------------------------------------------------------------------------------
-	// Read the CATMaterialRef section
-	void _3DXMLParser::ReadCATMaterialRef() {
-		struct Params {
-			_3DXMLParser* me;
-		} params;
-
-		static const XMLParser::XSD::Choice<Params> mapping(([](){
-			XMLParser::XSD::Choice<Params>::type map;
-
-			// Parse CATMatReference element
-			//map.emplace("CATMatReference", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadCATMatReference();}, 0, XMLParser::XSD::unbounded));
-
-			// Parse MaterialDomain element
-			//map.emplace("MaterialDomain", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadMaterialDomain();}, 0, XMLParser::XSD::unbounded));
-
-			// Parse MaterialDomainInstance element
-			//map.emplace("MaterialDomainInstance", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadMaterialDomainInstance();}, 0, XMLParser::XSD::unbounded));
-
-			return std::move(map);
-		})(), 1, XMLParser::XSD::unbounded);
-
-		Optional<unsigned int> root = mReader->GetAttribute<unsigned int>("root");
-
-		//TODO
-		/*if(root) {
-			mContent.root_index = *root;
-			mContent.has_root_index = true;
-		}*/
-
-		params.me = this;
-
-		mReader->ParseElements(&mapping, params);
-	}
-
-	// ------------------------------------------------------------------------------------------------
-	// Read the CATMaterial section
-	void _3DXMLParser::ReadCATMaterial() {
-		//TODO
 	}
 	
 	// ------------------------------------------------------------------------------------------------
@@ -740,6 +699,59 @@ namespace Assimp {
 
 		// Create the refered ReferenceRep if necessary
 		params.mesh->instance_of = &(mContent.representations[_3DXMLStructure::ID(params.instance_of.filename, params.instance_of.id)]);
+	}
+	
+	// ------------------------------------------------------------------------------------------------
+	// Read the CATMaterialRef section
+	void _3DXMLParser::ReadCATMaterialRef() {
+		struct Params {
+			_3DXMLParser* me;
+		} params;
+
+		static const XMLParser::XSD::Choice<Params> mapping(([](){
+			XMLParser::XSD::Choice<Params>::type map;
+
+			// Parse CATMatReference element
+			//map.emplace("CATMatReference", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadCATMatReference();}, 0, XMLParser::XSD::unbounded));
+
+			// Parse MaterialDomain element
+			//map.emplace("MaterialDomain", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadMaterialDomain();}, 0, XMLParser::XSD::unbounded));
+
+			// Parse MaterialDomainInstance element
+			//map.emplace("MaterialDomainInstance", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadMaterialDomainInstance();}, 0, XMLParser::XSD::unbounded));
+
+			return std::move(map);
+		})(), 1, XMLParser::XSD::unbounded);
+
+		mContent.mat_root_index = mReader->GetAttribute<unsigned int>("root");
+
+		params.me = this;
+
+		mReader->ParseElements(&mapping, params);
+	}
+	
+	// ------------------------------------------------------------------------------------------------
+	// Read the ReadCATMatReference section
+	void _3DXMLParser::ReadCATMatReference() {
+		//TODO
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	// Read the ReadMaterialDomain section
+	void _3DXMLParser::ReadMaterialDomain() {
+		//TODO
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	// Read the ReadMaterialDomainInstance section
+	void _3DXMLParser::ReadMaterialDomainInstance() {
+		//TODO
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	// Read the CATMaterial section
+	void _3DXMLParser::ReadCATMaterial() {
+		//TODO
 	}
 
 } // Namespace Assimp
