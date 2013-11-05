@@ -729,35 +729,56 @@ namespace Assimp {
 		// Get the side of the material
 		Optional<std::string> side = mReader.GetAttribute<std::string>("mappingSide");
 		if(side) {
-			params.application->two_sided = (side->compare("FRONT") != 0);
+			static const std::map<std::string, _3DXMLStructure::MaterialApplication::MappingSide> mapping_sides([]() {
+				std::map<std::string, _3DXMLStructure::MaterialApplication::MappingSide> map;
+
+				map.emplace("FRONT", _3DXMLStructure::MaterialApplication::FRONT);
+				map.emplace("BACK", _3DXMLStructure::MaterialApplication::BACK);
+				map.emplace("FRONT_AND_BACK", _3DXMLStructure::MaterialApplication::FRONT_AND_BACK);
+
+				return std::move(map);
+			}());
+
+			auto it = mapping_sides.find(*side);
+
+			if(it != mapping_sides.end()) {
+				params.application->side = it->second;
+			} else {
+				DefaultLogger::get()->warn("Unsupported mapping side \"" + *side + "\". Using FRONT side instead.");
+
+				params.application->side = _3DXMLStructure::MaterialApplication::FRONT;
+			}
 		} else {
-			params.application->two_sided = false;
+			params.application->side = _3DXMLStructure::MaterialApplication::FRONT;
 		}
 
 		// Get the blending function
 		Optional<std::string> blend = mReader.GetAttribute<std::string>("blendType");
 		if(blend) {
-			static const std::map<std::string, _3DXMLStructure::MaterialApplication::Operation> operations([]() {
-				std::map<std::string, _3DXMLStructure::MaterialApplication::Operation> map;
+			static const std::map<std::string, _3DXMLStructure::MaterialApplication::TextureBlendFunction> blend_functions([]() {
+				std::map<std::string, _3DXMLStructure::MaterialApplication::TextureBlendFunction> map;
 
 				map.emplace("REPLACE", _3DXMLStructure::MaterialApplication::REPLACE);
 				map.emplace("ADD", _3DXMLStructure::MaterialApplication::ADD);
 				map.emplace("ALPHA_TRANSPARENCY", _3DXMLStructure::MaterialApplication::ALPHA_TRANSPARENCY);
+				map.emplace("LIGHTMAP", _3DXMLStructure::MaterialApplication::LIGHTMAP);
+				map.emplace("BURN", _3DXMLStructure::MaterialApplication::BURN);
+				map.emplace("INVERT", _3DXMLStructure::MaterialApplication::INVERT);
 
 				return std::move(map);
 			}());
 
-			auto it = operations.find(*blend);
+			auto it = blend_functions.find(*blend);
 
-			if(it != operations.end()) {
-				params.application->operation = it->second;
+			if(it != blend_functions.end()) {
+				params.application->blend_function = it->second;
 			} else {
 				DefaultLogger::get()->warn("Unsupported texture blending function \"" + *blend + "\". Using REPLACE function instead.");
 
-				params.application->operation = _3DXMLStructure::MaterialApplication::REPLACE;
+				params.application->blend_function = _3DXMLStructure::MaterialApplication::REPLACE;
 			}
 		} else {
-			params.application->operation = _3DXMLStructure::MaterialApplication::REPLACE;
+			params.application->blend_function = _3DXMLStructure::MaterialApplication::REPLACE;
 		}
 
 		mReader.ParseElements(&mapping, params);

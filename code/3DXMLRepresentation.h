@@ -54,7 +54,7 @@ namespace Assimp {
 
 		protected:
 
-			/** Current xml reader */
+			/** xml reader */
 			XMLParser mReader;
 
 			/** List containing the parsed meshes */

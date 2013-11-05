@@ -45,17 +45,21 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef AI_3DXMLMATERIAL_H_INC
 #define AI_3DXMLMATERIAL_H_INC
 
+#include "3DXMLStructure.h"
+#include "XMLParser.h"
+
 namespace Assimp {
 
 	class _3DXMLMaterial {
 
 		protected:
 
-			
+			/** xml reader */
+			XMLParser mReader;
 
 		public:
 
-			_3DXMLMaterial();
+			_3DXMLMaterial(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename);
 
 			virtual ~_3DXMLMaterial();
 			

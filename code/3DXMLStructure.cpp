@@ -118,28 +118,28 @@ namespace Assimp {
 	}
 	
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::MaterialApplication::MaterialApplication() : channel(0), two_sided(false), operation(REPLACE), materials() {
+	_3DXMLStructure::MaterialApplication::MaterialApplication() : channel(0), side(FRONT), blend_function(REPLACE), materials() {
 
 	}
 	
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::MaterialApplication::MaterialApplication(MaterialApplication&& other) : channel(other.channel), two_sided(other.two_sided), operation(other.operation), materials(std::move(other.materials)) {
+	_3DXMLStructure::MaterialApplication::MaterialApplication(MaterialApplication&& other) : channel(other.channel), side(other.side), blend_function(other.blend_function), materials(std::move(other.materials)) {
 
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	bool _3DXMLStructure::MaterialApplication::operator==(const MaterialApplication& other) const {
-		return channel == other.channel && two_sided == other.two_sided && operation == other.operation && std::equal(materials.begin(), materials.end(), other.materials.begin());
+		return channel == other.channel && side == other.side && blend_function == other.blend_function && std::equal(materials.begin(), materials.end(), other.materials.begin());
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	bool _3DXMLStructure::MaterialApplication::operator<(const MaterialApplication& other) const {
 		return channel < other.channel || (
 			channel == other.channel && (
-				two_sided < other.two_sided || (
-					two_sided == other.two_sided && (
-						operation < other.operation || (
-							operation == other.operation && (
+				side < other.side || (
+					side == other.side && (
+						blend_function < other.blend_function || (
+							blend_function == other.blend_function && (
 								less(materials, other.materials)
 							)
 						)

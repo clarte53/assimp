@@ -52,8 +52,35 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLMaterial::_3DXMLMaterial() {
+	_3DXMLMaterial::_3DXMLMaterial(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename) : mReader(archive, filename) {
+		struct Params {
+			_3DXMLMaterial* me;
+		} params;
 
+		static const XMLParser::XSD::Sequence<Params> mapping(([](){
+			XMLParser::XSD::Sequence<Params>::type map;
+
+			// Parse Feature element
+			map.emplace_back("Feature", XMLParser::XSD::Element<Params>([](Params& params){
+
+			}, 0, XMLParser::XSD::unbounded));
+			
+			return std::move(map);
+		})(), 1, 1);
+
+
+		params.me = this;
+
+		// Parse the main 3DXML file
+		while(mReader.Next()) {
+			if(mReader.IsElement("Osm")) {
+				mReader.ParseElements(&mapping, params);
+			} else {
+				mReader.SkipElement();
+			}
+		}
+
+		mReader.Close();
 	}
 
 	_3DXMLMaterial::~_3DXMLMaterial() {
