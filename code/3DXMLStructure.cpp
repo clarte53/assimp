@@ -199,12 +199,12 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::Reference3D::Reference3D() : id(0), name(), nb_references(0) {
+	_3DXMLStructure::Reference3D::Reference3D() : id(0), has_name(false), name(""), nb_references(0) {
 	
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::Reference3D::Reference3D(Reference3D&& other) : id(other.id), name(std::move(other.name)), nb_references(other.nb_references) {
+	_3DXMLStructure::Reference3D::Reference3D(Reference3D&& other) : id(other.id), has_name(other.has_name), name(std::move(other.name)), nb_references(other.nb_references) {
 	
 	}
 
