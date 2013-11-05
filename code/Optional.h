@@ -68,6 +68,12 @@ namespace Assimp {
 
 			Optional(const T& value) : mDefined(true), mValue(value) {}
 
+			virtual ~Optional() {}
+
+			inline Optional& operator=(const Optional& other) {mDefined = other.mDefined; mValue = other.mValue; return *this;}
+
+			inline Optional& operator=(Optional&& other) {mDefined = other.mDefined; mValue = std::move(other.mValue); return *this;}
+
 			inline operator bool() const {return mDefined;}
 
 			inline const T* operator->() const {return &mValue;}
@@ -91,13 +97,15 @@ namespace Assimp {
 
 		public:
 
-			Optional() : mDefined(false), mValue(NULL) {}
+			Optional() : mDefined(false), mValue(nullptr) {}
 			
 			Optional(Optional&& other) : mDefined(other.mDefined), mValue(other.mValue) {other.mValue = nullptr;}
 
 			Optional(const T* value) : mDefined(true), mValue(value) {}
 
-			virtual ~Optional() {if(mDefined && mValue != NULL) {delete mValue;}}
+			virtual ~Optional() {if(mDefined && mValue != nullptr) {delete mValue;}}
+
+			inline Optional& operator=(Optional&& other) {mDefined = other.mDefined; mValue = other.mValue; other.mValue = nullptr; return *this;}
 
 			inline operator bool() const {return mDefined;}
 

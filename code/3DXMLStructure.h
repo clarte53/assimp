@@ -93,7 +93,13 @@ namespace Assimp {
 
 			ID(const std::string& _filename, unsigned int _id);
 
+			ID(const ID& other);
+
 			ID(ID&& other);
+
+			ID& operator=(const ID& other);
+
+			ID& operator=(ID&& other);
 			
 			bool operator==(const ID& other) const;
 

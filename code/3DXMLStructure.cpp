@@ -79,8 +79,33 @@ namespace Assimp {
 	}
 	
 	// ------------------------------------------------------------------------------------------------
+	_3DXMLStructure::ID::ID(const ID& other) : filename(other.filename), id(other.id) {
+
+	}
+	
+	// ------------------------------------------------------------------------------------------------
 	_3DXMLStructure::ID::ID(ID&& other) : filename(std::move(other.filename)), id(other.id) {
 	
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	_3DXMLStructure::ID& _3DXMLStructure::ID::operator=(const ID& other) {
+		if(this != &other) {
+			filename = other.filename;
+			id = other.id;
+		}
+
+		return *this;
+	}
+	
+	// ------------------------------------------------------------------------------------------------
+	_3DXMLStructure::ID& _3DXMLStructure::ID::operator=(ID&& other) {
+		if(this != &other) {
+			filename = std::move(other.filename);
+			id = other.id;
+		}
+
+		return *this;
 	}
 	
 	// ------------------------------------------------------------------------------------------------
@@ -134,6 +159,26 @@ namespace Assimp {
 	// ------------------------------------------------------------------------------------------------
 	_3DXMLStructure::SurfaceAttributes::SurfaceAttributes(SurfaceAttributes&& other) : color(other.color), materials(std::move(other.materials)) {
 	
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	_3DXMLStructure::MaterialDomain::MaterialDomain() {
+
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	_3DXMLStructure::MaterialDomain::MaterialDomain(MaterialDomain&& other) {
+
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	_3DXMLStructure::CATMaterialRef::CATMaterialRef() : id(0), has_name(false), name("") {
+
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	_3DXMLStructure::CATMaterialRef::CATMaterialRef(CATMaterialRef&& other) : id(other.id), has_name(other.has_name), name(std::move(other.name)) {
+
 	}
 
 	// ------------------------------------------------------------------------------------------------

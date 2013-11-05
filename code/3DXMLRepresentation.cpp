@@ -709,10 +709,11 @@ namespace Assimp {
 				params.application->materials.emplace_back(uri.filename, uri.id);
 
 				// If the reference is on another file and does not already exist, add it to the list of files to parse
+				_3DXMLStructure::ID& id = params.application->materials.back();
 				if(uri.external && uri.id && uri.filename.compare(params.me->mReader.GetFilename()) != 0 &&
-						params.me->mDependencies.find(params.application->materials.back()) == params.me->mDependencies.end()) {
+						params.me->mDependencies.find(id) == params.me->mDependencies.end()) {
 
-					params.me->mDependencies.emplace(params.application->materials.back());
+					params.me->mDependencies.emplace(id);
 				}
 			}, 1, 1));
 			
