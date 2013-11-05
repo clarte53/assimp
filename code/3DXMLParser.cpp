@@ -49,6 +49,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "3DXMLParser.h"
 
+#include "3DXMLMaterial.h"
 #include "3DXMLRepresentation.h"
 #include "Q3BSPZipArchive.h"
 #include "SceneCombiner.h"
@@ -826,7 +827,7 @@ namespace Assimp {
 		if(params.rendering) {
 			if(format.compare("TECHREP") == 0) {
 				if(uri.extension.compare("3DRep") == 0) {
-					// TODO
+					_3DXMLMaterial material(mArchive, uri.filename, mat.material.get());
 				} else {
 					ThrowException("In MaterialDomain \"" + mReader->ToString(id) + "\": unsupported extension \"" + uri.extension + "\" for associated file.");
 				}

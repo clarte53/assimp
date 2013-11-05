@@ -167,13 +167,13 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::MaterialDomain::MaterialDomain() : id(0), has_name(false), name("") {
+	_3DXMLStructure::MaterialDomain::MaterialDomain() : id(0), has_name(false), name(""), material(new aiMaterial()) {
 
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::MaterialDomain::MaterialDomain(MaterialDomain&& other) : id(other.id), has_name(other.has_name), name(std::move(other.name)) {
-
+	_3DXMLStructure::MaterialDomain::MaterialDomain(MaterialDomain&& other) : id(other.id), has_name(other.has_name), name(std::move(other.name)), material(std::move(other.material)) {
+		other.material = nullptr;
 	}
 
 	// ------------------------------------------------------------------------------------------------

@@ -150,6 +150,8 @@ namespace Assimp {
 
 			std::string name;
 
+			std::unique_ptr<aiMaterial> material;
+
 			MaterialDomain();
 
 			MaterialDomain(MaterialDomain&& other);

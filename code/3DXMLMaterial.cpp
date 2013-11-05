@@ -52,7 +52,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLMaterial::_3DXMLMaterial(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename) : mReader(archive, filename) {
+	_3DXMLMaterial::_3DXMLMaterial(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, aiMaterial* material) : mReader(archive, filename), mMaterial(material) {
 		struct Params {
 			_3DXMLMaterial* me;
 		} params;

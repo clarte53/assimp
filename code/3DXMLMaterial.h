@@ -57,9 +57,11 @@ namespace Assimp {
 			/** xml reader */
 			XMLParser mReader;
 
+			aiMaterial* mMaterial;
+
 		public:
 
-			_3DXMLMaterial(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename);
+			_3DXMLMaterial(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, aiMaterial* material);
 
 			virtual ~_3DXMLMaterial();
 			
