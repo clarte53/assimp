@@ -119,7 +119,7 @@ namespace Assimp {
 
 		params.me = this;
 
-		// Parse the main 3DXML file
+		// Parse the 3DRep file
 		while(mReader.Next()) {
 			if(mReader.IsElement("XMLRepresentation")) {
 				mReader.ParseElements(&mapping, params);

@@ -61,9 +61,7 @@ namespace Assimp {
 			XMLParser::XSD::Sequence<Params>::type map;
 
 			// Parse Feature element
-			map.emplace_back("Feature", XMLParser::XSD::Element<Params>([](Params& params){
-
-			}, 0, XMLParser::XSD::unbounded));
+			map.emplace_back("Feature", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadFeature();}, 0, XMLParser::XSD::unbounded));
 			
 			return std::move(map);
 		})(), 1, 1);
@@ -71,7 +69,7 @@ namespace Assimp {
 
 		params.me = this;
 
-		// Parse the main 3DXML file
+		// Parse the 3DRep file
 		while(mReader.Next()) {
 			if(mReader.IsElement("Osm")) {
 				mReader.ParseElements(&mapping, params);
@@ -83,8 +81,14 @@ namespace Assimp {
 		mReader.Close();
 	}
 
+	// ------------------------------------------------------------------------------------------------
 	_3DXMLMaterial::~_3DXMLMaterial() {
 
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	void _3DXMLMaterial::ReadFeature() {
+		//TODO
 	}
 
 } // Namespace Assimp
