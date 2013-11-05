@@ -152,12 +152,12 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::SurfaceAttributes::SurfaceAttributes() : color(), materials() {
+	_3DXMLStructure::MaterialAttributes::MaterialAttributes() : color(), materials() {
 	
 	}
 	
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::SurfaceAttributes::SurfaceAttributes(SurfaceAttributes&& other) : color(other.color), materials(std::move(other.materials)) {
+	_3DXMLStructure::MaterialAttributes::MaterialAttributes(MaterialAttributes&& other) : color(other.color), materials(std::move(other.materials)) {
 	
 	}
 
@@ -182,7 +182,7 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	bool _3DXMLStructure::SurfaceAttributes::operator<(const SurfaceAttributes& other) const {
+	bool _3DXMLStructure::MaterialAttributes::operator<(const MaterialAttributes& other) const {
 		return color < other.color || (
 			color == other.color && less(materials, other.materials)
 		);

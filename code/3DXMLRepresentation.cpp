@@ -677,7 +677,7 @@ namespace Assimp {
 		})(), 1, 1);
 
 		if(mReader.HasElements()) {
-			mCurrentSurface = _3DXMLStructure::ReferenceRep::MatID(new _3DXMLStructure::SurfaceAttributes());
+			mCurrentSurface = _3DXMLStructure::ReferenceRep::MatID(new _3DXMLStructure::MaterialAttributes());
 
 			params.me = this;
 
@@ -797,7 +797,7 @@ namespace Assimp {
 		})(), 1, 1);
 
 		if(mReader.HasElements()) {
-			mCurrentLine = _3DXMLStructure::ReferenceRep::MatID(new _3DXMLStructure::SurfaceAttributes());
+			mCurrentLine = _3DXMLStructure::ReferenceRep::MatID(new _3DXMLStructure::MaterialAttributes());
 
 			params.me = this;
 			//TODO: support lineType & thickness?

@@ -129,19 +129,19 @@ namespace Assimp {
 
 		}; // struct MaterialApplication
 
-		struct SurfaceAttributes : public boost::noncopyable {
+		struct MaterialAttributes : public boost::noncopyable {
 
 			aiColor4D color;
 
 			std::list<MaterialApplication> materials;
 
-			SurfaceAttributes();
+			MaterialAttributes();
 
-			SurfaceAttributes(SurfaceAttributes&& other);
+			MaterialAttributes(MaterialAttributes&& other);
 
-			bool operator<(const SurfaceAttributes& other) const;
+			bool operator<(const MaterialAttributes& other) const;
 
-		}; // struct SurfaceAttributes
+		}; // struct MaterialAttributes
 		
 		struct MaterialDomain : public boost::noncopyable {
 
@@ -200,8 +200,8 @@ namespace Assimp {
 
 			}; // struct shared_less
 
-			typedef std::shared_ptr<_3DXMLStructure::SurfaceAttributes> MatID;
-			typedef std::map<MatID, std::unique_ptr<aiMesh>, shared_less<_3DXMLStructure::SurfaceAttributes>> Meshes;
+			typedef std::shared_ptr<_3DXMLStructure::MaterialAttributes> MatID;
+			typedef std::map<MatID, std::unique_ptr<aiMesh>, shared_less<_3DXMLStructure::MaterialAttributes>> Meshes;
 					
 			unsigned int id;
 					
