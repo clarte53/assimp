@@ -49,9 +49,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Optional.h"
 #include "ParsingUtils.h"
 
-#include <boost/noncopyable.hpp>
 #include <functional>
-#include <memory>
 
 namespace Assimp {
 

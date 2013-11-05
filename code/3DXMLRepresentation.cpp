@@ -49,11 +49,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "3DXMLRepresentation.h"
 
-#include "Q3BSPZipArchive.h"
+#include "3DXMLParser.h"
 
 #include <cctype>
-#include <limits>
-#include <tuple>
 
 namespace Assimp {
 

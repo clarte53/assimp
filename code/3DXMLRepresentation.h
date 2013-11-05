@@ -45,12 +45,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef AI_3DXMLREPRESENTATION_H_INC
 #define AI_3DXMLREPRESENTATION_H_INC
 
-#include "3DXMLParser.h"
-#include "../include/assimp/mesh.h"
-
-#include <list>
-#include <memory>
-#include <sstream>
+#include "3DXMLStructure.h"
+#include "XMLParser.h"
 
 namespace Assimp {
 

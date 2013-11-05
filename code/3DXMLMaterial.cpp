@@ -49,8 +49,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "3DXMLMaterial.h"
 
-#include "Q3BSPZipArchive.h"
-
 namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------

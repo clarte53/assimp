@@ -53,9 +53,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Q3BSPZipArchive.h"
 #include "SceneCombiner.h"
 
-#include <algorithm>
-#include <cctype>
-
 namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
