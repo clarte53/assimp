@@ -636,9 +636,8 @@ namespace Assimp {
 		struct Params {
 			_3DXMLParser* me;
 			Optional<std::string> name_opt;
-			unsigned int id;
 			_3DXMLStructure::InstanceRep* mesh;
-			_3DXMLStructure::URI instance_of;
+			unsigned int id;
 		} params;
 
 		static const XMLParser::XSD::Sequence<Params> mapping(([](){
@@ -664,16 +663,24 @@ namespace Assimp {
 			// Parse IsInstanceOf element
 			map.emplace_back("IsInstanceOf", XMLParser::XSD::Element<Params>([](Params& params){
 				std::string uri = *(params.me->mReader->GetContent<std::string>(true));
+				_3DXMLStructure::URI instance_of;
 
 				// Parse the URI to get its different components
-				params.me->ParseURI(params.me->mReader.get(), uri, params.instance_of);
+				params.me->ParseURI(params.me->mReader.get(), uri, instance_of);
 
 				// If the reference is on another file and does not already exist, add it to the list of files to parse
-				if(params.instance_of.external && params.instance_of.id &&
-						params.instance_of.filename.compare(params.me->mReader->GetFilename()) != 0 &&
-						params.me->mContent.references_node.find(_3DXMLStructure::ID(params.instance_of.filename, *(params.instance_of.id))) == params.me->mContent.references_node.end()) {
+				if(instance_of.external && instance_of.id &&
+						instance_of.filename.compare(params.me->mReader->GetFilename()) != 0 &&
+						params.me->mContent.references_node.find(_3DXMLStructure::ID(instance_of.filename, *(instance_of.id))) == params.me->mContent.references_node.end()) {
 
-					params.me->mContent.files_to_parse.emplace(params.instance_of.filename);
+					params.me->mContent.files_to_parse.emplace(instance_of.filename);
+				}
+
+				if(instance_of.id) {
+					// Create the refered ReferenceRep if necessary
+					params.mesh->instance_of = &(params.me->mContent.representations[_3DXMLStructure::ID(instance_of.filename, *(instance_of.id))]);
+				} else {
+					params.me->ThrowException("In InstanceRep \"" + params.me->mReader->ToString(params.id) + "\": the uri \"" + uri + "\" has no id component.");
 				}
 			}, 1, 1));
 
@@ -696,9 +703,6 @@ namespace Assimp {
 			params.mesh->name = params.me->mReader->ToString(params.id);
 			params.mesh->has_name = false;
 		}
-
-		// Create the refered ReferenceRep if necessary
-		params.mesh->instance_of = &(mContent.representations[_3DXMLStructure::ID(params.instance_of.filename, params.instance_of.id)]);
 	}
 	
 	// ------------------------------------------------------------------------------------------------
@@ -853,9 +857,8 @@ namespace Assimp {
 		struct Params {
 			_3DXMLParser* me;
 			Optional<std::string> name_opt;
-			unsigned int id;
 			_3DXMLStructure::MaterialDomainInstance* material;
-			_3DXMLStructure::URI instance_of;
+			unsigned int id;
 		} params;
 
 		static const XMLParser::XSD::Sequence<Params> mapping(([](){
@@ -881,16 +884,24 @@ namespace Assimp {
 			// Parse IsInstanceOf element
 			map.emplace_back("IsInstanceOf", XMLParser::XSD::Element<Params>([](Params& params){
 				std::string uri = *(params.me->mReader->GetContent<std::string>(true));
+				_3DXMLStructure::URI instance_of;
 
 				// Parse the URI to get its different components
-				params.me->ParseURI(params.me->mReader.get(), uri, params.instance_of);
+				params.me->ParseURI(params.me->mReader.get(), uri, instance_of);
 
 				// If the reference is on another file and does not already exist, add it to the list of files to parse
-				if(params.instance_of.external && params.instance_of.id &&
-						params.instance_of.filename.compare(params.me->mReader->GetFilename()) != 0 &&
-						params.me->mContent.references_mat.find(_3DXMLStructure::ID(params.instance_of.filename, *(params.instance_of.id))) == params.me->mContent.references_mat.end()) {
+				if(instance_of.external && instance_of.id &&
+						instance_of.filename.compare(params.me->mReader->GetFilename()) != 0 &&
+						params.me->mContent.references_mat.find(_3DXMLStructure::ID(instance_of.filename, *(instance_of.id))) == params.me->mContent.references_mat.end()) {
 
-					params.me->mContent.files_to_parse.emplace(params.instance_of.filename);
+					params.me->mContent.files_to_parse.emplace(instance_of.filename);
+				}
+
+				if(instance_of.id) {
+					// Create the refered ReferenceRep if necessary
+					params.material->instance_of = &(params.me->mContent.materials[_3DXMLStructure::ID(instance_of.filename, *(instance_of.id))]);
+				} else {
+					params.me->ThrowException("In MaterialDomainInstance \"" + params.me->mReader->ToString(params.id) + "\": the uri \"" + uri + "\" has no id component.");
 				}
 			}, 1, 1));
 
@@ -913,9 +924,6 @@ namespace Assimp {
 			params.material->name = params.me->mReader->ToString(params.id);
 			params.material->has_name = false;
 		}
-
-		// Create the refered ReferenceRep if necessary
-		params.material->instance_of = &(mContent.materials[_3DXMLStructure::ID(params.instance_of.filename, params.instance_of.id)]);
 	}
 
 	// ------------------------------------------------------------------------------------------------
