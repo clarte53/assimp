@@ -214,13 +214,13 @@ namespace Assimp {
 			ref.nb_references--;
 		}
 
-		if(node != NULL) {
+		if(node != nullptr) {
 			// Copy the indexes of the meshes contained into this instance into the proper aiNode
 			if(node->Meshes.Size() == 0) {
 				for(std::map<_3DXMLStructure::ID, _3DXMLStructure::InstanceRep>::const_iterator it_mesh(ref.meshes.begin()), end_mesh(ref.meshes.end()); it_mesh != end_mesh; ++it_mesh) {
 					const _3DXMLStructure::InstanceRep& rep = it_mesh->second;
 
-					if(rep.instance_of != NULL) {
+					if(rep.instance_of != nullptr) {
 						for(unsigned int i = node->Meshes.Size(), index = rep.instance_of->index_begin; index <= rep.instance_of->index_end; i++, index++) {
 							node->Meshes.Set(i, index);
 						}
@@ -235,7 +235,7 @@ namespace Assimp {
 				for(std::map<_3DXMLStructure::ID, _3DXMLStructure::Instance3D>::iterator it_child(ref.instances.begin()), end_child(ref.instances.end()); it_child != end_child; ++ it_child) {
 					_3DXMLStructure::Instance3D& child = it_child->second;
 
-					if(child.node.get() != NULL && child.instance_of != NULL) {
+					if(child.node.get() != nullptr && child.instance_of != nullptr) {
 						// Test if the node name is an id to see if we better take the Reference3D instead
 						if(! child.has_name && child.instance_of->has_name) {
 							child.node->mName = child.instance_of->name;
@@ -252,7 +252,7 @@ namespace Assimp {
 						} else {
 							// Otherwise we need to make a deep copy of the child node in order to avoid duplicate nodes in the scene hierarchy
 							// (which would cause assimp to deallocate them multiple times, therefore making the application crash)
-							aiNode* copy_node = NULL;
+							aiNode* copy_node = nullptr;
 
 							SceneCombiner::Copy(&copy_node, child.node.get());
 
@@ -408,7 +408,6 @@ namespace Assimp {
 		struct Params {
 			_3DXMLParser* me;
 			Optional<std::string> name_opt;
-			unsigned int id;
 		} params;
 
 		static const XMLParser::XSD::Sequence<Params> mapping(([](){
@@ -424,14 +423,14 @@ namespace Assimp {
 
 		params.me = this;
 		params.name_opt = mReader->GetAttribute<std::string>("name");
-		params.id = *(mReader->GetAttribute<unsigned int>("id", true));
+		unsigned int id = *(mReader->GetAttribute<unsigned int>("id", true));
 
 		mReader->ParseElements(&mapping, params);
 
-		_3DXMLStructure::Reference3D& ref = mContent.references_node[_3DXMLStructure::ID(mReader->GetFilename(), params.id)]; // Create the Reference3D if not present.
+		_3DXMLStructure::Reference3D& ref = mContent.references_node[_3DXMLStructure::ID(mReader->GetFilename(), id)]; // Create the Reference3D if not present.
 				
 		// Save id and name for future error / log messages
-		ref.id = params.id;
+		ref.id = id;
 
 		// Test if the name exist, otherwise use the id as name
 		if(params.name_opt) {
@@ -439,7 +438,7 @@ namespace Assimp {
 			ref.has_name = true;
 		} else {
 			// No name: take the id as the name
-			ref.name = mReader->ToString(params.id);
+			ref.name = mReader->ToString(id);
 			ref.has_name = false;
 		}
 
@@ -561,7 +560,6 @@ namespace Assimp {
 		struct Params {
 			_3DXMLParser* me;
 			Optional<std::string> name_opt;
-			unsigned int id;
 		} params;
 
 		static const XMLParser::XSD::Sequence<Params> mapping(([](){
@@ -577,7 +575,7 @@ namespace Assimp {
 
 		params.me = this;
 		params.name_opt = mReader->GetAttribute<std::string>("name");
-		params.id = *(mReader->GetAttribute<unsigned int>("id", true));
+		unsigned int id = *(mReader->GetAttribute<unsigned int>("id", true));
 		std::string format = *(mReader->GetAttribute<std::string>("format", true));
 		std::string file = *(mReader->GetAttribute<std::string>("associatedFile", true));
 		_3DXMLStructure::URI uri;
@@ -587,12 +585,12 @@ namespace Assimp {
 		// Parse the external URI to the file containing the representation
 		ParseURI(mReader.get(), file, uri);
 		if(! uri.external) {
-			ThrowException("In ReferenceRep \"" + mReader->ToString(params.id) + "\": invalid associated file \"" + file + "\". The field must reference another file in the same archive.");
+			ThrowException("In ReferenceRep \"" + mReader->ToString(id) + "\": invalid associated file \"" + file + "\". The field must reference another file in the same archive.");
 		}
 
 		// Get the container for this representation
-		_3DXMLStructure::ReferenceRep& rep = mContent.representations[_3DXMLStructure::ID(mReader->GetFilename(), params.id)];
-		rep.id = params.id;
+		_3DXMLStructure::ReferenceRep& rep = mContent.representations[_3DXMLStructure::ID(mReader->GetFilename(), id)];
+		rep.id = id;
 		rep.index_begin = 0;
 		rep.index_end = 0;
 		rep.meshes.clear();
@@ -615,10 +613,10 @@ namespace Assimp {
 					}
 				}
 			} else {
-				ThrowException("In ReferenceRep \"" + mReader->ToString(params.id) + "\": unsupported extension \"" + uri.extension + "\" for associated file.");
+				ThrowException("In ReferenceRep \"" + mReader->ToString(id) + "\": unsupported extension \"" + uri.extension + "\" for associated file.");
 			}
 		} else {
-			ThrowException("In ReferenceRep \"" + mReader->ToString(params.id) + "\": unsupported representation format \"" + format + "\".");
+			ThrowException("In ReferenceRep \"" + mReader->ToString(id) + "\": unsupported representation format \"" + format + "\".");
 		}
 
 		// Test if the name exist, otherwise use the id as name
@@ -627,7 +625,7 @@ namespace Assimp {
 			rep.has_name = true;
 		} else {
 			// No name: take the id as the name
-			rep.name = params.me->mReader->ToString(params.id);
+			rep.name = params.me->mReader->ToString(id);
 			rep.has_name = false;
 		}
 	}
@@ -685,16 +683,18 @@ namespace Assimp {
 		params.me = this;
 		params.name_opt = mReader->GetAttribute<std::string>("name");
 		params.id = *(mReader->GetAttribute<unsigned int>("id", true));
-		params.mesh = NULL;
+		params.mesh = nullptr;
 
 		mReader->ParseElements(&mapping, params);
 
 		// Test if the name exist, otherwise use the id as name
 		if(params.name_opt) {
 			params.mesh->name = *(params.name_opt);
+			params.mesh->has_name = true;
 		} else {
 			// No name: take the id as the name
 			params.mesh->name = params.me->mReader->ToString(params.id);
+			params.mesh->has_name = false;
 		}
 
 		// Create the refered ReferenceRep if necessary
@@ -731,12 +731,11 @@ namespace Assimp {
 	}
 	
 	// ------------------------------------------------------------------------------------------------
-	// Read the ReadCATMatReference section
+	// Read the CATMatReference section
 	void _3DXMLParser::ReadCATMatReference() {
 		struct Params {
 			_3DXMLParser* me;
 			Optional<std::string> name_opt;
-			unsigned int id;
 		} params;
 
 		static const XMLParser::XSD::Sequence<Params> mapping(([](){
@@ -752,14 +751,14 @@ namespace Assimp {
 
 		params.me = this;
 		params.name_opt = mReader->GetAttribute<std::string>("name");
-		params.id = *(mReader->GetAttribute<unsigned int>("id", true));
+		unsigned int id = *(mReader->GetAttribute<unsigned int>("id", true));
 
 		mReader->ParseElements(&mapping, params);
 
-		_3DXMLStructure::CATMaterialRef& ref = mContent.references_mat[_3DXMLStructure::ID(mReader->GetFilename(), params.id)]; // Create the CATMaterialRef if not present.
+		_3DXMLStructure::CATMatReference& ref = mContent.references_mat[_3DXMLStructure::ID(mReader->GetFilename(), id)]; // Create the CATMaterialRef if not present.
 				
 		// Save id and name for future error / log messages
-		ref.id = params.id;
+		ref.id = id;
 
 		// Test if the name exist, otherwise use the id as name
 		if(params.name_opt) {
@@ -767,7 +766,7 @@ namespace Assimp {
 			ref.has_name = true;
 		} else {
 			// No name: take the id as the name
-			ref.name = mReader->ToString(params.id);
+			ref.name = mReader->ToString(id);
 			ref.has_name = false;
 		}
 
@@ -776,15 +775,147 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	// Read the ReadMaterialDomain section
+	// Read the MaterialDomain section
 	void _3DXMLParser::ReadMaterialDomain() {
-		//TODO
+		struct Params {
+			_3DXMLParser* me;
+			Optional<std::string> name_opt;
+			bool rendering;
+		} params;
+
+		static const XMLParser::XSD::Sequence<Params> mapping(([](){
+			XMLParser::XSD::Sequence<Params>::type map;
+
+			// Parse PLM_ExternalID element
+			map.emplace_back("PLM_ExternalID", XMLParser::XSD::Element<Params>([](Params& params){
+				params.name_opt = params.me->mReader->GetContent<std::string>(true);
+			}, 0, 1));
+
+			// Parse V_MatDomain element
+			map.emplace_back("V_MatDomain", XMLParser::XSD::Element<Params>([](Params& params){
+				std::string domain = *(params.me->mReader->GetContent<std::string>(true));
+
+				params.rendering = (domain.compare("Rendering") == 0);
+			}, 0, 1));
+
+			return std::move(map);
+		})(), 1, 1);
+
+		params.me = this;
+		params.rendering = false;
+		params.name_opt = mReader->GetAttribute<std::string>("name");
+		unsigned int id = *(mReader->GetAttribute<unsigned int>("id", true));
+		std::string format = *(mReader->GetAttribute<std::string>("format", true));
+		std::string file = *(mReader->GetAttribute<std::string>("associatedFile", true));
+		_3DXMLStructure::URI uri;
+
+		mReader->ParseElements(&mapping, params);
+
+		// Parse the external URI to the file containing the representation
+		ParseURI(mReader.get(), file, uri);
+		if(! uri.external) {
+			ThrowException("In MaterialDomain \"" + mReader->ToString(id) + "\": invalid associated file \"" + file + "\". The field must reference another file in the same archive.");
+		}
+
+		// Get the container for this representation
+		_3DXMLStructure::MaterialDomain& mat = mContent.materials[_3DXMLStructure::ID(mReader->GetFilename(), id)];
+		mat.id = id;
+
+		// Check the representation format and call the correct parsing function accordingly
+		if(params.rendering) {
+			if(format.compare("TECHREP") == 0) {
+				if(uri.extension.compare("3DRep") == 0) {
+					// TODO
+				} else {
+					ThrowException("In MaterialDomain \"" + mReader->ToString(id) + "\": unsupported extension \"" + uri.extension + "\" for associated file.");
+				}
+			} else {
+				ThrowException("In MaterialDomain \"" + mReader->ToString(id) + "\": unsupported representation format \"" + format + "\".");
+			}
+		} else {
+			//params.me->ThrowException("In MaterialDomain \"" + params.me->mReader->ToString(id) + "\": unsupported material domain.");
+		}
+
+		// Test if the name exist, otherwise use the id as name
+		if(params.name_opt) {
+			mat.name = *(params.name_opt);
+			mat.has_name = true;
+		} else {
+			// No name: take the id as the name
+			mat.name = params.me->mReader->ToString(id);
+			mat.has_name = false;
+		}
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	// Read the ReadMaterialDomainInstance section
+	// Read the MaterialDomainInstance section
 	void _3DXMLParser::ReadMaterialDomainInstance() {
-		//TODO
+		struct Params {
+			_3DXMLParser* me;
+			Optional<std::string> name_opt;
+			unsigned int id;
+			_3DXMLStructure::MaterialDomainInstance* material;
+			_3DXMLStructure::URI instance_of;
+		} params;
+
+		static const XMLParser::XSD::Sequence<Params> mapping(([](){
+			XMLParser::XSD::Sequence<Params>::type map;
+
+			// Parse PLM_ExternalID element
+			map.emplace_back("PLM_ExternalID", XMLParser::XSD::Element<Params>([](Params& params){
+				params.name_opt = params.me->mReader->GetContent<std::string>(true);
+			}, 0, 1));
+
+			// Parse IsAggregatedBy element
+			map.emplace_back("IsAggregatedBy", XMLParser::XSD::Element<Params>([](Params& params){
+				unsigned int aggregated_by = *(params.me->mReader->GetContent<unsigned int>(true));
+
+				// Save the reference to the parent Reference3D
+				_3DXMLStructure::CATMatReference& parent = params.me->mContent.references_mat[_3DXMLStructure::ID(params.me->mReader->GetFilename(), aggregated_by)];
+				params.material = &(parent.materials[_3DXMLStructure::ID(params.me->mReader->GetFilename(), params.id)]);
+
+				// Save id for future error / log message
+				params.material->id = params.id;
+			}, 1, 1));
+
+			// Parse IsInstanceOf element
+			map.emplace_back("IsInstanceOf", XMLParser::XSD::Element<Params>([](Params& params){
+				std::string uri = *(params.me->mReader->GetContent<std::string>(true));
+
+				// Parse the URI to get its different components
+				params.me->ParseURI(params.me->mReader.get(), uri, params.instance_of);
+
+				// If the reference is on another file and does not already exist, add it to the list of files to parse
+				if(params.instance_of.external && params.instance_of.id &&
+						params.instance_of.filename.compare(params.me->mReader->GetFilename()) != 0 &&
+						params.me->mContent.references_mat.find(_3DXMLStructure::ID(params.instance_of.filename, *(params.instance_of.id))) == params.me->mContent.references_mat.end()) {
+
+					params.me->mContent.files_to_parse.emplace(params.instance_of.filename);
+				}
+			}, 1, 1));
+
+			return std::move(map);
+		})(), 1, 1);
+
+		params.me = this;
+		params.name_opt = mReader->GetAttribute<std::string>("name");
+		params.id = *(mReader->GetAttribute<unsigned int>("id", true));
+		params.material = nullptr;
+
+		mReader->ParseElements(&mapping, params);
+
+		// Test if the name exist, otherwise use the id as name
+		if(params.name_opt) {
+			params.material->name = *(params.name_opt);
+			params.material->has_name = true;
+		} else {
+			// No name: take the id as the name
+			params.material->name = params.me->mReader->ToString(params.id);
+			params.material->has_name = false;
+		}
+
+		// Create the refered ReferenceRep if necessary
+		params.material->instance_of = &(mContent.materials[_3DXMLStructure::ID(params.instance_of.filename, params.instance_of.id)]);
 	}
 
 	// ------------------------------------------------------------------------------------------------

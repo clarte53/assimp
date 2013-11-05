@@ -145,13 +145,35 @@ namespace Assimp {
 		
 		struct MaterialDomain : public boost::noncopyable {
 
+			unsigned int id;
+					
+			bool has_name;
+
+			std::string name;
+
 			MaterialDomain();
 
 			MaterialDomain(MaterialDomain&& other);
 
 		}; // struct MaterialDomain
 
-		struct CATMaterialRef : public boost::noncopyable {
+		struct MaterialDomainInstance : public boost::noncopyable {
+
+			unsigned int id;
+
+			bool has_name;
+
+			std::string name;
+			
+			MaterialDomain* instance_of;
+
+			MaterialDomainInstance();
+
+			MaterialDomainInstance(MaterialDomainInstance&& other);
+
+		}; // struct MaterialDomainInstance
+
+		struct CATMatReference : public boost::noncopyable {
 
 			unsigned int id;
 					
@@ -159,11 +181,13 @@ namespace Assimp {
 
 			std::string name;
 
-			CATMaterialRef();
+			std::map<ID, MaterialDomainInstance> materials;
 
-			CATMaterialRef(CATMaterialRef&& other);
+			CATMatReference();
 
-		}; // struct CATMaterialRef
+			CATMatReference(CATMatReference&& other);
+
+		}; // struct CATMatReference
 
 		struct Instance3D;
 
@@ -261,7 +285,7 @@ namespace Assimp {
 
 		std::map<ID, Reference3D> references_node;
 
-		std::map<ID, CATMaterialRef> references_mat;
+		std::map<ID, CATMatReference> references_mat;
 
 		std::map<ID, ReferenceRep> representations;
 
