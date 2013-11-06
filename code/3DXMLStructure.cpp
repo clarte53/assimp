@@ -72,7 +72,7 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::ID::ID(const std::string& _filename, unsigned int _id) : filename(_filename), id(_id) {
+	_3DXMLStructure::ID::ID(const std::string& filename, unsigned int id) : filename(filename), id(id) {
 	
 	}
 	
@@ -118,18 +118,18 @@ namespace Assimp {
 	}
 	
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::MaterialApplication::MaterialApplication() : channel(0), side(FRONT), blend_function(REPLACE), materials() {
+	_3DXMLStructure::MaterialApplication::MaterialApplication(const std::string& filename, unsigned int id) : channel(0), side(FRONT), blend_function(REPLACE), id(filename, id) {
 
 	}
 	
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::MaterialApplication::MaterialApplication(MaterialApplication&& other) : channel(other.channel), side(other.side), blend_function(other.blend_function), materials(std::move(other.materials)) {
+	_3DXMLStructure::MaterialApplication::MaterialApplication(MaterialApplication&& other) : channel(other.channel), side(other.side), blend_function(other.blend_function), id(std::move(other.id)) {
 
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	bool _3DXMLStructure::MaterialApplication::operator==(const MaterialApplication& other) const {
-		return channel == other.channel && side == other.side && blend_function == other.blend_function && std::equal(materials.begin(), materials.end(), other.materials.begin());
+		return channel == other.channel && side == other.side && blend_function == other.blend_function && id == other.id;
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -140,7 +140,7 @@ namespace Assimp {
 					side == other.side && (
 						blend_function < other.blend_function || (
 							blend_function == other.blend_function && (
-								less(materials, other.materials)
+								id < other.id
 							)
 						)
 					)

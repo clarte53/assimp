@@ -403,10 +403,26 @@ namespace Assimp {
 			
 			// Parse Face element
 			map.emplace_back("Face", XMLParser::XSD::Element<Params>([](Params& params){
+				static const XMLParser::XSD::Sequence<Params> mapping(([](){
+					XMLParser::XSD::Sequence<Params>::type map;
+
+					// Parse SurfaceAttributes element
+					map.emplace_back("SurfaceAttributes", XMLParser::XSD::Element<Params>([](Params& params){
+						params.me->ReadSurfaceAttributes();
+					}, 0, 1));
+
+					return std::move(map);
+				})(), 1, 1);
+
 				static const unsigned int nb_vertices = 3;
 
+				Optional<std::string> triangles = params.me->mReader.GetAttribute<std::string>("triangles");
+				Optional<std::string> strips = params.me->mReader.GetAttribute<std::string>("strips");
+				Optional<std::string> fans = params.me->mReader.GetAttribute<std::string>("fans");
+				
 				_3DXMLStructure::ReferenceRep::MatID old_surface = params.me->mCurrentSurface;
-				params.me->ReadSurfaceAttributes();
+
+				params.me->mReader.ParseElements(&mapping, params);
 
 				std::list<std::vector<unsigned int>> data;
 
@@ -415,7 +431,6 @@ namespace Assimp {
 				unsigned int face_offset = mesh->Vertices.Size();
 				unsigned int index = mesh->Faces.Size();
 
-				Optional<std::string> triangles = params.me->mReader.GetAttribute<std::string>("triangles");
 				if(triangles) {
 					data.clear();
 
@@ -437,7 +452,6 @@ namespace Assimp {
 					}
 				}
 				
-				Optional<std::string> strips = params.me->mReader.GetAttribute<std::string>("strips");
 				if(strips) {
 					data.clear();
 
@@ -466,7 +480,6 @@ namespace Assimp {
 					}
 				}
 				
-				Optional<std::string> fans = params.me->mReader.GetAttribute<std::string>("fans");
 				if(fans) {
 					data.clear();
 
@@ -519,10 +532,22 @@ namespace Assimp {
 
 			// Parse Polyline element
 			map.emplace_back("Polyline", XMLParser::XSD::Element<Params>([](Params& params){
-				_3DXMLStructure::ReferenceRep::MatID old_line = params.me->mCurrentLine;
-				params.me->ReadLineAttributes();
+				static const XMLParser::XSD::Sequence<Params> mapping(([](){
+					XMLParser::XSD::Sequence<Params>::type map;
+
+					// Parse LineAttributes element
+					map.emplace_back("LineAttributes", XMLParser::XSD::Element<Params>([](Params& params){
+						params.me->ReadLineAttributes();
+					}, 0, 1));
+
+					return std::move(map);
+				})(), 1, 1);
 
 				std::string vertices = *(params.me->mReader.GetAttribute<std::string>("vertices", true));
+
+				_3DXMLStructure::ReferenceRep::MatID old_line = params.me->mCurrentLine;
+
+				params.me->mReader.ParseElements(&mapping, params);
 
 				params.lines->emplace_back(params.me->mCurrentLine, std::vector<aiVector3D>());
 				params.me->ParseArray(vertices, params.lines->back().second);
@@ -687,7 +712,7 @@ namespace Assimp {
 	void _3DXMLRepresentation::ReadMaterialApplication() {
 		struct Params {
 			_3DXMLRepresentation* me;
-			_3DXMLStructure::MaterialApplication* application;
+			_3DXMLStructure::MaterialAttributes* attributes;
 		} params;
 
 		static const XMLParser::XSD::Sequence<Params> mapping(([](){
@@ -704,10 +729,10 @@ namespace Assimp {
 					params.me->ThrowException("The MaterialId refers to an invalid reference \"" + uri.uri + "\" without id.");
 				}
 
-				params.application->materials.emplace_back(uri.filename, uri.id);
+				params.attributes->materials.emplace_back(uri.filename, *(uri.id));
 
 				// If the reference is on another file and does not already exist, add it to the list of files to parse
-				_3DXMLStructure::ID& id = params.application->materials.back();
+				_3DXMLStructure::ID& id = params.attributes->materials.back().id;
 				if(uri.external && uri.id && uri.filename.compare(params.me->mReader.GetFilename()) != 0 &&
 						params.me->mDependencies.find(id) == params.me->mDependencies.end()) {
 
@@ -718,17 +743,13 @@ namespace Assimp {
 			return std::move(map);
 		})(), 1, 1);
 
-		mCurrentSurface->materials.emplace_back();
-
-		params.me = this;
-		params.application = &(mCurrentSurface->materials.back());
-
 		// Get the channel attribute
-		params.application->channel = *(mReader.GetAttribute<unsigned int>("mappingChannel", true));
+		unsigned int channel = *(mReader.GetAttribute<unsigned int>("mappingChannel", true));
 
 		// Get the side of the material
-		Optional<std::string> side = mReader.GetAttribute<std::string>("mappingSide");
-		if(side) {
+		Optional<std::string> side_opt = mReader.GetAttribute<std::string>("mappingSide");
+		_3DXMLStructure::MaterialApplication::MappingSide side;
+		if(side_opt) {
 			static const std::map<std::string, _3DXMLStructure::MaterialApplication::MappingSide> mapping_sides([]() {
 				std::map<std::string, _3DXMLStructure::MaterialApplication::MappingSide> map;
 
@@ -739,22 +760,23 @@ namespace Assimp {
 				return std::move(map);
 			}());
 
-			auto it = mapping_sides.find(*side);
+			auto it = mapping_sides.find(*side_opt);
 
 			if(it != mapping_sides.end()) {
-				params.application->side = it->second;
+				side = it->second;
 			} else {
-				DefaultLogger::get()->warn("Unsupported mapping side \"" + *side + "\". Using FRONT side instead.");
+				DefaultLogger::get()->warn("Unsupported mapping side \"" + *side_opt + "\". Using FRONT side instead.");
 
-				params.application->side = _3DXMLStructure::MaterialApplication::FRONT;
+				side = _3DXMLStructure::MaterialApplication::FRONT;
 			}
 		} else {
-			params.application->side = _3DXMLStructure::MaterialApplication::FRONT;
+			side = _3DXMLStructure::MaterialApplication::FRONT;
 		}
 
 		// Get the blending function
-		Optional<std::string> blend = mReader.GetAttribute<std::string>("blendType");
-		if(blend) {
+		Optional<std::string> blend_opt = mReader.GetAttribute<std::string>("blendType");
+		_3DXMLStructure::MaterialApplication::TextureBlendFunction blend_function;
+		if(blend_opt) {
 			static const std::map<std::string, _3DXMLStructure::MaterialApplication::TextureBlendFunction> blend_functions([]() {
 				std::map<std::string, _3DXMLStructure::MaterialApplication::TextureBlendFunction> map;
 
@@ -768,20 +790,29 @@ namespace Assimp {
 				return std::move(map);
 			}());
 
-			auto it = blend_functions.find(*blend);
+			auto it = blend_functions.find(*blend_opt);
 
 			if(it != blend_functions.end()) {
-				params.application->blend_function = it->second;
+				blend_function = it->second;
 			} else {
-				DefaultLogger::get()->warn("Unsupported texture blending function \"" + *blend + "\". Using REPLACE function instead.");
+				DefaultLogger::get()->warn("Unsupported texture blending function \"" + *blend_opt + "\". Using REPLACE function instead.");
 
-				params.application->blend_function = _3DXMLStructure::MaterialApplication::REPLACE;
+				blend_function = _3DXMLStructure::MaterialApplication::REPLACE;
 			}
 		} else {
-			params.application->blend_function = _3DXMLStructure::MaterialApplication::REPLACE;
+			blend_function = _3DXMLStructure::MaterialApplication::REPLACE;
 		}
 
+		params.me = this;
+		params.attributes = &(*mCurrentSurface);
+
 		mReader.ParseElements(&mapping, params);
+
+		_3DXMLStructure::MaterialApplication& application = params.attributes->materials.back();
+
+		application.channel = channel;
+		application.side = side;
+		application.blend_function = blend_function;
 	}
 	
 	// ------------------------------------------------------------------------------------------------

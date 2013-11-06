@@ -88,7 +88,7 @@ namespace Assimp {
 
 			unsigned int id;
 
-			ID(const std::string& _filename, unsigned int _id);
+			ID(const std::string& filename, unsigned int id);
 
 			ID(const ID& other);
 
@@ -116,9 +116,9 @@ namespace Assimp {
 
 			TextureBlendFunction blend_function;
 
-			std::list<ID> materials;
+			ID id;
 
-			MaterialApplication();
+			MaterialApplication(const std::string& filename, unsigned int id);
 
 			MaterialApplication(MaterialApplication&& other);
 
