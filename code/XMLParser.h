@@ -488,6 +488,7 @@ namespace Assimp {
 			ThrowException("The type \"" + std::string(typeid(T).name()) + "\" can not be converted into string.");
 		}
 
+		// We're using C++11, therefore the copied value of the stream will be automatically moved by the compiler
 		return stream.str();
 	}
 
@@ -503,6 +504,7 @@ namespace Assimp {
 			ThrowException("The value \"" + string + "\" can not be converted into \"" + std::string(typeid(T).name()) + "\".");
 		}
 
+		// We're using C++11, therefore the value will be automatically moved by the compiler
 		return value;
 	}
 

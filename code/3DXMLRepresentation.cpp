@@ -271,7 +271,7 @@ namespace Assimp {
 
 		while(! stream.eof()) {
 			char next = stream.peek();
-			while(next == ',' || next == ' ') {
+			while(! stream.eof() && (next == ',' || next == ' ')) {
 				if(next == ',') {
 					triangles.emplace_back();
 					triangles.back().reserve(128); // better use too much memory than to have multiple reallocations

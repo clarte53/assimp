@@ -106,9 +106,9 @@ namespace Assimp {
 		
 		struct MaterialApplication : public boost::noncopyable {
 
-			enum MappingSide { FRONT, BACK, FRONT_AND_BACK };
+			enum MappingSide {FRONT, BACK, FRONT_AND_BACK};
 
-			enum TextureBlendFunction { REPLACE, ADD, ALPHA_TRANSPARENCY, LIGHTMAP, BURN, INVERT };
+			enum TextureBlendFunction {REPLACE, ADD, ALPHA_TRANSPARENCY, LIGHTMAP, BURN, INVERT};
 
 			unsigned int channel;
 

@@ -85,10 +85,147 @@ namespace Assimp {
 	_3DXMLMaterial::~_3DXMLMaterial() {
 
 	}
-
+	
+	// ------------------------------------------------------------------------------------------------
+	// Aborts the file reading with an exception
+	void _3DXMLMaterial::ThrowException(const std::string& error) const {
+		throw DeadlyImportError(boost::str(boost::format("3DXML: %s - %s") % mReader.GetFilename() % error));
+	}
+	
 	// ------------------------------------------------------------------------------------------------
 	void _3DXMLMaterial::ReadFeature() {
-		//TODO
+		struct Params {
+			_3DXMLMaterial* me;
+		} params;
+
+		static const XMLParser::XSD::Sequence<Params> mapping(([](){
+			XMLParser::XSD::Sequence<Params>::type map;
+
+			// Parse Attr element
+			map.emplace_back("Attr", XMLParser::XSD::Element<Params>([](Params& params){
+				// We aggregate all the attributes of each Features into the output material
+				params.me->ReadAttribute();
+			}, 0, XMLParser::XSD::unbounded));
+			
+			return std::move(map);
+		})(), 1, 1);
+
+		params.me = this;
+		unsigned int id = *(mReader.GetAttribute<unsigned int>("Id", true));
+		std::string start_up = *(mReader.GetAttribute<std::string>("StartUp", true));
+		std::string alias = *(mReader.GetAttribute<std::string>("Alias", true));
+		Optional<unsigned int> aggregating = mReader.GetAttribute<unsigned int>("Aggregating");
+
+		mReader.ParseElements(&mapping, params);
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	void _3DXMLMaterial::ReadAttribute() {
+		/*
+		enum Type {EXTERNAL, SPECOBJECT, COMPONENT, STRING, INT, DOUBLE, OCTET, BOOLEAN};
+
+		static const std::map<std::string, Type> types([]() {
+			std::map<std::string, Type> map;
+
+			map.emplace("external", EXTERNAL);
+			map.emplace("specobject", SPECOBJECT);
+			map.emplace("component", COMPONENT);
+			map.emplace("string", STRING);
+			map.emplace("int", INT);
+			map.emplace("double", DOUBLE);
+			map.emplace("octet", OCTET);
+			map.emplace("boolean", BOOLEAN);
+
+			return std::move(map);
+		}());
+		*/
+
+		struct Params {
+			_3DXMLMaterial* me;
+			std::string value;
+		} params;
+
+		static const std::map<std::string, std::function<void(Params&)>> attributes([]() {
+			std::map<std::string, std::function<void(Params&)>> map;
+
+			//TODO: AmbientCoef
+
+			map.emplace("AmbientColor", [](Params& params) {
+				std::vector<float> values = params.me->ReadValues<float>(params.value);
+
+				if(values.size() == 3) {
+					aiColor3D color(values[0], values[1], values[2]);
+
+					params.me->mMaterial->AddProperty(&color, 1, AI_MATKEY_COLOR_AMBIENT);
+				} else {
+					params.me->ThrowException("In attribute AmbientColor: invalid number of color components (" + params.me->mReader.ToString(values.size()) + " instead of 3).");
+				}
+			});
+
+			//TODO: DiffuseCoef
+
+			map.emplace("DiffuseColor", [](Params& params) {
+				std::vector<float> values = params.me->ReadValues<float>(params.value);
+
+				if(values.size() == 3) {
+					aiColor3D color(values[0], values[1], values[2]);
+
+					params.me->mMaterial->AddProperty(&color, 1, AI_MATKEY_COLOR_DIFFUSE);
+				} else {
+					params.me->ThrowException("In attribute DiffuseColor: invalid number of color components (" + params.me->mReader.ToString(values.size()) + " instead of 3).");
+				}
+			});
+			
+			map.emplace("SpecularCoef", [](Params& params) {
+				float value = params.me->ReadValue<float>(params.value);
+
+				params.me->mMaterial->AddProperty(&value, 1, AI_MATKEY_SHININESS_STRENGTH);
+			});
+			
+			map.emplace("SpecularColor", [](Params& params) {
+				std::vector<float> values = params.me->ReadValues<float>(params.value);
+
+				if(values.size() == 3) {
+					aiColor3D color(values[0], values[1], values[2]);
+
+					params.me->mMaterial->AddProperty(&color, 1, AI_MATKEY_COLOR_SPECULAR);
+				} else {
+					params.me->ThrowException("In attribute SpecularColor: invalid number of color components (" + params.me->mReader.ToString(values.size()) + " instead of 3).");
+				}
+			});
+
+			map.emplace("SpecularExponent", [](Params& params) {
+				//TODO
+			});
+
+			return std::move(map);
+		}());
+
+		std::string name = *(mReader.GetAttribute<std::string>("Name", true));
+		std::string type_str = *(mReader.GetAttribute<std::string>("Type", true));
+		params.value = *(mReader.GetAttribute<std::string>("Value", true));
+		params.me = this;
+
+		/*
+		std::map<std::string, Type>::const_iterator it = types.find(type_str);
+		Type type;
+
+		if(it != types.end()) {
+			type = it->second;
+		} else {
+			DefaultLogger::get()->warn("Unsupported attribute type \"" + type_str + "\". Using string type instead.");
+
+			type = STRING;
+		}
+		*/
+
+		auto it = attributes.find(name);
+
+		if(it != attributes.end()) {
+			it->second(params);
+		} else {
+			DefaultLogger::get()->warn("Unsupported attribute \"" + name + "\".");
+		}
 	}
 
 } // Namespace Assimp

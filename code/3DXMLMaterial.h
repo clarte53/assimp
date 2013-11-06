@@ -67,9 +67,53 @@ namespace Assimp {
 
 		protected:
 
+			/** Aborts the file reading with an exception */
+			void ThrowException(const std::string& error) const;
+
 			void ReadFeature();
+
+			void ReadAttribute();
+
+			template<typename T>
+			inline T ReadValue(const std::string& value_str) const;
+
+			template<typename T>
+			std::vector<T> ReadValues(const std::string& values_str) const;
 			
 	}; // end of class _3DXMLMaterial
+
+	template<typename T>
+	inline T _3DXMLMaterial::ReadValue(const std::string& value_str) const {
+		return mReader.FromString<T>(value_str);
+	}
+
+	template<typename T>
+	std::vector<T> _3DXMLMaterial::ReadValues(const std::string& values_str) const {
+		std::istringstream stream(values_str);
+		std::vector<T> result;
+		T value;
+
+		while(! stream.eof()) {
+			char next = stream.peek();
+			while(! stream.eof() && (next == ',' || next == '[' || next == ']' || next == ' ')) {
+				stream.get();
+				next = stream.peek();
+			}
+
+			if(! stream.eof()) {
+				stream >> value;
+
+				if(stream.fail()) {
+					ThrowException("Can not convert array of values \"" + values_str + "\" to \"" + std::string(typeid(T).name()) + "\".");
+				}
+
+				result.push_back(std::move(value));
+			}
+		}
+
+		// We're using C++11, therefore the vector will be automatically moved by the compiler
+		return result;
+	}
 
 } // end of namespace Assimp
 
