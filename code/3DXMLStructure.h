@@ -226,7 +226,7 @@ namespace Assimp {
 			}; // struct shared_less
 
 			typedef std::shared_ptr<_3DXMLStructure::MaterialAttributes> MatID;
-			typedef std::map<MatID, std::unique_ptr<aiMesh>, shared_less<_3DXMLStructure::MaterialAttributes>> Meshes;
+			typedef std::map<MatID, std::pair<std::unique_ptr<aiMesh>, unsigned int>, shared_less<_3DXMLStructure::MaterialAttributes>> Meshes;
 					
 			unsigned int id;
 					
