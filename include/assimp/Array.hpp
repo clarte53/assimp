@@ -128,22 +128,24 @@ class Array {
 			mReservedMemory = 0;
 		}
 		
-		unsigned int Size() const {
+		inline unsigned int Size() const {
 			return (*mSize);
 		}
 		
-		T Get(unsigned int index) {
-			if(mData == NULL || (*mData) == NULL || index >= Size()) {
-				throw std::out_of_range("Invalid index to unallocated memory");
-			}
+		inline T Get(unsigned int index) {
+			#ifdef _DEBUG  
+				if(mData == NULL || (*mData) == NULL || index >= Size()) {
+					throw std::out_of_range("Invalid index to unallocated memory");
+				}
+			#endif
 			
 			Update(Size());
 			
 			return (*mData)[index];
 		}
 		
-		// Warning: copy the value into the data array without regard for ownership
-		void Set(unsigned int index, const T& value) {
+		// Warning: copy the value into the data array
+		inline void Set(unsigned int index, const T& value) {
 			Update(index + 1);
 			
 			(*mData)[index] = value;
@@ -241,22 +243,24 @@ class Array<T*> {
 			mReservedMemory = 0;
 		}
 		
-		unsigned int Size() const {
+		inline unsigned int Size() const {
 			return (*mSize);
 		}
 		
-		T& Get(unsigned int index) {
-			if(mData == NULL || (*mData) == NULL || index >= Size()) {
-				throw std::out_of_range("Invalid index to unallocated memory");
-			}
+		inline T& Get(unsigned int index) {
+			#ifdef _DEBUG  
+				if(mData == NULL || (*mData) == NULL || index >= Size()) {
+					throw std::out_of_range("Invalid index to unallocated memory");
+				}
+			#endif
 			
 			Update(Size());
 			
 			return *((*mData)[index]);
 		}
 		
-		// Warning: copy the value into the data array without regard for ownership
-		void Set(unsigned int index, T* value) {
+		// Warning: copy the pointer into the data array but does not take ownership of it (you still have to free the associated memory)
+		inline void Set(unsigned int index, T* value) {
 			Update(index + 1);
 			
 			(*mData)[index] = value;
@@ -318,22 +322,26 @@ class MultiArray {
 			}
 		}
 		
-		unsigned int Size() const {
+		inline unsigned int Size() const {
 			return mSize;
 		}
 		
-		Array<T>& Get(unsigned int index) const {
-			if(mData == NULL || index >= Size()) {
-				throw std::out_of_range("Invalid index to unallocated memory");
-			}
+		inline Array<T>& Get(unsigned int index) const {
+			#ifdef _DEBUG  
+				if(mData == NULL || index >= Size()) {
+					throw std::out_of_range("Invalid index to unallocated memory");
+				}
+			#endif
 			
 			return *(mData[index]);
 		}
 		
-		void Set(unsigned int index, Array<T>* value, bool dealloc = true) const {
-			if(mData == NULL || index >= Size()) {
-				throw std::out_of_range("Invalid index to unallocated memory");
-			}
+		inline void Set(unsigned int index, Array<T>* value, bool dealloc = true) const {
+			#ifdef _DEBUG  
+				if(mData == NULL || index >= Size()) {
+					throw std::out_of_range("Invalid index to unallocated memory");
+				}
+			#endif
 
 			if(dealloc && mData[index] != NULL) {
 				delete mData[index];
@@ -368,22 +376,26 @@ class FixedArray {
 			mSize = size;
 		}
 		
-		unsigned int Size() const {
+		inline unsigned int Size() const {
 			return mSize;
 		}
 		
-		T Get(unsigned int index) const {
-			if(mData == NULL || index >= Size()) {
-				throw std::out_of_range("Invalid index to unallocated memory");
-			}
+		inline T Get(unsigned int index) const {
+			#ifdef _DEBUG  
+				if(mData == NULL || index >= Size()) {
+					throw std::out_of_range("Invalid index to unallocated memory");
+				}
+			#endif
 			
 			return mData[index];
 		}
 		
-		void Set(unsigned int index, const T& value) const {
-			if(mData == NULL || index >= Size()) {
-				throw std::out_of_range("Invalid index to unallocated memory");
-			}
+		inline void Set(unsigned int index, const T& value) const {
+			#ifdef _DEBUG  
+				if(mData == NULL || index >= Size()) {
+					throw std::out_of_range("Invalid index to unallocated memory");
+				}
+			#endif
 			
 			mData[index] = value;
 		}

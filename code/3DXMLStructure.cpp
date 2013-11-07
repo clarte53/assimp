@@ -207,6 +207,16 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
+	_3DXMLStructure::ReferenceRep::Mesh::Mesh() : mesh(new aiMesh()), processed(0) {
+
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	_3DXMLStructure::ReferenceRep::Mesh::Mesh(Mesh&& other) : mesh(std::move(other.mesh)), processed(other.processed) {
+
+	}
+
+	// ------------------------------------------------------------------------------------------------
 	_3DXMLStructure::ReferenceRep::ReferenceRep() : id(0), has_name(false), name(""), meshes(), index_begin(0), index_end(0) {
 	
 	}

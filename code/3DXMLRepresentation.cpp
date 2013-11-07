@@ -101,11 +101,11 @@ namespace Assimp {
 	}
 	
 	// ------------------------------------------------------------------------------------------------
-	aiMesh* _3DXMLRepresentation::GetMesh(const _3DXMLStructure::ReferenceRep::MatID& material) const {
+	_3DXMLStructure::ReferenceRep::Mesh& _3DXMLRepresentation::GetMesh(const _3DXMLStructure::ReferenceRep::MatID& material) const {
 		auto position = mMeshes.find(material);
 
 		if(position == mMeshes.end()) {
-			auto insert = mMeshes.emplace(material, std::make_pair(std::unique_ptr<aiMesh>(new aiMesh()), 0));
+			auto insert = mMeshes.emplace(material, _3DXMLStructure::ReferenceRep::Mesh());
 
 			if(! insert.second) {
 				ThrowException("Impossible to create a new mesh for the new material.");
@@ -114,7 +114,7 @@ namespace Assimp {
 			position = insert.first;
 		}
 
-		return position->second.first.get();
+		return position->second;
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -284,7 +284,6 @@ namespace Assimp {
 	void _3DXMLRepresentation::ReadPolygonalRep() {
 		struct Params {
 			_3DXMLRepresentation* me;
-			std::vector<std::pair<_3DXMLStructure::ReferenceRep::MatID, std::vector<aiVector3D>>> lines;
 		} params;
 
 		static const XMLParser::XSD::Sequence<Params> mapping(([](){
@@ -303,7 +302,7 @@ namespace Assimp {
 			map.emplace_back("Faces", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadFaces();}, 0, XMLParser::XSD::unbounded));
 			
 			// Parse Edges element
-			map.emplace_back("Edges", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadEdges(params.lines);}, 0, XMLParser::XSD::unbounded));
+			map.emplace_back("Edges", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadEdges();}, 0, XMLParser::XSD::unbounded));
 			
 			// Parse VertexBuffer element
 			map.emplace_back("VertexBuffer", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadVertexBuffer();}, 0, 1));
@@ -320,27 +319,6 @@ namespace Assimp {
 
 		mCurrentSurface = old_surface;
 		mCurrentLine = old_line;
-
-		// Add the lines after the faces and vertices have been already added to avoid messing with the vertice indexes
-		for(std::vector<std::pair<_3DXMLStructure::ReferenceRep::MatID, std::vector<aiVector3D>>>::iterator it(params.lines.begin()), end(params.lines.end()); it != end; ++it) {
-			if(! it->second.empty()) {
-				aiMesh* mesh = GetMesh(it->first);
-
-				unsigned int index = mesh->Vertices.Size();
-
-				mesh->Vertices.Set(index++, (it->second)[0]);
-
-				for(unsigned int i = 1; i < it->second.size(); i++, index++) {
-					mesh->Vertices.Set(index, (it->second)[i]);
-						
-					aiFace face;
-					face.Indices.Set(face.Indices.Size(), index - 1);
-					face.Indices.Set(face.Indices.Size(), index);
-
-					mesh->Faces.Set(mesh->Faces.Size(), face);
-				}
-			}
-		}
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -380,9 +358,8 @@ namespace Assimp {
 
 				std::list<std::vector<unsigned int>> data;
 
-				aiMesh* mesh = params.me->GetMesh(params.me->mCurrentSurface);
+				aiMesh* mesh = params.me->GetMesh(params.me->mCurrentSurface).mesh.get();
 
-				unsigned int face_offset = mesh->Vertices.Size();
 				unsigned int index = mesh->Faces.Size();
 
 				if(triangles) {
@@ -398,7 +375,7 @@ namespace Assimp {
 							face.mIndices = new unsigned int[nb_vertices];
 
 							for(unsigned int j = 0; j < nb_vertices; j++) {
-								face.mIndices[j] = (*it)[i + j] + face_offset;
+								face.mIndices[j] = (*it)[i + j];
 							}
 
 							mesh->Faces.Set(index++, face);
@@ -421,9 +398,9 @@ namespace Assimp {
 
 							for(unsigned int j = 0; j < nb_vertices; j++) {
 								if(! inversed) {
-									face.mIndices[j] = (*it)[i + j] + face_offset;
+									face.mIndices[j] = (*it)[i + j];
 								} else {
-									face.mIndices[j] = (*it)[i + nb_vertices - (j + 1)] + face_offset;
+									face.mIndices[j] = (*it)[i + nb_vertices - (j + 1)];
 								}
 							}
 
@@ -446,9 +423,9 @@ namespace Assimp {
 							face.mNumIndices = nb_vertices;
 							face.mIndices = new unsigned int[nb_vertices];
 							
-							face.mIndices[0] = (*it)[0] + face_offset;
+							face.mIndices[0] = (*it)[0];
 							for(unsigned int j = 1; j < nb_vertices; j++) {
-								face.mIndices[j] = (*it)[i + j] + face_offset;
+								face.mIndices[j] = (*it)[i + j];
 							}
 							
 							mesh->Faces.Set(index++, face);
@@ -472,7 +449,7 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLRepresentation::ReadEdges(std::vector<std::pair<_3DXMLStructure::ReferenceRep::MatID, std::vector<aiVector3D>>>& lines) {
+	void _3DXMLRepresentation::ReadEdges() {
 		struct Params {
 			_3DXMLRepresentation* me;
 			std::vector<std::pair<_3DXMLStructure::ReferenceRep::MatID, std::vector<aiVector3D>>>* lines;
@@ -503,8 +480,29 @@ namespace Assimp {
 
 				params.me->mReader.ParseElements(&mapping, params);
 
-				params.lines->emplace_back(params.me->mCurrentLine, std::vector<aiVector3D>());
-				params.me->ParseArray(vertices, params.lines->back().second);
+				std::vector<aiVector3D> lines;
+				params.me->ParseArray(vertices, lines);
+
+				if(! lines.empty()) {
+					_3DXMLStructure::ReferenceRep::Mesh& mesh_data = params.me->GetMesh(params.me->mCurrentLine);
+
+					aiMesh* mesh = mesh_data.mesh.get();
+
+					unsigned int index = mesh->mNumVertices;
+
+					for(unsigned int i = 0; i < lines.size() - 1; i++, index += 2) {
+						mesh->Vertices.Set(index, lines[i]);
+						mesh->Vertices.Set(index + 1, lines[i + 1]);
+						
+						aiFace face;
+						face.Indices.Set(face.mNumIndices, index);
+						face.Indices.Set(face.mNumIndices, index + 1);
+
+						mesh->Faces.Set(mesh->mNumFaces, face);
+					}
+
+					mesh_data.processed = mesh->mNumFaces;
+				}
 
 				params.me->mCurrentLine = old_line;
 			}, 1, XMLParser::XSD::unbounded));
@@ -515,7 +513,6 @@ namespace Assimp {
 		_3DXMLStructure::ReferenceRep::MatID old_line = mCurrentLine;
 
 		params.me = this;
-		params.lines = &lines;
 
 		mReader.ParseElements(&mapping, params);
 
@@ -615,11 +612,11 @@ namespace Assimp {
 
 		// Duplicate the vertices to avoid different faces sharing the same (and to pass the ValidateDataStructure test...)
 		for(_3DXMLStructure::ReferenceRep::Meshes::iterator it(mMeshes.begin()), end(mMeshes.end()); it != end; ++it) {
-			aiMesh* mesh = it->second.first.get();
+			aiMesh* mesh = it->second.mesh.get();
 
 			unsigned int vertice_index = mesh->Vertices.Size();
 
-			for(unsigned int i = it->second.second; i < mesh->mNumFaces; i++) {
+			for(unsigned int i = it->second.processed; i < mesh->mNumFaces; i++) {
 				aiFace& face = mesh->mFaces[i];
 
 				for(unsigned int j = 0; j < face.mNumIndices; j++) {
@@ -637,22 +634,18 @@ namespace Assimp {
 						mesh->Tangents.Set(vertice_index, params.mesh->mTangents[index]);
 						mesh->Bitangents.Set(vertice_index, params.mesh->mBitangents[index]);
 					}
-					for(unsigned int k = 0; k < AI_MAX_NUMBER_OF_TEXTURECOORDS; k++) {
-						if(params.mesh->HasTextureCoords(k)) {
-							mesh->TextureCoords.Get(k).Set(vertice_index, params.mesh->mTextureCoords[k][index]);
-						}
+					for(unsigned int k = 0; k < params.mesh->GetNumUVChannels(); k++) {
+						mesh->TextureCoords.Get(k).Set(vertice_index, params.mesh->mTextureCoords[k][index]);
 					}
-					for(unsigned int k = 0; k < AI_MAX_NUMBER_OF_COLOR_SETS; k++) {
-						if(params.mesh->HasVertexColors(k)) {
-							mesh->Colors.Get(k).Set(vertice_index, params.mesh->mColors[k][index]);
-						}
+					for(unsigned int k = 0; k < params.mesh->GetNumColorChannels(); k++) {
+						mesh->Colors.Get(k).Set(vertice_index, params.mesh->mColors[k][index]);
 					}
 
 					vertice_index++;
 				}
 			}
 
-			it->second.second = mesh->mNumFaces;
+			it->second.processed = mesh->mNumFaces;
 		}
 	}
 

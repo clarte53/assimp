@@ -225,8 +225,20 @@ namespace Assimp {
 
 			}; // struct shared_less
 
+			struct Mesh : public boost::noncopyable {
+
+				std::unique_ptr<aiMesh> mesh;
+
+				unsigned int processed;
+
+				Mesh();
+
+				Mesh(Mesh&& other);
+
+			}; // struct Mesh
+
 			typedef std::shared_ptr<_3DXMLStructure::MaterialAttributes> MatID;
-			typedef std::map<MatID, std::pair<std::unique_ptr<aiMesh>, unsigned int>, shared_less<_3DXMLStructure::MaterialAttributes>> Meshes;
+			typedef std::map<MatID, Mesh, shared_less<_3DXMLStructure::MaterialAttributes>> Meshes;
 					
 			unsigned int id;
 					

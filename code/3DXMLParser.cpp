@@ -94,9 +94,7 @@ namespace Assimp {
 		std::map<_3DXMLStructure::ReferenceRep::MatID, unsigned int> attributes;
 		for(std::map<_3DXMLStructure::ID, _3DXMLStructure::ReferenceRep>::const_iterator it_rep(mContent.representations.begin()), end_rep(mContent.representations.end()); it_rep != end_rep; ++it_rep) {
 			for(_3DXMLStructure::ReferenceRep::Meshes::const_iterator it_mesh(it_rep->second.meshes.begin()), end_mesh(it_rep->second.meshes.end()); it_mesh != end_mesh; ++it_mesh) {
-				//if(it_mesh->second->Vertices.Size() != 0) {
-					attributes.emplace(it_mesh->first, 0); // No need to check the output, we don't care if the element is inserted or is already present
-				//}
+				attributes.emplace(it_mesh->first, 0); // No need to check the output, we don't care if the element is inserted or is already present
 			}
 		}
 
@@ -175,25 +173,23 @@ namespace Assimp {
 			it_rep->second.index_end = index;
 
 			for(_3DXMLStructure::ReferenceRep::Meshes::iterator it_mesh(it_rep->second.meshes.begin()), end_mesh(it_rep->second.meshes.end()); it_mesh != end_mesh; ++it_mesh) {
-				//if(it_mesh->second->Vertices.Size() != 0) {
-					// Set the names of the parsed meshes with this ReferenceRep name
-					it_mesh->second.first->mName = it_rep->second.name;
+				// Set the names of the parsed meshes with this ReferenceRep name
+				it_mesh->second.mesh->mName = it_rep->second.name;
 
-					// Set the index of the used material
-					std::map<_3DXMLStructure::ReferenceRep::MatID, unsigned int>::iterator it_mat = attributes.find(it_mesh->first);
+				// Set the index of the used material
+				std::map<_3DXMLStructure::ReferenceRep::MatID, unsigned int>::iterator it_mat = attributes.find(it_mesh->first);
 
-					if(it_mat != attributes.end()) {
-						it_mesh->second.first->mMaterialIndex = it_mat->second;
-					} else {
-						ThrowException("In Mesh \"" + it_rep->second.name + "\": no material defined.");
-					}
+				if(it_mat != attributes.end()) {
+					it_mesh->second.mesh->mMaterialIndex = it_mat->second;
+				} else {
+					ThrowException("In Mesh \"" + it_rep->second.name + "\": no material defined.");
+				}
 
-					// Realease the ownership of the mesh to the protected scene
-					mContent.scene->Meshes.Set(index++, it_mesh->second.first.release());
+				// Realease the ownership of the mesh to the protected scene
+				mContent.scene->Meshes.Set(index++, it_mesh->second.mesh.release());
 
-					// Update the number of meshes in this ReferenceRep
-					it_rep->second.index_end++;
-				//}
+				// Update the number of meshes in this ReferenceRep
+				it_rep->second.index_end++;
 			}
 		}
 
