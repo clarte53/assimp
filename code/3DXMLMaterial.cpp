@@ -210,6 +210,42 @@ namespace Assimp {
 				params.me->mMaterial->AddProperty(&result, 1, AI_MATKEY_SHININESS);
 			});
 
+			//TODO: EmissiveCoeff
+			
+			map.emplace("EmissiveColor", [](Params& params) {
+				std::vector<float> values = params.me->ReadValues<float>(params.value);
+
+				if(values.size() == 3) {
+					aiColor3D color(values[0], values[1], values[2]);
+
+					params.me->mMaterial->AddProperty(&color, 1, AI_MATKEY_COLOR_EMISSIVE);
+				} else {
+					params.me->ThrowException("In attribute EmissiveColor: invalid number of color components (" + params.me->mReader.ToString(values.size()) + " instead of 3).");
+				}
+			});
+
+			//TODO: BlendColor
+
+			map.emplace("Transparency", [](Params& params) {
+				float value = params.me->ReadValue<float>(params.value);
+
+				value = 1.0f - value;
+
+				params.me->mMaterial->AddProperty(&value, 1, AI_MATKEY_OPACITY);
+			});
+
+			map.emplace("Reflectivity", [](Params& params) {
+				float value = params.me->ReadValue<float>(params.value);
+
+				params.me->mMaterial->AddProperty(&value, 1, AI_MATKEY_REFLECTIVITY);
+			});
+
+			map.emplace("Refraction", [](Params& params) {
+				float value = params.me->ReadValue<float>(params.value);
+
+				params.me->mMaterial->AddProperty(&value, 1, AI_MATKEY_REFRACTI);
+			});
+
 			return std::move(map);
 		}());
 
