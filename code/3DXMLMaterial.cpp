@@ -49,6 +49,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "3DXMLMaterial.h"
 
+#include <cmath>
+
 namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
@@ -195,7 +197,17 @@ namespace Assimp {
 			});
 
 			map.emplace("SpecularExponent", [](Params& params) {
-				//TODO
+				long double value = params.me->ReadValue<long double>(params.value);
+
+				if(1.0 - value >= 0.0) {
+					value = 127.0 * std::pow(1.0 - value, 1.0 / 3.0) + 1.0;
+				} else {
+					params.me->ThrowException("In attribute SpecularExponent: can not compute the cubic root of negative value \"" + params.me->mReader.ToString(1.0 - value) + "\".");
+				}
+
+				float result = (float) value; // Cast to the appropriate type, after all computation are done to minimize the rounding errors
+
+				params.me->mMaterial->AddProperty(&result, 1, AI_MATKEY_SHININESS);
 			});
 
 			return std::move(map);
