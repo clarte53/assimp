@@ -164,7 +164,6 @@ SET( 3DXML_SRCS
 	3DXMLStructure.h
 	3DXMLStructure.cpp
 	Optional.h
-	Optional.cpp
 	XMLParser.h
 	XMLParser.cpp
 )
@@ -693,9 +692,14 @@ SET( assimp_src
 
 	${PUBLIC_HEADERS}
 	${COMPILER_HEADERS}
+	
+	# Old precompiled header
+	# (removed because the precompiled header is not updated when visual studio switch configuration which leads to failed compilation.
+	# Moreover it's a drag to recompile assimp entirely each time a modification is made to one of the included header, which is definitely counter-productive.)
+	AssimpPCH.cpp
 )
 
-ADD_MSVC_PRECOMPILED_HEADER("AssimpPCH.h" "AssimpPCH.cpp" assimp_src)
+#ADD_MSVC_PRECOMPILED_HEADER("AssimpPCH.h" "AssimpPCH.cpp" assimp_src)
 
 IF ( ASSIMP_BUILD_STATIC_LIB )
 	ADD_LIBRARY( assimp STATIC
