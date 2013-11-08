@@ -71,21 +71,29 @@ namespace Assimp {
 		if(mStream == nullptr && mReader == nullptr) {
 			mFileName = file;
 
-			// Open the manifest files
-			mStream = mArchive->Open(mFileName.c_str());
-			if(mStream == nullptr) {
-				// because Q3BSPZipArchive (now) correctly close all open files automatically on destruction,
-				// we do not have to worry about closing the stream explicitly on exceptions
+			if(mArchive->isOpen()) {
+				if(mArchive->Exists(mFileName.c_str())) {
+					// Open the manifest files
+					mStream = mArchive->Open(mFileName.c_str());
+					if(mStream == nullptr) {
+						// because Q3BSPZipArchive (now) correctly close all open files automatically on destruction,
+						// we do not have to worry about closing the stream explicitly on exceptions
 
-				ThrowException(mFileName + " not found.");
-			}
+						ThrowException(mFileName + " not found.");
+					}
 
-			// generate a XML reader for it
-			// the pointer is automatically deleted at the end of the function, even if some exceptions are raised
-			std::unique_ptr<CIrrXML_IOStreamReader> IOWrapper(new CIrrXML_IOStreamReader(mStream));
-			mReader = irr::io::createIrrXMLReader(IOWrapper.get());
-			if(mReader == nullptr) {
-				ThrowException("Unable to create XML parser for file \"" + mFileName + "\".");
+					// generate a XML reader for it
+					// the pointer is automatically deleted at the end of the function, even if some exceptions are raised
+					std::unique_ptr<CIrrXML_IOStreamReader> IOWrapper(new CIrrXML_IOStreamReader(mStream));
+					mReader = irr::io::createIrrXMLReader(IOWrapper.get());
+					if(mReader == nullptr) {
+						ThrowException("Unable to create XML parser for file \"" + mFileName + "\".");
+					}
+				} else {
+					ThrowException("The file \"" + mFileName + "\" does not exist in the zip archive.");
+				}
+			} else {
+				ThrowException("The zip archive can not be opened.");
 			}
 		}
 	}

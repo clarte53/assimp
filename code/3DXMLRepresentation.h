@@ -50,7 +50,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace Assimp {
 
-	class _3DXMLRepresentation {
+	class _3DXMLRepresentation : boost::noncopyable {
 
 		protected:
 

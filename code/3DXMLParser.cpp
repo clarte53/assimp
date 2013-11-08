@@ -81,6 +81,8 @@ namespace Assimp {
 			if(it != mContent.files_to_parse.end()) {
 				// Create a xml parser for the file
 				mReader.reset(new XMLParser(mArchive, *it));
+				
+				DefaultLogger::get()->error("Parsing 1 \"" + *it + "\" (" + mReader->GetFilename() + ").");
 
 				// Parse the 3DXML file
 				ReadFile();
@@ -442,7 +444,9 @@ namespace Assimp {
 
 		// Parse the main 3DXML file
 		while(mReader->Next()) {
+			DefaultLogger::get()->error("Parsing 2 \"" + mReader->GetNodeName() + "\" in \"" + mReader->GetFilename() + "\".");
 			if(mReader->IsElement("Model_3dxml")) {
+				DefaultLogger::get()->error("Parsing 3 \"Model_3dxml\" in \"" + mReader->GetFilename() + "\".");
 				mReader->ParseElements(&mapping, params);
 			} else {
 				mReader->SkipElement();
@@ -813,6 +817,8 @@ namespace Assimp {
 			return std::move(map);
 		})(), 1, XMLParser::XSD::unbounded);
 
+		DefaultLogger::get()->warn("CATMaterialRef: start.");
+
 		mContent.mat_root_index = mReader->GetAttribute<unsigned int>("root");
 
 		params.me = this;
@@ -846,7 +852,7 @@ namespace Assimp {
 		mReader->ParseElements(&mapping, params);
 
 		_3DXMLStructure::CATMatReference& ref = mContent.references_mat[_3DXMLStructure::ID(mReader->GetFilename(), id)]; // Create the CATMaterialRef if not present.
-				
+		
 		// Save id and name for future error / log messages
 		ref.id = id;
 
@@ -859,6 +865,8 @@ namespace Assimp {
 			ref.name = mReader->ToString(id);
 			ref.has_name = false;
 		}
+		
+		DefaultLogger::get()->warn("CATMaterialRef: reference \"" + ref.name + "\" (" + mReader->ToString(ref.id) + ").");
 
 		// Nothing else to do because of the weird indirection scheme of 3DXML
 		// The CATMaterialRef will be completed by the MaterialDomainInstance

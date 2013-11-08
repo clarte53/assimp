@@ -50,8 +50,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace Assimp {
 
-	class _3DXMLMaterial {
-
+	class _3DXMLMaterial : boost::noncopyable {
+		
 		protected:
 
 			/** xml reader */
@@ -94,7 +94,7 @@ namespace Assimp {
 		T value;
 
 		while(! stream.eof()) {
-			char next = stream.peek();
+			int next = stream.peek();
 			while(! stream.eof() && (next == ',' || next == '[' || next == ']' || next == ' ')) {
 				stream.get();
 				next = stream.peek();

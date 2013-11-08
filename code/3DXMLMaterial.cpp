@@ -113,7 +113,7 @@ namespace Assimp {
 		})(), 1, 1);
 
 		params.me = this;
-		unsigned int id = *(mReader.GetAttribute<unsigned int>("Id", true));
+		//unsigned int id = *(mReader.GetAttribute<unsigned int>("Id", true));
 		std::string start_up = *(mReader.GetAttribute<std::string>("StartUp", true));
 		std::string alias = *(mReader.GetAttribute<std::string>("Alias", true));
 		Optional<unsigned int> aggregating = mReader.GetAttribute<unsigned int>("Aggregating");
