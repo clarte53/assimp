@@ -168,6 +168,15 @@ namespace Assimp {
 							mat->mProperties[i]->mIndex = channel;
 						}
 
+						// Should we disable backface culling?
+						int two_sided = 0;
+						if(it_mat_app->first->side != _3DXMLStructure::MaterialApplication::FRONT) {
+							two_sided = 1;
+						}
+						mat->AddProperty(&two_sided, 1, AI_MATKEY_TWOSIDED);
+
+						//TODO: MaterialApplication.TextureBlendFunction
+
 						mat_list_final.push_back(mat);
 					}
 					
