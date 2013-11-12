@@ -106,33 +106,32 @@ namespace Assimp {
 			
 			if(it_mat->first) {
 				if(! it_mat->first->materials.empty()) {
-					// TODO: merge different MaterialApplications
+					// TODO: merge different MaterialApplications based on their channel
 					_3DXMLStructure::MaterialApplication& application = it_mat->first->materials.front();
 
 					std::map<_3DXMLStructure::ID, _3DXMLStructure::CATMatReference>::const_iterator it_mat_ref = mContent.references_mat.find(application.id);
 
 					if(it_mat_ref != mContent.references_mat.end()) {
-						// TODO: merge different MaterialDomainInstances
-						std::map<_3DXMLStructure::ID, _3DXMLStructure::MaterialDomainInstance>::const_iterator it_dom = it_mat_ref->second.materials.begin();
+						std::vector<aiMaterial*> mat_list;
 
-						if(it_dom != it_mat_ref->second.materials.end()) {
-							_3DXMLStructure::MaterialDomain* domaine = it_dom->second.instance_of;
+						for(std::map<_3DXMLStructure::ID, _3DXMLStructure::MaterialDomainInstance>::const_iterator it_dom(it_mat_ref->second.materials.begin()), end_dom(it_mat_ref->second.materials.end()); it_dom != end_dom; ++it_dom) {
+							mat_list.push_back(it_dom->second.instance_of->material.get());
+						}
 
-							// Copy the material
+						if(! mat_list.empty()) {
+							// Merge the different materials
 							aiMaterial* material_ptr = NULL;
-							SceneCombiner::Copy(&material_ptr, domaine->material.get());
+							SceneCombiner::MergeMaterials(&material_ptr, mat_list.begin(), mat_list.end());
 
 							// Save the copied material
 							material = std::unique_ptr<aiMaterial>(material_ptr);
 
 							// Save the name of the material
 							aiString name;
-							if(domaine->has_name) {
-								name = domaine->name;
-							} else if(it_dom->second.has_name) {
-								name = it_dom->second.name;
+							if(it_mat_ref->second.has_name) {
+								name = it_mat_ref->second.name;
 							} else {
-								name = domaine->name;
+								name = mReader->ToString(it_mat_ref->second.id);
 							}
 							material->AddProperty(&name, AI_MATKEY_NAME);
 						} else {
