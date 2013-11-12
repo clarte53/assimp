@@ -1088,7 +1088,116 @@ namespace Assimp {
 	// ------------------------------------------------------------------------------------------------
 	// Read the CATMaterial section
 	void _3DXMLParser::ReadCATMaterial() {
-		//TODO
+		struct Params {
+			_3DXMLParser* me;
+		} params;
+
+		static const XMLParser::XSD::Sequence<Params> mapping(([](){
+			XMLParser::XSD::Sequence<Params>::type map;
+
+			// Parse CATMatConnection element
+			map.emplace_back("CATMatConnection", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadCATMatConnection();}, 0, 1));
+
+			return std::move(map);
+		})(), 1, XMLParser::XSD::unbounded);
+
+		params.me = this;
+
+		mReader->ParseElements(&mapping, params);
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	// Read the CATMatConnection section
+	void _3DXMLParser::ReadCATMatConnection() {
+		struct Params {
+			_3DXMLParser* me;
+		} params;
+
+		static const XMLParser::XSD::Sequence<Params> mapping(([](){
+			XMLParser::XSD::Sequence<Params>::type map;
+			
+			// Parse PLM_ExternalID element
+			map.emplace_back("PLM_ExternalID", XMLParser::XSD::Element<Params>([](Params& params){
+				//TODO: content: string
+			}, 0, 1));
+			
+			// Parse IsAggregatedBy element
+			map.emplace_back("IsAggregatedBy", XMLParser::XSD::Element<Params>([](Params& params){
+				//TODO: content: indexLinkType (id in same file -> unsigned int)
+			}, 1, 1));
+			
+			// Parse PLMRelation element
+			map.emplace_back("PLMRelation", XMLParser::XSD::Element<Params>([](Params& params){
+				//TODO: content: PLMRelationType
+			}, 1, XMLParser::XSD::unbounded));
+			
+			// Parse V_Layer element
+			map.emplace_back("V_Layer", XMLParser::XSD::Element<Params>([](Params& params){
+				//TODO: content: unsigned int
+			}, 1, 1));
+			
+			// Parse V_Applied element
+			map.emplace_back("V_Applied", XMLParser::XSD::Element<Params>([](Params& params){
+				//TODO: content: unsigned int
+			}, 1, 1));
+
+			// TODO: V_Matrix_1 .. V_Matrix_12, content: float
+
+			return std::move(map);
+		})(), 1, 1);
+
+		//TODO: attribute id, content unsigned int
+		//TODO: attribute name, content string (optional)
+
+		params.me = this;
+
+		mReader->ParseElements(&mapping, params);
+	}
+	
+	// ------------------------------------------------------------------------------------------------
+	// Read the PLMRelation section
+	void _3DXMLParser::ReadPLMRelation() {
+		struct Params {
+			_3DXMLParser* me;
+		} params;
+
+		static const XMLParser::XSD::Sequence<Params> mapping(([](){
+			XMLParser::XSD::Sequence<Params>::type map;
+			
+			// Parse C_Semantics element
+			map.emplace_back("C_Semantics", XMLParser::XSD::Element<Params>([](Params& params){
+				//TODO: content: string
+			}, 1, 1));
+			
+			// Parse C_Role element
+			map.emplace_back("C_Role", XMLParser::XSD::Element<Params>([](Params& params){
+				//TODO: content: string
+			}, 1, 1));
+			
+			// Parse Ids element
+			map.emplace_back("Ids", XMLParser::XSD::Element<Params>([](Params& params){
+				static const XMLParser::XSD::Sequence<Params> mapping(([](){
+					XMLParser::XSD::Sequence<Params>::type map;
+			
+					// Parse C_Semantics element
+					map.emplace_back("C_Semantics", XMLParser::XSD::Element<Params>([](Params& params){
+						//TODO: content: string
+					}, 1, 1));
+
+					return std::move(map);
+				})(), 1, XMLParser::XSD::unbounded);
+
+				params.me->mReader->ParseElements(&mapping, params);
+			}, 1, 1));
+
+			// TODO: V_Matrix_1 .. V_Matrix_12, content: float
+
+			return std::move(map);
+		})(), 1, 1);
+
+		params.me = this;
+
+		mReader->ParseElements(&mapping, params);
 	}
 
 } // Namespace Assimp

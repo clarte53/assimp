@@ -108,6 +108,10 @@ namespace Assimp {
 			void ReadMaterialDomainInstance();
 			
 			void ReadCATMaterial();
+
+			void ReadCATMatConnection();
+
+			void ReadPLMRelation();
 			
 	}; // end of class _3DXMLParser
 
