@@ -187,12 +187,12 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::CATMatReference::CATMatReference() : id(0), has_name(false), name("") {
+	_3DXMLStructure::CATMatReference::CATMatReference() : id(0), has_name(false), name(""), materials(), merged_material(nullptr) {
 
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::CATMatReference::CATMatReference(CATMatReference&& other) : id(other.id), has_name(other.has_name), name(std::move(other.name)) {
+	_3DXMLStructure::CATMatReference::CATMatReference(CATMatReference&& other) : id(other.id), has_name(other.has_name), name(std::move(other.name)), materials(std::move(other.materials)), merged_material(std::move(other.merged_material)) {
 
 	}
 

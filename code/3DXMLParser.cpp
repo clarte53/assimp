@@ -92,6 +92,43 @@ namespace Assimp {
 			}
 		}
 
+		// Merge all the materials composing a CATMatReference into a single material
+		for(std::map<_3DXMLStructure::ID, _3DXMLStructure::CATMatReference>::iterator it(mContent.references_mat.begin()), end(mContent.references_mat.end()); it != end; ++it) {
+			// Is the merged material already computed?
+			if(! it->second.merged_material) {
+				// List of the different instances of materials referenced by this CATMatReference
+				// (Normally, in schema 4.3 it should be only 1 instance, but we have no garantees that it will remain the case in future versions.
+				// Therefore we merge the different instanciated materials together)
+				std::vector<aiMaterial*> mat_list_ref;
+
+				// Get all the instances
+				for(std::map<_3DXMLStructure::ID, _3DXMLStructure::MaterialDomainInstance>::const_iterator it_dom(it->second.materials.begin()), end_dom(it->second.materials.end()); it_dom != end_dom; ++it_dom) {
+					mat_list_ref.push_back(it_dom->second.instance_of->material.get());
+				}
+
+				// If we have at least one instance
+				if(! mat_list_ref.empty()) {
+					// Merge the different materials together
+					aiMaterial* material_ptr = NULL;
+					SceneCombiner::MergeMaterials(&material_ptr, mat_list_ref.begin(), mat_list_ref.end());
+
+					// Save the merged material
+					it->second.merged_material.reset(material_ptr);
+
+					// Save the name of the material
+					aiString name;
+					if(it->second.has_name) {
+						name = it->second.name;
+					} else {
+						name = mReader->ToString(it->second.id);
+					}
+					material_ptr->AddProperty(&name, AI_MATKEY_NAME);
+				} else {
+					ThrowException("In CATMatReference \"" + mReader->ToString(it->second.id) + "\": invalid reference without any instance.");
+				}
+			}
+		}
+
 		// Get all the MaterialAttributes of the scene
 		std::map<_3DXMLStructure::ReferenceRep::MatID, unsigned int> attributes;
 		for(std::map<_3DXMLStructure::ID, _3DXMLStructure::ReferenceRep>::const_iterator it_rep(mContent.representations.begin()), end_rep(mContent.representations.end()); it_rep != end_rep; ++it_rep) {
@@ -110,47 +147,16 @@ namespace Assimp {
 				// If the material ID contains some MaterialApplications (ie it is not just a simple color) 
 				if(! it_mat->first->materials.empty()) {
 					// List of the materials corresponding to the different applications
-					std::vector<std::pair<const _3DXMLStructure::MaterialApplication*, std::unique_ptr<aiMaterial>>> mat_list_app;
+					std::vector<std::pair<const _3DXMLStructure::MaterialApplication*, aiMaterial*>> mat_list_app;
 
 					// For each application
 					for(std::list<_3DXMLStructure::MaterialApplication>::const_iterator it_app(it_mat->first->materials.begin()), end_app(it_mat->first->materials.end()); it_app != end_app; ++it_app) {						
 						// Find the corresponding CATMatReference which reference the material
-						std::map<_3DXMLStructure::ID, _3DXMLStructure::CATMatReference>::const_iterator it_mat_ref = mContent.references_mat.find(it_app->id);
+						std::map<_3DXMLStructure::ID, _3DXMLStructure::CATMatReference>::iterator it_mat_ref = mContent.references_mat.find(it_app->id);
 
 						// Found?
 						if(it_mat_ref != mContent.references_mat.end()) {
-							// List of the different instances of materials referenced by this CATMatReference
-							// (Normally, in schema 4.3 it should be only 1 instance, but we have no garantees that it will remain the case in future versions.
-							// Therefore we merge the different instanciated materials together)
-							std::vector<aiMaterial*> mat_list_ref;
-
-							// Get all the instances
-							for(std::map<_3DXMLStructure::ID, _3DXMLStructure::MaterialDomainInstance>::const_iterator it_dom(it_mat_ref->second.materials.begin()), end_dom(it_mat_ref->second.materials.end()); it_dom != end_dom; ++it_dom) {
-								mat_list_ref.push_back(it_dom->second.instance_of->material.get());
-							}
-
-							// If we have at least one instance
-							if(! mat_list_ref.empty()) {
-								// Merge the different materials together
-								aiMaterial* material_ptr = NULL;
-								SceneCombiner::MergeMaterials(&material_ptr, mat_list_ref.begin(), mat_list_ref.end());
-
-								// Save the merged material
-								mat_list_app.emplace_back();
-								mat_list_app.back().first = &(*it_app);
-								mat_list_app.back().second.reset(material_ptr);
-
-								// Save the name of the material
-								aiString name;
-								if(it_mat_ref->second.has_name) {
-									name = it_mat_ref->second.name;
-								} else {
-									name = mReader->ToString(it_mat_ref->second.id);
-								}
-								material_ptr->AddProperty(&name, AI_MATKEY_NAME);
-							} else {
-								ThrowException("In CATMatReference \"" + mReader->ToString(it_mat_ref->second.id) + "\": invalid reference without any instance.");
-							}
+							mat_list_app.emplace_back(std::make_pair(&(*it_app), it_mat_ref->second.merged_material.get()));
 						}  else {
 							ThrowException("Invalid MaterialApplication referencing unknown CATMatReference \"" + mReader->ToString(it_app->id.id) + "\".");
 						}
@@ -159,33 +165,47 @@ namespace Assimp {
 					// Save the materials to merge together
 					std::vector<aiMaterial*> mat_list_final;
 
-					// Set the channel of the different materials
-					for(std::vector<std::pair<const _3DXMLStructure::MaterialApplication*, std::unique_ptr<aiMaterial>>>::iterator it_mat_app(mat_list_app.begin()), end_mat_app(mat_list_app.end()); it_mat_app != end_mat_app; ++it_mat_app) {
-						aiMaterial* mat = it_mat_app->second.get();
-						unsigned int channel = it_mat_app->first->channel;
+					// The pointers in mat_list_final are not protected, therefore we must catch any exception to release the allocated memory correctly
+					try {
+						// Set the channel of the different materials
+						for(std::vector<std::pair<const _3DXMLStructure::MaterialApplication*, aiMaterial*>>::iterator it_mat_app(mat_list_app.begin()), end_mat_app(mat_list_app.end()); it_mat_app != end_mat_app; ++it_mat_app) {
+							aiMaterial* mat = NULL;
+							SceneCombiner::Copy(&mat, it_mat_app->second);
 
-						for(unsigned int i = 0; i < mat->mNumProperties; ++i) {
-							mat->mProperties[i]->mIndex = channel;
+							unsigned int channel = it_mat_app->first->channel;
+
+							for(unsigned int i = 0; i < mat->mNumProperties; ++i) {
+								mat->mProperties[i]->mIndex = channel;
+							}
+
+							// Should we disable backface culling?
+							int two_sided = 0;
+							if(it_mat_app->first->side != _3DXMLStructure::MaterialApplication::FRONT) {
+								two_sided = 1;
+							}
+							mat->AddProperty(&two_sided, 1, AI_MATKEY_TWOSIDED);
+
+							//TODO: MaterialApplication.TextureBlendFunction
+
+							mat_list_final.push_back(mat);
 						}
-
-						// Should we disable backface culling?
-						int two_sided = 0;
-						if(it_mat_app->first->side != _3DXMLStructure::MaterialApplication::FRONT) {
-							two_sided = 1;
-						}
-						mat->AddProperty(&two_sided, 1, AI_MATKEY_TWOSIDED);
-
-						//TODO: MaterialApplication.TextureBlendFunction
-
-						mat_list_final.push_back(mat);
-					}
 					
-					// Merge the different applications together based on their channel
-					aiMaterial* material_ptr = NULL;
-					SceneCombiner::MergeMaterials(&material_ptr, mat_list_final.begin(), mat_list_final.end());
+						// Merge the different applications together based on their channel
+						aiMaterial* material_ptr = NULL;
+						SceneCombiner::MergeMaterials(&material_ptr, mat_list_final.begin(), mat_list_final.end());
 
-					// Save the final material
-					material.reset(material_ptr);
+						// Save the final material
+						material.reset(material_ptr);
+					} catch(...) {
+						// Cleaning up memory
+						for(std::vector<aiMaterial*>::iterator it(mat_list_final.begin()), end(mat_list_final.end()); it != end; ++it) {
+							delete *it;
+						}
+						mat_list_final.clear();
+
+						// Rethrow the exception
+						throw;
+					}
 				} else { // It must be a simple color material
 					material.reset(new aiMaterial());
 

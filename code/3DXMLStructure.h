@@ -184,6 +184,8 @@ namespace Assimp {
 
 			std::map<ID, MaterialDomainInstance> materials;
 
+			std::unique_ptr<aiMaterial> merged_material;
+
 			CATMatReference();
 
 			CATMatReference(CATMatReference&& other);
