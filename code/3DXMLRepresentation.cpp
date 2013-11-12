@@ -731,7 +731,13 @@ namespace Assimp {
 		})(), 1, 1);
 
 		// Get the channel attribute
-		unsigned int channel = *(mReader.GetAttribute<unsigned int>("mappingChannel", true));
+		// This attribute is required in schema 4.3 but seem optional in previous versions
+		Optional<unsigned int> channel_opt = mReader.GetAttribute<unsigned int>("mappingChannel");
+		unsigned int channel = 0;
+
+		if(channel_opt) {
+			channel = *channel_opt;
+		}
 
 		// Get the side of the material
 		Optional<std::string> side_opt = mReader.GetAttribute<std::string>("mappingSide");
