@@ -102,57 +102,94 @@ namespace Assimp {
 
 		// Generate the final materials of the scene and store their indices
 		for(std::map<_3DXMLStructure::ReferenceRep::MatID, unsigned int>::iterator it_mat(attributes.begin()), end_mat(attributes.end()); it_mat != end_mat; ++ it_mat) {
+			// The final material
 			std::unique_ptr<aiMaterial> material(nullptr);
 			
+			// If the material ID is defined (ie not the default material)
 			if(it_mat->first) {
+				// If the material ID contains some MaterialApplications (ie it is not just a simple color) 
 				if(! it_mat->first->materials.empty()) {
-					// TODO: merge different MaterialApplications based on their channel
-					_3DXMLStructure::MaterialApplication& application = it_mat->first->materials.front();
+					// List of the materials corresponding to the different applications
+					std::vector<std::pair<const _3DXMLStructure::MaterialApplication*, std::unique_ptr<aiMaterial>>> mat_list_app;
 
-					std::map<_3DXMLStructure::ID, _3DXMLStructure::CATMatReference>::const_iterator it_mat_ref = mContent.references_mat.find(application.id);
+					// For each application
+					for(std::list<_3DXMLStructure::MaterialApplication>::const_iterator it_app(it_mat->first->materials.begin()), end_app(it_mat->first->materials.end()); it_app != end_app; ++it_app) {						
+						// Find the corresponding CATMatReference which reference the material
+						std::map<_3DXMLStructure::ID, _3DXMLStructure::CATMatReference>::const_iterator it_mat_ref = mContent.references_mat.find(it_app->id);
 
-					if(it_mat_ref != mContent.references_mat.end()) {
-						std::vector<aiMaterial*> mat_list;
+						// Found?
+						if(it_mat_ref != mContent.references_mat.end()) {
+							// List of the different instances of materials referenced by this CATMatReference
+							// (Normally, in schema 4.3 it should be only 1 instance, but we have no garantees that it will remain the case in future versions.
+							// Therefore we merge the different instanciated materials together)
+							std::vector<aiMaterial*> mat_list_ref;
 
-						for(std::map<_3DXMLStructure::ID, _3DXMLStructure::MaterialDomainInstance>::const_iterator it_dom(it_mat_ref->second.materials.begin()), end_dom(it_mat_ref->second.materials.end()); it_dom != end_dom; ++it_dom) {
-							mat_list.push_back(it_dom->second.instance_of->material.get());
-						}
-
-						if(! mat_list.empty()) {
-							// Merge the different materials
-							aiMaterial* material_ptr = NULL;
-							SceneCombiner::MergeMaterials(&material_ptr, mat_list.begin(), mat_list.end());
-
-							// Save the copied material
-							material = std::unique_ptr<aiMaterial>(material_ptr);
-
-							// Save the name of the material
-							aiString name;
-							if(it_mat_ref->second.has_name) {
-								name = it_mat_ref->second.name;
-							} else {
-								name = mReader->ToString(it_mat_ref->second.id);
+							// Get all the instances
+							for(std::map<_3DXMLStructure::ID, _3DXMLStructure::MaterialDomainInstance>::const_iterator it_dom(it_mat_ref->second.materials.begin()), end_dom(it_mat_ref->second.materials.end()); it_dom != end_dom; ++it_dom) {
+								mat_list_ref.push_back(it_dom->second.instance_of->material.get());
 							}
-							material->AddProperty(&name, AI_MATKEY_NAME);
-						} else {
-							ThrowException("In CATMatReference \"" + mReader->ToString(it_mat_ref->second.id) + "\": invalid reference without any instance.");
+
+							// If we have at least one instance
+							if(! mat_list_ref.empty()) {
+								// Merge the different materials together
+								aiMaterial* material_ptr = NULL;
+								SceneCombiner::MergeMaterials(&material_ptr, mat_list_ref.begin(), mat_list_ref.end());
+
+								// Save the merged material
+								mat_list_app.emplace_back();
+								mat_list_app.back().first = &(*it_app);
+								mat_list_app.back().second.reset(material_ptr);
+
+								// Save the name of the material
+								aiString name;
+								if(it_mat_ref->second.has_name) {
+									name = it_mat_ref->second.name;
+								} else {
+									name = mReader->ToString(it_mat_ref->second.id);
+								}
+								material_ptr->AddProperty(&name, AI_MATKEY_NAME);
+							} else {
+								ThrowException("In CATMatReference \"" + mReader->ToString(it_mat_ref->second.id) + "\": invalid reference without any instance.");
+							}
+						}  else {
+							ThrowException("Invalid MaterialApplication referencing unknown CATMatReference \"" + mReader->ToString(it_app->id.id) + "\".");
 						}
-					} else {
-						ThrowException("Invalid MaterialApplication referencing unknown CATMatReference \"" + mReader->ToString(application.id.id) + "\".");
 					}
+
+					// Save the materials to merge together
+					std::vector<aiMaterial*> mat_list_final;
+
+					// Set the channel of the different materials
+					for(std::vector<std::pair<const _3DXMLStructure::MaterialApplication*, std::unique_ptr<aiMaterial>>>::iterator it_mat_app(mat_list_app.begin()), end_mat_app(mat_list_app.end()); it_mat_app != end_mat_app; ++it_mat_app) {
+						aiMaterial* mat = it_mat_app->second.get();
+						unsigned int channel = it_mat_app->first->channel;
+
+						for(unsigned int i = 0; i < mat->mNumProperties; ++i) {
+							mat->mProperties[i]->mIndex = channel;
+						}
+
+						mat_list_final.push_back(mat);
+					}
+					
+					// Merge the different applications together based on their channel
+					aiMaterial* material_ptr = NULL;
+					SceneCombiner::MergeMaterials(&material_ptr, mat_list_final.begin(), mat_list_final.end());
+
+					// Save the final material
+					material.reset(material_ptr);
 				} else { // It must be a simple color material
-					material = std::unique_ptr<aiMaterial>(new aiMaterial());
+					material.reset(new aiMaterial());
 
 					material->AddProperty(&(it_mat->first->color), 1, AI_MATKEY_COLOR_DIFFUSE);
 
 					if(it_mat->first->color.a != 1.0) {
-						// Add also transparency
+						// Also add transparency
 						material->AddProperty(&(it_mat->first->color.a), 1, AI_MATKEY_OPACITY);
 					}
 				}
 			} else {
 				// Default material
-				material = std::unique_ptr<aiMaterial>(new aiMaterial());
+				material.reset(new aiMaterial());
 
 				aiString name("Default Material");
 				material->AddProperty(&name, AI_MATKEY_NAME);
