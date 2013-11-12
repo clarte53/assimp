@@ -192,6 +192,18 @@ namespace Assimp {
 
 		}; // struct CATMatReference
 
+		struct CATMatConnection : public boost::noncopyable {
+
+			ID reference;
+
+			ID material;
+
+			CATMatConnection(const ID& ref, const ID& mat);
+
+			CATMatConnection(CATMatConnection&& other);
+
+		}; // struct CATMatConnection
+
 		struct Instance3D;
 
 		struct InstanceRep;
@@ -204,11 +216,11 @@ namespace Assimp {
 
 			std::string name;
 
+			unsigned int nb_references;
+
 			std::map<ID, Instance3D> instances;
 
 			std::map<ID, InstanceRep> meshes;
-
-			unsigned int nb_references;
 
 			Reference3D();
 
