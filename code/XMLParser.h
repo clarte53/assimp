@@ -97,7 +97,7 @@ namespace Assimp {
 				}; // class Element
 				
 				template<typename T, typename U>
-				class Container : Element<T> {
+				class Container : public Element<T> {
 
 					public:
 
@@ -181,14 +181,14 @@ namespace Assimp {
 
 			void SkipUntilEnd(const std::string& name) const;
 
-			template<typename T, typename U>
-			void ParseElement(const XSD::Element<T>& schema, U& params) const;
+			template<typename T>
+			void ParseElement(const XSD::Element<T>& schema, T& params) const;
 
-			template<typename T, typename U>
-			void ParseElement(const XSD::Choice<T>& schema, U& params) const;
+			template<typename T>
+			void ParseElement(const XSD::Choice<T>& schema, T& params) const;
 
-			template<typename T, typename U>
-			void ParseElement(const XSD::Sequence<T>& schema, U& params) const;
+			template<typename T>
+			void ParseElement(const XSD::Sequence<T>& schema, T& params) const;
 
 			/** Return the name of a node */
 			std::string GetNodeName() const;
@@ -302,14 +302,14 @@ namespace Assimp {
 	}
 	
 	// ------------------------------------------------------------------------------------------------
-	template<typename T, typename U>
-	void XMLParser::ParseElement(const XSD::Element<T>& schema, U& params) const {
+	template<typename T>
+	void XMLParser::ParseElement(const XSD::Element<T>& schema, T& params) const {
 		(schema.GetParser())(this, params);
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	template<typename T, typename U>
-	void XMLParser::ParseElement(const XSD::Choice<T>& schema, U& params) const {
+	template<typename T>
+	void XMLParser::ParseElement(const XSD::Choice<T>& schema, T& params) const {
 		irr::io::EXML_NODE node_type;
 		std::string node_name;
 
@@ -382,8 +382,8 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	template<typename T, typename U>
-	void XMLParser::ParseElement(const XSD::Sequence<T>& schema, U& params) const {
+	template<typename T>
+	void XMLParser::ParseElement(const XSD::Sequence<T>& schema, T& params) const {
 		irr::io::EXML_NODE node_type;
 		std::string node_name;
 
