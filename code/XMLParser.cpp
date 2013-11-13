@@ -131,7 +131,7 @@ namespace Assimp {
 		unsigned int depth = 0;
 
 		// Are we already on the ending element or an <element />?
-		if(! mReader->isEmptyElement() && (node_type != irr::io::EXN_ELEMENT_END || ! is_same_name)) {
+		if(node_type != irr::io::EXN_UNKNOWN && ! mReader->isEmptyElement() && (node_type != irr::io::EXN_ELEMENT_END || ! is_same_name)) {
 			// If not, parse the next elements...
 			while(mReader->read()) {
 				node_type = mReader->getNodeType();
