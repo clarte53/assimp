@@ -72,7 +72,7 @@ namespace Assimp {
 
 					public:
 
-						typedef std::function<void(T&)> parser;
+						typedef std::function<void(const XMLParser*, T&)> parser;
 
 					protected:
 
@@ -96,58 +96,48 @@ namespace Assimp {
 
 				}; // class Element
 				
-				template<typename T>
-				class Container {
+				template<typename T, typename U>
+				class Container : Element<T> {
 
 					public:
 
-						typedef T type;
+						typedef U type;
 
 					protected:
 					
 						type mMap;
 
-						unsigned int mMinOccurs;
-
-						unsigned int mMaxOccurs;
-
 					public:
 
-						Container(typename Container<T>::type&& map, unsigned int min = 1, unsigned int max = 1);
+						Container(typename Container<T, U>::type&& map, unsigned int min = 1, unsigned int max = 1);
 						
-						const typename Container<T>::type& GetMap() const;
+						const typename Container<T, U>::type& GetMap() const;
 
-						unsigned int GetMin() const;
+					protected:
 
-						unsigned int GetMax() const;
-
-						virtual typename Container<T>::type::const_iterator find(const typename Container<T>::type& map, typename Container<T>::type::const_iterator position, const std::string& name) const = 0;
+						void Parser(const XMLParser* parser, T& params);
 
 				}; // class Container
 
 				template<typename T>
-				class Choice : public Container<std::map<std::string, Element<T>>> {
+				class Choice : public Container<T, std::map<std::string, Element<T>>> {
 					
 					public:
 
-						typedef typename Container<std::map<std::string, Element<T>>>::type type;
+						typedef typename Container<T, std::map<std::string, Element<T>>>::type type;
 
 						Choice(typename Choice<T>::type&& map, unsigned int min = 1, unsigned int max = 1);
-
-						virtual typename Choice<T>::type::const_iterator find(const typename Choice<T>::type& map, typename Choice<T>::type::const_iterator position, const std::string& name) const;
 
 				}; // class Choice
 
 				template<typename T>
-				class Sequence : public Container<std::list<std::pair<std::string, Element<T>>>> {
+				class Sequence : public Container<T, std::list<std::pair<std::string, Element<T>>>> {
 
 					public:
 
-						typedef typename Container<std::list<std::pair<std::string, Element<T>>>>::type type;
+						typedef typename Container<T, std::list<std::pair<std::string, Element<T>>>>::type type;
 
 						Sequence(typename Sequence<T>::type&& map, unsigned int min = 1, unsigned int max = 1);
-
-						virtual typename Sequence<T>::type::const_iterator find(const typename Sequence<T>::type& map, typename Sequence<T>::type::const_iterator position, const std::string& name) const;
 
 				}; // class Sequence
 				
@@ -196,7 +186,13 @@ namespace Assimp {
 			void SkipUntilEnd(const std::string& name) const;
 
 			template<typename T, typename U>
-			void ParseElements(const XSD::Container<T>* schema, U& params) const;
+			void ParseElement(const XSD::Element<T>* schema, U& params) const;
+
+			template<typename T, typename U>
+			void ParseElement(const XSD::Choice<T>* schema, U& params) const;
+
+			template<typename T, typename U>
+			void ParseElement(const XSD::Sequence<T>* schema, U& params) const;
 
 			/** Return the name of a node */
 			std::string GetNodeName() const;
@@ -262,58 +258,35 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	template<typename T>
-	XMLParser::XSD::Container<T>::Container(typename XMLParser::XSD::Container<T>::type&& map, unsigned int min, unsigned int max) : mMap(map), mMinOccurs(min), mMaxOccurs(max) {
+	template<typename T, typename U>
+	XMLParser::XSD::Container<T, U>::Container(typename XMLParser::XSD::Container<T, U>::type&& map, unsigned int min, unsigned int max) : Element<T>(std::bind(&Container<T, U>::Parser, this, std::placeholders::_1,std::placeholders::_2), min, max), mMap(map) {
 	
 	}
 						
 	// ------------------------------------------------------------------------------------------------
-	template<typename T>
-	inline const typename XMLParser::XSD::Container<T>::type& XMLParser::XSD::Container<T>::GetMap() const {
+	template<typename T, typename U>
+	inline const typename XMLParser::XSD::Container<T, U>::type& XMLParser::XSD::Container<T, U>::GetMap() const {
 		return mMap;
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	template<typename T>
-	inline unsigned int XMLParser::XSD::Container<T>::GetMin() const {
-		return mMinOccurs;
+	template<typename T, typename U>
+	void XMLParser::XSD::Container<T, U>::Parser(const XMLParser* parser, T& params) {
+		parser->ParseElement(this, params);
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
-	inline unsigned int XMLParser::XSD::Container<T>::GetMax() const {
-		return mMaxOccurs;
-	}
-
-	// ------------------------------------------------------------------------------------------------
-	template<typename T>
-	XMLParser::XSD::Choice<T>::Choice(typename XMLParser::XSD::Choice<T>::type&& map, unsigned int min, unsigned int max) : Container<std::map<std::string, Element<T>>>(std::move(map), min, max) {
+	XMLParser::XSD::Choice<T>::Choice(typename XMLParser::XSD::Choice<T>::type&& map, unsigned int min, unsigned int max) : Container<T, std::map<std::string, Element<T>>>(std::move(map), min, max) {
 	
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
-	typename XMLParser::XSD::Choice<T>::type::const_iterator XMLParser::XSD::Choice<T>::find(const typename XMLParser::XSD::Choice<T>::type& map, typename XMLParser::XSD::Choice<T>::type::const_iterator /*position*/, const std::string& name) const {
-		return map.find(name);
-	}
-	
-	// ------------------------------------------------------------------------------------------------
-	template<typename T>
-	XMLParser::XSD::Sequence<T>::Sequence(typename XMLParser::XSD::Sequence<T>::type&& map, unsigned int min, unsigned int max) : Container<std::list<std::pair<std::string, Element<T>>>>(std::move(map), min, max) {
+	XMLParser::XSD::Sequence<T>::Sequence(typename XMLParser::XSD::Sequence<T>::type&& map, unsigned int min, unsigned int max) : Container<T, std::list<std::pair<std::string, Element<T>>>>(std::move(map), min, max) {
 	
 	}
-	
-	// ------------------------------------------------------------------------------------------------
-	template<typename T>
-	typename XMLParser::XSD::Sequence<T>::type::const_iterator XMLParser::XSD::Sequence<T>::find(const typename XMLParser::XSD::Sequence<T>::type& map, typename XMLParser::XSD::Sequence<T>::type::const_iterator position, const std::string& name) const {
-		// Move to the position of the current element in the sequence
-		while(position != map.end() && position->first.compare(name) != 0) {
-			++position;
-		}
 
-		return position;
-	}
-	
 	// ------------------------------------------------------------------------------------------------
 	// Return the name of the file currently parsed
 	inline const std::string& XMLParser::GetFilename() const {
@@ -340,7 +313,87 @@ namespace Assimp {
 	
 	// ------------------------------------------------------------------------------------------------
 	template<typename T, typename U>
-	void XMLParser::ParseElements(const XSD::Container<T>* schema, U& params) const {
+	void XMLParser::ParseElement(const XSD::Element<T>* schema, U& params) const {
+		(schema->GetParser())(this, params);
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	template<typename T, typename U>
+	void XMLParser::ParseElement(const XSD::Choice<T>* schema, U& params) const {
+		irr::io::EXML_NODE node_type;
+		std::string node_name;
+
+		// Test if it's not an <element />
+		if(! mReader->isEmptyElement()) {
+			// Save the current node name for checking closing of elements
+			std::string name = mReader->getNodeName();
+
+			// Get a reference to the map
+			const typename XSD::Choice<T>::type& map = schema->GetMap();
+
+			// Save the count for each type of element
+			std::map<std::string, unsigned int> check;
+
+			// Initialize all the counters to 0
+			for(typename XSD::Choice<T>::type::const_iterator it(map.begin()), end(map.end()); it != end; ++it) {
+				check[it->first] = 0;
+			}
+
+			typename XSD::Choice<T>::type::const_iterator position = map.begin();
+
+			while(mReader->read()) {
+				node_type = mReader->getNodeType();
+				node_name = mReader->getNodeName();
+
+				// Test if we have an opening element
+				if(node_type == irr::io::EXN_ELEMENT) {
+					// Get the position of the current element
+					typename XSD::Choice<T>::type::const_iterator it = map.find(node_name);
+
+					// Is the element mapped?
+					if(it != map.end()) {
+						(it->second.GetParser())(this, params);
+
+						SkipUntilEnd(it->first);
+
+						// Increment the counter for this type of element
+						(check[it->first])++;
+
+						// Save the new position in the map
+						position = it;
+					} else {
+						// Ignore elements that are not mapped
+						SkipElement();
+
+						DefaultLogger::get()->warn("Skipping parsing of element \"" + node_name + "\".");
+					}
+				} else if(node_type == irr::io::EXN_ELEMENT_END) {
+					if(name.compare(node_name) == 0) {
+						// check if the minOccurs & maxOccurs conditions where satisfied
+						for(typename XSD::Choice<T>::type::const_iterator it(map.begin()), end(map.end()); it != end; ++it) {
+							unsigned int occurs = check[it->first];
+
+							//TODO: FIXME
+							if(occurs < it->second.GetMin()) {
+								ThrowException("The element \"" + it->first + "\" is not present enough times (" + ToString(occurs) + " times instead of min. " + ToString(it->second.GetMin()) + ") in element \"" + name + "\" to validate the schema.");
+							} else if(occurs > it->second.GetMax()) {
+								ThrowException("The element \"" + it->first + "\" is present too many times (" + ToString(occurs) + " times instead of max. " + ToString(it->second.GetMax()) + ") in element \"" + name + "\" to validate the schema.");
+							}
+						}
+
+						// Ok, we can stop the loop
+						break;
+					} else {
+						ThrowException("Expected end of \"" + name + "\" element.");
+					}
+				}
+			}
+		}
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	template<typename T, typename U>
+	void XMLParser::ParseElement(const XSD::Sequence<T>* schema, U& params) const {
 		irr::io::EXML_NODE node_type;
 		std::string node_name;
 
@@ -350,17 +403,17 @@ namespace Assimp {
 			std::string name = mReader->getNodeName();
 			
 			// Get a reference to the map
-			const typename XSD::Container<T>::type& map = schema->GetMap();
+			const typename XSD::Sequence<T>::type& map = schema->GetMap();
 
 			// Save the count for each type of element
 			std::map<std::string, unsigned int> check;
 
 			// Initialize all the counters to 0
-			for(typename XSD::Container<T>::type::const_iterator it(map.begin()), end(map.end()); it != end; ++it) {
+			for(typename XSD::Sequence<T>::type::const_iterator it(map.begin()), end(map.end()); it != end; ++it) {
 				check[it->first] = 0;
 			}
 
-			typename XSD::Container<T>::type::const_iterator position = map.begin();
+			typename XSD::Sequence<T>::type::const_iterator position = map.begin();
 
 			while(mReader->read()) {
 				node_type = mReader->getNodeType();
@@ -369,11 +422,16 @@ namespace Assimp {
 				// Test if we have an opening element
 				if(node_type == irr::io::EXN_ELEMENT) {
 					// Get the position of the current element
-					typename XSD::Container<T>::type::const_iterator it = schema->find(map, position, node_name);
+					typename XSD::Sequence<T>::type::const_iterator it = position;
+
+					// Move to the position of the current element in the sequence
+					while(it != map.end() && it->first.compare(node_name) != 0) {
+						++it;
+					}
 					
 					// Is the element mapped?
 					if(it != map.end()) {
-						(it->second.GetParser())(params);
+						(it->second.GetParser())(this, params);
 
 						SkipUntilEnd(it->first);
 
@@ -391,7 +449,7 @@ namespace Assimp {
 				} else if(node_type == irr::io::EXN_ELEMENT_END) {
 					if(name.compare(node_name) == 0) {
 						// check if the minOccurs & maxOccurs conditions where satisfied
-						for(typename XSD::Container<T>::type::const_iterator it(map.begin()), end(map.end()); it != end; ++it) {
+						for(typename XSD::Sequence<T>::type::const_iterator it(map.begin()), end(map.end()); it != end; ++it) {
 							unsigned int occurs = check[it->first];
 
 							//TODO: FIXME

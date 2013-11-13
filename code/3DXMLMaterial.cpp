@@ -63,7 +63,7 @@ namespace Assimp {
 			XMLParser::XSD::Sequence<Params>::type map;
 
 			// Parse Feature element
-			map.emplace_back("Feature", XMLParser::XSD::Element<Params>([](Params& params){params.me->ReadFeature();}, 0, XMLParser::XSD::unbounded));
+			map.emplace_back("Feature", XMLParser::XSD::Element<Params>([](const XMLParser* /*parser*/, Params& params){params.me->ReadFeature();}, 0, XMLParser::XSD::unbounded));
 			
 			return std::move(map);
 		})(), 1, 1);
@@ -74,7 +74,7 @@ namespace Assimp {
 		// Parse the 3DRep file
 		while(mReader.Next()) {
 			if(mReader.IsElement("Osm")) {
-				mReader.ParseElements(&mapping, params);
+				mReader.ParseElement(&mapping, params);
 			} else {
 				mReader.SkipElement();
 			}
@@ -104,7 +104,7 @@ namespace Assimp {
 			XMLParser::XSD::Sequence<Params>::type map;
 
 			// Parse Attr element
-			map.emplace_back("Attr", XMLParser::XSD::Element<Params>([](Params& params){
+			map.emplace_back("Attr", XMLParser::XSD::Element<Params>([](const XMLParser* /*parser*/, Params& params){
 				// We aggregate all the attributes of each Features into the output material
 				params.me->ReadAttribute();
 			}, 0, XMLParser::XSD::unbounded));
@@ -118,7 +118,7 @@ namespace Assimp {
 		std::string alias = *(mReader.GetAttribute<std::string>("Alias", true));
 		Optional<unsigned int> aggregating = mReader.GetAttribute<unsigned int>("Aggregating");
 
-		mReader.ParseElements(&mapping, params);
+		mReader.ParseElement(&mapping, params);
 	}
 
 	// ------------------------------------------------------------------------------------------------
