@@ -74,7 +74,7 @@ namespace Assimp {
 		// Parse the 3DRep file
 		while(mReader.Next()) {
 			if(mReader.IsElement("Osm")) {
-				mReader.ParseElement(&mapping, params);
+				mReader.ParseElement(mapping, params);
 			} else {
 				mReader.SkipElement();
 			}
@@ -118,7 +118,7 @@ namespace Assimp {
 		std::string alias = *(mReader.GetAttribute<std::string>("Alias", true));
 		Optional<unsigned int> aggregating = mReader.GetAttribute<unsigned int>("Aggregating");
 
-		mReader.ParseElement(&mapping, params);
+		mReader.ParseElement(mapping, params);
 	}
 
 	// ------------------------------------------------------------------------------------------------

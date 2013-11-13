@@ -113,10 +113,6 @@ namespace Assimp {
 						
 						const typename Container<T, U>::type& GetMap() const;
 
-					protected:
-
-						void Parser(const XMLParser* parser, T& params);
-
 				}; // class Container
 
 				template<typename T>
@@ -186,13 +182,13 @@ namespace Assimp {
 			void SkipUntilEnd(const std::string& name) const;
 
 			template<typename T, typename U>
-			void ParseElement(const XSD::Element<T>* schema, U& params) const;
+			void ParseElement(const XSD::Element<T>& schema, U& params) const;
 
 			template<typename T, typename U>
-			void ParseElement(const XSD::Choice<T>* schema, U& params) const;
+			void ParseElement(const XSD::Choice<T>& schema, U& params) const;
 
 			template<typename T, typename U>
-			void ParseElement(const XSD::Sequence<T>* schema, U& params) const;
+			void ParseElement(const XSD::Sequence<T>& schema, U& params) const;
 
 			/** Return the name of a node */
 			std::string GetNodeName() const;
@@ -259,7 +255,7 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	template<typename T, typename U>
-	XMLParser::XSD::Container<T, U>::Container(typename XMLParser::XSD::Container<T, U>::type&& map, unsigned int min, unsigned int max) : Element<T>(std::bind(&Container<T, U>::Parser, this, std::placeholders::_1,std::placeholders::_2), min, max), mMap(map) {
+	XMLParser::XSD::Container<T, U>::Container(typename XMLParser::XSD::Container<T, U>::type&& map, unsigned int min, unsigned int max) : Element<T>([this](const XMLParser* parser, T& params){parser->ParseElement(*this, params);}, min, max), mMap(map) {
 	
 	}
 						
@@ -267,12 +263,6 @@ namespace Assimp {
 	template<typename T, typename U>
 	inline const typename XMLParser::XSD::Container<T, U>::type& XMLParser::XSD::Container<T, U>::GetMap() const {
 		return mMap;
-	}
-
-	// ------------------------------------------------------------------------------------------------
-	template<typename T, typename U>
-	void XMLParser::XSD::Container<T, U>::Parser(const XMLParser* parser, T& params) {
-		parser->ParseElement(this, params);
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -313,13 +303,13 @@ namespace Assimp {
 	
 	// ------------------------------------------------------------------------------------------------
 	template<typename T, typename U>
-	void XMLParser::ParseElement(const XSD::Element<T>* schema, U& params) const {
-		(schema->GetParser())(this, params);
+	void XMLParser::ParseElement(const XSD::Element<T>& schema, U& params) const {
+		(schema.GetParser())(this, params);
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	template<typename T, typename U>
-	void XMLParser::ParseElement(const XSD::Choice<T>* schema, U& params) const {
+	void XMLParser::ParseElement(const XSD::Choice<T>& schema, U& params) const {
 		irr::io::EXML_NODE node_type;
 		std::string node_name;
 
@@ -329,7 +319,7 @@ namespace Assimp {
 			std::string name = mReader->getNodeName();
 
 			// Get a reference to the map
-			const typename XSD::Choice<T>::type& map = schema->GetMap();
+			const typename XSD::Choice<T>::type& map = schema.GetMap();
 
 			// Save the count for each type of element
 			std::map<std::string, unsigned int> check;
@@ -352,7 +342,7 @@ namespace Assimp {
 
 					// Is the element mapped?
 					if(it != map.end()) {
-						(it->second.GetParser())(this, params);
+						ParseElement(it->second, params);
 
 						SkipUntilEnd(it->first);
 
@@ -393,7 +383,7 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	template<typename T, typename U>
-	void XMLParser::ParseElement(const XSD::Sequence<T>* schema, U& params) const {
+	void XMLParser::ParseElement(const XSD::Sequence<T>& schema, U& params) const {
 		irr::io::EXML_NODE node_type;
 		std::string node_name;
 
@@ -403,7 +393,7 @@ namespace Assimp {
 			std::string name = mReader->getNodeName();
 			
 			// Get a reference to the map
-			const typename XSD::Sequence<T>::type& map = schema->GetMap();
+			const typename XSD::Sequence<T>::type& map = schema.GetMap();
 
 			// Save the count for each type of element
 			std::map<std::string, unsigned int> check;
@@ -431,7 +421,7 @@ namespace Assimp {
 					
 					// Is the element mapped?
 					if(it != map.end()) {
-						(it->second.GetParser())(this, params);
+						ParseElement(it->second, params);
 
 						SkipUntilEnd(it->first);
 

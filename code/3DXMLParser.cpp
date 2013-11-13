@@ -448,7 +448,7 @@ namespace Assimp {
 		while(! params.found && mReader->Next()) {
 			// handle the root element "Manifest"
 			if(mReader->IsElement("Manifest")) {
-				mReader->ParseElement(&mapping, params);
+				mReader->ParseElement(mapping, params);
 			} else {
 				mReader->SkipElement();
 			}
@@ -510,7 +510,7 @@ namespace Assimp {
 			DefaultLogger::get()->error("Parsing 2 \"" + mReader->GetNodeName() + "\" in \"" + mReader->GetFilename() + "\".");
 			if(mReader->IsElement("Model_3dxml")) {
 				DefaultLogger::get()->error("Parsing 3 \"Model_3dxml\" in \"" + mReader->GetFilename() + "\".");
-				mReader->ParseElement(&mapping, params);
+				mReader->ParseElement(mapping, params);
 			} else {
 				mReader->SkipElement();
 			}
@@ -552,7 +552,7 @@ namespace Assimp {
 
 		params.me = this;
 
-		mReader->ParseElement(&mapping, params);
+		mReader->ParseElement(mapping, params);
 	}
 	
 	// ------------------------------------------------------------------------------------------------
@@ -576,7 +576,7 @@ namespace Assimp {
 		params.name_opt = mReader->GetAttribute<std::string>("name");
 		unsigned int id = *(mReader->GetAttribute<unsigned int>("id", true));
 
-		mReader->ParseElement(&mapping, params);
+		mReader->ParseElement(mapping, params);
 
 		_3DXMLStructure::Reference3D& ref = mContent.references_node[_3DXMLStructure::ID(mReader->GetFilename(), id)]; // Create the Reference3D if not present.
 				
@@ -669,7 +669,7 @@ namespace Assimp {
 		params.name_opt = mReader->GetAttribute<std::string>("name");
 		params.instance.id = *(mReader->GetAttribute<unsigned int>("id", true));
 
-		mReader->ParseElement(&mapping, params);
+		mReader->ParseElement(mapping, params);
 
 		// Test if the name exist, otherwise use the id as name
 		std::string name;
@@ -729,7 +729,7 @@ namespace Assimp {
 		std::string file = *(mReader->GetAttribute<std::string>("associatedFile", true));
 		_3DXMLStructure::URI uri;
 
-		mReader->ParseElement(&mapping, params);
+		mReader->ParseElement(mapping, params);
 
 		// Parse the external URI to the file containing the representation
 		ParseURI(mReader.get(), file, uri);
@@ -841,7 +841,7 @@ namespace Assimp {
 		params.id = *(mReader->GetAttribute<unsigned int>("id", true));
 		params.mesh = nullptr;
 
-		mReader->ParseElement(&mapping, params);
+		mReader->ParseElement(mapping, params);
 
 		// Test if the name exist, otherwise use the id as name
 		if(params.name_opt) {
@@ -882,7 +882,7 @@ namespace Assimp {
 
 		params.me = this;
 
-		mReader->ParseElement(&mapping, params);
+		mReader->ParseElement(mapping, params);
 	}
 	
 	// ------------------------------------------------------------------------------------------------
@@ -906,7 +906,7 @@ namespace Assimp {
 		params.name_opt = mReader->GetAttribute<std::string>("name");
 		unsigned int id = *(mReader->GetAttribute<unsigned int>("id", true));
 
-		mReader->ParseElement(&mapping, params);
+		mReader->ParseElement(mapping, params);
 
 		_3DXMLStructure::CATMatReference& ref = mContent.references_mat[_3DXMLStructure::ID(mReader->GetFilename(), id)]; // Create the CATMaterialRef if not present.
 		
@@ -962,7 +962,7 @@ namespace Assimp {
 		std::string file = *(mReader->GetAttribute<std::string>("associatedFile", true));
 		_3DXMLStructure::URI uri;
 
-		mReader->ParseElement(&mapping, params);
+		mReader->ParseElement(mapping, params);
 
 		// Parse the external URI to the file containing the representation
 		ParseURI(mReader.get(), file, uri);
@@ -1062,7 +1062,7 @@ namespace Assimp {
 		params.id = *(mReader->GetAttribute<unsigned int>("id", true));
 		params.material = nullptr;
 
-		mReader->ParseElement(&mapping, params);
+		mReader->ParseElement(mapping, params);
 
 		// Test if the name exist, otherwise use the id as name
 		if(params.name_opt) {
@@ -1093,7 +1093,7 @@ namespace Assimp {
 
 		params.me = this;
 
-		mReader->ParseElement(&mapping, params);
+		mReader->ParseElement(mapping, params);
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -1141,7 +1141,7 @@ namespace Assimp {
 
 		params.me = this;
 
-		mReader->ParseElement(&mapping, params);
+		mReader->ParseElement(mapping, params);
 	}
 	
 	// ------------------------------------------------------------------------------------------------
@@ -1177,7 +1177,7 @@ namespace Assimp {
 					return std::move(map);
 				})(), 1, XMLParser::XSD::unbounded);
 
-				parser->ParseElement(&mapping, params);
+				parser->ParseElement(mapping, params);
 			}, 1, 1));
 
 			// TODO: V_Matrix_1 .. V_Matrix_12, content: float
@@ -1187,7 +1187,7 @@ namespace Assimp {
 
 		params.me = this;
 
-		mReader->ParseElement(&mapping, params);
+		mReader->ParseElement(mapping, params);
 	}
 
 } // Namespace Assimp

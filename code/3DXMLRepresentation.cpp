@@ -76,7 +76,7 @@ namespace Assimp {
 		// Parse the 3DRep file
 		while(mReader.Next()) {
 			if(mReader.IsElement("XMLRepresentation")) {
-				mReader.ParseElement(&mapping, params);
+				mReader.ParseElement(mapping, params);
 			} else {
 				mReader.SkipElement();
 			}
@@ -277,7 +277,7 @@ namespace Assimp {
 
 		params.me = this;
 
-		mReader.ParseElement(&mapping, params);
+		mReader.ParseElement(mapping, params);
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -315,7 +315,7 @@ namespace Assimp {
 
 		params.me = this;
 
-		mReader.ParseElement(&mapping, params);
+		mReader.ParseElement(mapping, params);
 
 		mCurrentSurface = old_surface;
 		mCurrentLine = old_line;
@@ -354,7 +354,7 @@ namespace Assimp {
 				
 				_3DXMLStructure::ReferenceRep::MatID old_surface = params.me->mCurrentSurface;
 
-				parser->ParseElement(&mapping, params);
+				parser->ParseElement(mapping, params);
 
 				std::list<std::vector<unsigned int>> data;
 
@@ -443,7 +443,7 @@ namespace Assimp {
 
 		params.me = this;
 
-		mReader.ParseElement(&mapping, params);
+		mReader.ParseElement(mapping, params);
 
 		mCurrentSurface = old_surface;
 	}
@@ -478,7 +478,7 @@ namespace Assimp {
 
 				_3DXMLStructure::ReferenceRep::MatID old_line = params.me->mCurrentLine;
 
-				parser->ParseElement(&mapping, params);
+				parser->ParseElement(mapping, params);
 
 				std::vector<aiVector3D> lines;
 				params.me->ParseArray(vertices, lines);
@@ -514,7 +514,7 @@ namespace Assimp {
 
 		params.me = this;
 
-		mReader.ParseElement(&mapping, params);
+		mReader.ParseElement(mapping, params);
 
 		mCurrentLine = old_line;
 	}
@@ -604,7 +604,7 @@ namespace Assimp {
 		params.me = this;
 		params.mesh = std::unique_ptr<aiMesh>(new aiMesh());
 
-		mReader.ParseElement(&mapping, params);
+		mReader.ParseElement(mapping, params);
 
 		if(params.mesh->Vertices.Size() == 0) {
 			ThrowException("The vertex buffer does not contain any vertex.");
@@ -691,7 +691,7 @@ namespace Assimp {
 
 			params.me = this;
 
-			mReader.ParseElement(&mapping, params);
+			mReader.ParseElement(mapping, params);
 		}
 	}
 
@@ -799,7 +799,7 @@ namespace Assimp {
 		params.me = this;
 		params.attributes = &(*mCurrentSurface);
 
-		mReader.ParseElement(&mapping, params);
+		mReader.ParseElement(mapping, params);
 
 		_3DXMLStructure::MaterialApplication& application = params.attributes->materials.back();
 
@@ -845,7 +845,7 @@ namespace Assimp {
 			params.me = this;
 			//TODO: support lineType & thickness?
 
-			mReader.ParseElement(&mapping, params);
+			mReader.ParseElement(mapping, params);
 		}
 	}
 
