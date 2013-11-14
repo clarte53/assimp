@@ -57,9 +57,6 @@ namespace Assimp {
 			/** The archive containing the 3DXML files */ 
 			std::shared_ptr<Q3BSP::Q3BSPZipArchive> mArchive;
 
-			/** Current xml reader */
-			std::unique_ptr<XMLParser> mReader;
-
 			/** Content of the 3DXML file */
 			_3DXMLStructure mContent;
 
@@ -79,39 +76,39 @@ namespace Assimp {
 		protected:
 			
 			/** Aborts the file reading with an exception */
-			void ThrowException(const std::string& error) const;
+			static void ThrowException(const XMLParser* parser, const std::string& error);
 
-			void BuildStructure(_3DXMLStructure::Reference3D& ref, aiNode* node) const;
+			void BuildStructure(const XMLParser* parser, _3DXMLStructure::Reference3D& ref, aiNode* node) const;
 
-			void ReadManifest(std::string& main_file);
+			void ReadManifest(const XMLParser* parser, std::string& main_file);
 
-			void ReadFile();
+			void ReadFile(const XMLParser* parser);
 
-			void ReadHeader();
+			void ReadHeader(const XMLParser* parser);
 
-			void ReadProductStructure();
+			void ReadProductStructure(const XMLParser* parser);
 
-			void ReadReference3D();
+			void ReadReference3D(const XMLParser* parser);
 
-			void ReadInstance3D();
+			void ReadInstance3D(const XMLParser* parser);
 
-			void ReadReferenceRep();
+			void ReadReferenceRep(const XMLParser* parser);
 
-			void ReadInstanceRep();
+			void ReadInstanceRep(const XMLParser* parser);
 
-			void ReadCATMaterialRef();
+			void ReadCATMaterialRef(const XMLParser* parser);
 
-			void ReadCATMatReference();
+			void ReadCATMatReference(const XMLParser* parser);
 
-			void ReadMaterialDomain();
+			void ReadMaterialDomain(const XMLParser* parser);
 
-			void ReadMaterialDomainInstance();
+			void ReadMaterialDomainInstance(const XMLParser* parser);
 			
-			void ReadCATMaterial();
+			void ReadCATMaterial(const XMLParser* parser);
 
-			void ReadCATMatConnection();
+			void ReadCATMatConnection(const XMLParser* parser);
 
-			void ReadPLMRelation();
+			void ReadPLMRelation(const XMLParser* parser);
 			
 	}; // end of class _3DXMLParser
 
