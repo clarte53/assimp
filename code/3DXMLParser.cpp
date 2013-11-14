@@ -282,6 +282,12 @@ namespace Assimp {
 
 						// Save the final material
 						material.reset(material_ptr);
+
+						// Cleaning up memory
+						for(std::vector<aiMaterial*>::iterator it(mat_list_final.begin()), end(mat_list_final.end()); it != end; ++it) {
+							delete *it;
+						}
+						mat_list_final.clear();
 					} catch(...) {
 						// Cleaning up memory
 						for(std::vector<aiMaterial*>::iterator it(mat_list_final.begin()), end(mat_list_final.end()); it != end; ++it) {
@@ -316,6 +322,86 @@ namespace Assimp {
 			// Save the material and index
 			mContent.scene->Materials.Set(index, material.release());
 			it_mat->second = index;
+		}
+
+		// Build the materials defined in the CATMaterial section
+		std::map<_3DXMLStructure::ID, unsigned int> mesh_con_indexes;
+		std::map<std::list<_3DXMLStructure::ID>, unsigned int, _3DXMLStructure::list_less<_3DXMLStructure::ID>> mat_con_indexes;
+		for(std::list<_3DXMLStructure::CATMatConnection>::const_iterator it_con(mContent.mat_connections.begin()), end_con(mContent.mat_connections.end()); it_con != end_con; ++it_con) {
+			std::unique_ptr<aiMaterial> material(nullptr);
+			std::vector<aiMaterial*> materials;
+
+			auto it_con_indexes = mat_con_indexes.find(it_con->materials);
+
+			// Is the material already processed?
+			if(it_con_indexes == mat_con_indexes.end()) {
+				// The pointers of materials are not protected, so we must use try/catch to deallocate memory in case of exceptions
+				try{
+					// Get all the materials referenced in the CATMatConnection
+					for(std::list<_3DXMLStructure::ID>::const_iterator it_mat(it_con->materials.begin()), end_mat(it_con->materials.end()); it_mat != end_mat; ++it_mat) {
+						std::map<_3DXMLStructure::ID, _3DXMLStructure::CATMatReference>::const_iterator it = mContent.references_mat.find(*it_mat);
+
+						if(it != mContent.references_mat.end()) {
+							aiMaterial* material_ptr = NULL;
+
+							// Copy the material
+							SceneCombiner::Copy(&material_ptr, it->second.merged_material.get());
+
+							// Save the new material
+							materials.emplace_back(material_ptr);
+
+							// Apply the channel to all the components of the material
+							for(unsigned int i = 0; i < material_ptr->mNumProperties; ++i) {
+								material_ptr->mProperties[i]->mIndex = it_con->channel;
+							}
+						} else {
+							ThrowException(parser, "Invalid CATMatConnection referencing unknown CATMatReference \"" + parser->ToString(it_mat->id) + "\".");
+						}
+					}
+
+					// Merge the different materials together
+					aiMaterial* material_ptr = NULL;
+					SceneCombiner::MergeMaterials(&material_ptr, materials.begin(), materials.end());
+
+					// Save the merged material
+					material.reset(material_ptr);
+
+					// Cleaning up memory
+					for(std::vector<aiMaterial*>::iterator it(materials.begin()), end(materials.end()); it != end; ++it) {
+						delete *it;
+					}
+					materials.clear();
+				} catch(...) {
+					// Cleaning up memory
+					for(std::vector<aiMaterial*>::iterator it(materials.begin()), end(materials.end()); it != end; ++it) {
+						delete *it;
+					}
+					materials.clear();
+
+					// Rethrow the exception
+					throw;
+				}
+
+				// Get the index for this material
+				unsigned int index = mContent.scene->Materials.Size();
+
+				// Save the material and index
+				mContent.scene->Materials.Set(index, material.release());
+				mat_con_indexes.emplace(it_con->materials, index);
+
+				// Save the index of the material for each referenced mesh
+				for(std::list<_3DXMLStructure::ID>::const_iterator it_ref(it_con->references.begin()), end_ref(it_con->references.end()); it_ref != end_ref; ++it_ref) {
+					std::map<_3DXMLStructure::ID, _3DXMLStructure::Reference3D>::const_iterator it_mesh = mContent.references_node.find(*it_ref);
+
+					if(it_mesh != mContent.references_node.end()) {
+						//TODO
+					} else {
+						ThrowException(parser, "Invalid CATMatConnection referencing unknown Reference3D \"" + parser->ToString(it_ref->id) + "\".");
+					}
+				}
+			}
+
+			//TODO
 		}
 
 		// Add the meshes into the scene

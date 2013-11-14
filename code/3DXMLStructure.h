@@ -58,7 +58,18 @@ namespace Assimp {
 	struct _3DXMLStructure : boost::noncopyable {
 
 		template<typename T>
-		static bool less(const std::list<T>& l1, const std::list<T>& l2);
+		struct list_less {
+
+				bool operator()(const std::list<T>& lhs, const std::list<T>& rhs) const;
+
+		}; // struct list_less
+
+		template<typename T>
+		struct shared_less {
+
+			bool operator()(const std::shared_ptr<T>& lhs, const std::shared_ptr<T>& rhs) const;
+
+		}; // struct shared_less
 
 		struct URI : public boost::noncopyable {
 
@@ -232,15 +243,6 @@ namespace Assimp {
 
 		struct ReferenceRep : public boost::noncopyable {
 
-			template<typename T>
-			struct shared_less {
-
-				bool operator()(const std::shared_ptr<T>& lhs, const std::shared_ptr<T>& rhs) const {
-					return (lhs && rhs ? (*lhs) < (*rhs) : (bool) rhs);
-				}
-
-			}; // struct shared_less
-
 			struct Mesh : public boost::noncopyable {
 
 				std::unique_ptr<aiMesh> mesh;
@@ -331,12 +333,12 @@ namespace Assimp {
 	}; // struct _3DXMLStructure
 
 	template<typename T>
-	bool _3DXMLStructure::less(const std::list<T>& l1, const std::list<T>& l2) {
+	bool _3DXMLStructure::list_less<T>::operator()(const std::list<T>& lhs, const std::list<T>& rhs) const {
 		bool less = false;
-		bool is_smaller = l1.size() < l2.size();
+		bool is_smaller = lhs.size() < rhs.size();
 
-		const std::list<T>& min = (is_smaller ? l1 : l2);
-		const std::list<T>& max = (is_smaller ? l2 : l1);
+		const std::list<T>& min = (is_smaller ? lhs : rhs);
+		const std::list<T>& max = (is_smaller ? rhs : lhs);
 
 		auto match = std::mismatch(min.begin(), min.end(), max.begin());
 
@@ -354,6 +356,11 @@ namespace Assimp {
 		}
 
 		return less;
+	}
+
+	template<typename T>
+	bool _3DXMLStructure::shared_less<T>::operator()(const std::shared_ptr<T>& lhs, const std::shared_ptr<T>& rhs) const {
+		return (lhs && rhs ? (*lhs) < (*rhs) : (bool) rhs);
 	}
 
 } // end of namespace Assimp
