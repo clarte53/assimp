@@ -82,8 +82,6 @@ namespace Assimp {
 				// Create a xml parser for the file
 				mReader.reset(new XMLParser(mArchive, *it));
 				
-				DefaultLogger::get()->error("Parsing 1 \"" + *it + "\" (" + mReader->GetFilename() + ").");
-
 				// Parse the 3DXML file
 				ReadFile();
 
@@ -507,9 +505,7 @@ namespace Assimp {
 
 		// Parse the main 3DXML file
 		while(mReader->Next()) {
-			DefaultLogger::get()->error("Parsing 2 \"" + mReader->GetNodeName() + "\" in \"" + mReader->GetFilename() + "\".");
 			if(mReader->IsElement("Model_3dxml")) {
-				DefaultLogger::get()->error("Parsing 3 \"Model_3dxml\" in \"" + mReader->GetFilename() + "\".");
 				mReader->ParseElement(mapping, params);
 			} else {
 				mReader->SkipElement();
