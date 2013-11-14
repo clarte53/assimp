@@ -90,6 +90,94 @@ namespace Assimp {
 			}
 		}
 
+		// Construct the materials & meshes from the parsed data
+		BuildResources(parser.get());
+
+		// Create the root node
+		BuildRoot(parser.get(), main_file);
+	}
+
+	_3DXMLParser::~_3DXMLParser() {
+
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	// Parse one uri and split it into it's different components
+	void _3DXMLParser::ParseURI(const XMLParser* parser, const std::string& uri, _3DXMLStructure::URI& result) {
+		static const unsigned int size_prefix = 10;
+
+		result.uri = uri;
+
+		if(uri.substr(0, size_prefix).compare("urn:3DXML:") == 0) {
+			result.external = true;
+
+			std::size_t begin = uri.find_last_of(':');
+			std::size_t end = uri.find_last_of('#');
+
+			if(begin == uri.npos) {
+				ThrowException(parser, "The URI \"" + uri + "\" has an invalid format.");
+			}
+
+			if(end != uri.npos) {
+				std::string id_str = uri.substr(end + 1, uri.npos);
+				unsigned int id;
+
+				ParseID(id_str, id);
+				result.id = Optional<unsigned int>(id);
+
+				result.filename = uri.substr(begin + 1, end - (begin + 1));
+			} else {
+				result.id = Optional<unsigned int>();
+				result.filename = uri.substr(begin + 1, uri.npos);
+			}
+		} else if((std::size_t) std::count_if(uri.begin(), uri.end(), ::isdigit) == uri.size()) {
+			unsigned int id;
+
+			ParseID(uri, id);
+
+			result.external = false;
+			result.id = Optional<unsigned int>(id);
+			result.filename = parser->GetFilename();
+		} else {
+			ThrowException(parser, "The URI \"" + uri + "\" has an invalid format.");
+		}
+
+		ParseExtension(result.filename, result.extension);
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	// Parse one the extension part of a filename
+	void _3DXMLParser::ParseExtension(const std::string& filename, std::string& extension) {
+		std::size_t pos = filename.find_last_of('.');
+
+		if(pos != filename.npos) {
+			extension = filename.substr(pos + 1, filename.npos);
+		} else {
+			extension = "";
+		}
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	// Parse one numerical id from a string
+	void _3DXMLParser::ParseID(const std::string& data, unsigned int& id) {
+		std::istringstream stream(data);
+
+		stream >> id;
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	// Aborts the file reading with an exception
+	void _3DXMLParser::ThrowException(const XMLParser* parser, const std::string& error) {
+		if(parser != nullptr) {
+			throw DeadlyImportError(boost::str(boost::format("3DXML: %s - %s") % parser->GetFilename() % error));
+		} else {
+			throw DeadlyImportError(boost::str(boost::format("3DXML: %s") % error));
+		}
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	// Construct the materials from the parsed data
+	void _3DXMLParser::BuildResources(const XMLParser* parser) {
 		// Merge all the materials composing a CATMatReference into a single material
 		for(std::map<_3DXMLStructure::ID, _3DXMLStructure::CATMatReference>::iterator it(mContent.references_mat.begin()), end(mContent.references_mat.end()); it != end; ++it) {
 			// Is the merged material already computed?
@@ -122,7 +210,7 @@ namespace Assimp {
 					}
 					material_ptr->AddProperty(&name, AI_MATKEY_NAME);
 				} else {
-					ThrowException(parser.get(), "In CATMatReference \"" + parser->ToString(it->second.id) + "\": invalid reference without any instance.");
+					ThrowException(parser, "In CATMatReference \"" + parser->ToString(it->second.id) + "\": invalid reference without any instance.");
 				}
 			}
 		}
@@ -150,13 +238,13 @@ namespace Assimp {
 					// For each application
 					for(std::list<_3DXMLStructure::MaterialApplication>::const_iterator it_app(it_mat->first->materials.begin()), end_app(it_mat->first->materials.end()); it_app != end_app; ++it_app) {						
 						// Find the corresponding CATMatReference which reference the material
-						std::map<_3DXMLStructure::ID, _3DXMLStructure::CATMatReference>::iterator it_mat_ref = mContent.references_mat.find(it_app->id);
+						std::map<_3DXMLStructure::ID, _3DXMLStructure::CATMatReference>::const_iterator it_mat_ref = mContent.references_mat.find(it_app->id);
 
 						// Found?
 						if(it_mat_ref != mContent.references_mat.end()) {
 							mat_list_app.emplace_back(std::make_pair(&(*it_app), it_mat_ref->second.merged_material.get()));
 						}  else {
-							ThrowException(parser.get(), "Invalid MaterialApplication referencing unknown CATMatReference \"" + parser->ToString(it_app->id.id) + "\".");
+							ThrowException(parser, "Invalid MaterialApplication referencing unknown CATMatReference \"" + parser->ToString(it_app->id.id) + "\".");
 						}
 					}
 
@@ -229,11 +317,11 @@ namespace Assimp {
 			mContent.scene->Materials.Set(index, material.release());
 			it_mat->second = index;
 		}
-			
+
 		// Add the meshes into the scene
 		for(std::map<_3DXMLStructure::ID, _3DXMLStructure::ReferenceRep>::iterator it_rep(mContent.representations.begin()), end_rep(mContent.representations.end()); it_rep != end_rep; ++it_rep) {
 			unsigned int index = mContent.scene->Meshes.Size();
-			
+
 			it_rep->second.index_begin = index;
 			it_rep->second.index_end = index;
 
@@ -247,18 +335,21 @@ namespace Assimp {
 				if(it_mat != attributes.end()) {
 					it_mesh->second.mesh->mMaterialIndex = it_mat->second;
 				} else {
-					ThrowException(parser.get(), "In Mesh \"" + it_rep->second.name + "\": no material defined.");
+					ThrowException(parser, "In Mesh \"" + it_rep->second.name + "\": no material defined.");
 				}
 
-				// Realease the ownership of the mesh to the protected scene
+				// Release the ownership of the mesh to the protected scene
 				mContent.scene->Meshes.Set(index++, it_mesh->second.mesh.release());
 
 				// Update the number of meshes in this ReferenceRep
 				it_rep->second.index_end++;
 			}
 		}
+	}
 
-		// Create the root node
+	// ------------------------------------------------------------------------------------------------
+	// Create the root node
+	void _3DXMLParser::BuildRoot(const XMLParser* parser, const std::string& main_file) {
 		if(mContent.ref_root_index) {
 			std::map<_3DXMLStructure::ID, _3DXMLStructure::Reference3D>::iterator it_root = mContent.references_node.find(_3DXMLStructure::ID(main_file, *(mContent.ref_root_index)));
 
@@ -270,100 +361,22 @@ namespace Assimp {
 					mContent.scene->mRootNode = new aiNode(root.name);
 
 					// Build the hierarchy recursively
-					BuildStructure(parser.get(), root, mContent.scene->mRootNode);
+					BuildStructure(parser, root, mContent.scene->mRootNode);
 				} else {
-					ThrowException(parser.get(), "The root Reference3D should not be instantiated.");
+					ThrowException(parser, "The root Reference3D should not be instantiated.");
 				}
 			} else {
-				ThrowException(parser.get(), "Unresolved root Reference3D \"" + parser->ToString(*(mContent.ref_root_index)) + "\".");
+				ThrowException(parser, "Unresolved root Reference3D \"" + parser->ToString(*(mContent.ref_root_index)) + "\".");
 			}
 		} else {
 			// TODO: no root node specifically named -> we must analyze the node structure to find the root or create an artificial root node
-			ThrowException(parser.get(), "No root Reference3D specified.");
-		}
-	}
-
-	_3DXMLParser::~_3DXMLParser() {
-
-	}
-	
-	// ------------------------------------------------------------------------------------------------
-	// Parse one uri and split it into it's different components
-	void _3DXMLParser::ParseURI(const XMLParser* parser, const std::string& uri, _3DXMLStructure::URI& result) {
-		static const unsigned int size_prefix = 10;
-
-		result.uri = uri;
-
-		if(uri.substr(0, size_prefix).compare("urn:3DXML:") == 0) {
-			result.external = true;
-
-			std::size_t begin = uri.find_last_of(':');
-			std::size_t end = uri.find_last_of('#');
-
-			if(begin == uri.npos) {
-				ThrowException(parser, "The URI \"" + uri + "\" has an invalid format.");
-			}
-
-			if(end != uri.npos) {
-				std::string id_str = uri.substr(end + 1, uri.npos);
-				unsigned int id;
-
-				ParseID(id_str, id);
-				result.id = Optional<unsigned int>(id);
-
-				result.filename = uri.substr(begin + 1, end - (begin + 1));
-			} else {
-				result.id = Optional<unsigned int>();
-				result.filename = uri.substr(begin + 1, uri.npos);
-			}
-		} else if((std::size_t) std::count_if(uri.begin(), uri.end(), ::isdigit) == uri.size()) {
-			unsigned int id;
-
-			ParseID(uri, id);
-
-			result.external = false;
-			result.id = Optional<unsigned int>(id);
-			result.filename = parser->GetFilename();
-		} else {
-			ThrowException(parser, "The URI \"" + uri + "\" has an invalid format.");
-		}
-
-		ParseExtension(result.filename, result.extension);
-	}
-
-	// ------------------------------------------------------------------------------------------------
-	// Parse one the extension part of a filename
-	void _3DXMLParser::ParseExtension(const std::string& filename, std::string& extension) {
-		std::size_t pos = filename.find_last_of('.');
-
-		if(pos != filename.npos) {
-			extension = filename.substr(pos + 1, filename.npos);
-		} else {
-			extension = "";
-		}
-	}
-
-	// ------------------------------------------------------------------------------------------------
-	// Parse one numerical id from a string
-	void _3DXMLParser::ParseID(const std::string& data, unsigned int& id) {
-		std::istringstream stream(data);
-
-		stream >> id;
-	}
-	
-	// ------------------------------------------------------------------------------------------------
-	// Aborts the file reading with an exception
-	void _3DXMLParser::ThrowException(const XMLParser* parser, const std::string& error) {
-		if(parser != nullptr) {
-			throw DeadlyImportError(boost::str(boost::format("3DXML: %s - %s") % parser->GetFilename() % error));
-		} else {
-			throw DeadlyImportError(boost::str(boost::format("3DXML: %s") % error));
+			ThrowException(parser, "No root Reference3D specified.");
 		}
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	// Add the meshes indices and children nodes into the given node recursively
-	void _3DXMLParser::BuildStructure(const XMLParser* parser, _3DXMLStructure::Reference3D& ref, aiNode* node) const {
+	void _3DXMLParser::BuildStructure(const XMLParser* parser, _3DXMLStructure::Reference3D& ref, aiNode* node) {
 		// Decrement the counter of instances to this Reference3D (used for memory managment)
 		if(ref.nb_references > 0) {
 			ref.nb_references--;
