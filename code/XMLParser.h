@@ -323,13 +323,12 @@ namespace Assimp {
 
 			// Save the count for each type of element
 			std::map<std::string, unsigned int> check;
+			unsigned int total_check = 0;
 
 			// Initialize all the counters to 0
 			for(typename XSD::Choice<T>::type::const_iterator it(map.begin()), end(map.end()); it != end; ++it) {
 				check[it->first] = 0;
 			}
-
-			typename XSD::Choice<T>::type::const_iterator position = map.begin();
 
 			while(mReader->read()) {
 				node_type = mReader->getNodeType();
@@ -348,9 +347,7 @@ namespace Assimp {
 
 						// Increment the counter for this type of element
 						(check[it->first])++;
-
-						// Save the new position in the map
-						position = it;
+						total_check++;
 					} else {
 						// Ignore elements that are not mapped
 						SkipElement();
@@ -359,11 +356,17 @@ namespace Assimp {
 					}
 				} else if(node_type == irr::io::EXN_ELEMENT_END) {
 					if(name.compare(node_name) == 0) {
-						// check if the minOccurs & maxOccurs conditions where satisfied
+						// Check if the minOccurs & maxOccurs conditions where satisfied for the choice
+						if(total_check < schema.GetMin()) {
+							ThrowException("The element \"" + name + "\" does not contain enough sub elements (" + ToString(total_check) + " elements instead of min. " + ToString(schema.GetMin()) + ") to validate the schema.");
+						} else if(total_check > schema.GetMax()) {
+							ThrowException("The element \"" + name + "\" contains too many sub elements (" + ToString(total_check) + " elements instead of max. " + ToString(schema.GetMax()) + ") to validate the schema.");
+						}
+
+						// Check if the minOccurs & maxOccurs conditions where satisfied for each sub elements
 						for(typename XSD::Choice<T>::type::const_iterator it(map.begin()), end(map.end()); it != end; ++it) {
 							unsigned int occurs = check[it->first];
 
-							//TODO: FIXME
 							if(occurs < it->second.GetMin()) {
 								ThrowException("The element \"" + it->first + "\" is not present enough times (" + ToString(occurs) + " times instead of min. " + ToString(it->second.GetMin()) + ") in element \"" + name + "\" to validate the schema.");
 							} else if(occurs > it->second.GetMax()) {
@@ -397,6 +400,7 @@ namespace Assimp {
 
 			// Save the count for each type of element
 			std::map<std::string, unsigned int> check;
+			unsigned int total_check = 1;
 
 			// Initialize all the counters to 0
 			for(typename XSD::Sequence<T>::type::const_iterator it(map.begin()), end(map.end()); it != end; ++it) {
@@ -413,20 +417,53 @@ namespace Assimp {
 				if(node_type == irr::io::EXN_ELEMENT) {
 					// Get the position of the current element
 					typename XSD::Sequence<T>::type::const_iterator it = position;
+					bool looped = false;
+					bool found = false;
 
 					// Move to the position of the current element in the sequence
-					while(it != map.end() && it->first.compare(node_name) != 0) {
-						++it;
-					}
-					
-					// Is the element mapped?
-					if(it != map.end()) {
-						ParseElement(it->second, params);
+					do {
+						if(it->first.compare(node_name) == 0) {
+							position = it;
+							found = true;
+						}
 
-						SkipUntilEnd(it->first);
+						++it;
+
+						if(it == map.end()) {
+							it = map.begin();
+
+							if(! found) {
+								looped = true;
+							}
+						}
+					} while(! found && it != position);
+
+					// Is the element mapped?
+					if(found) {
+						ParseElement(position->second, params);
+
+						SkipUntilEnd(position->first);
 
 						// Increment the counter for this type of element
-						(check[it->first])++;
+						(check[position->first])++;
+						if(looped) {
+							// Update the global counter for this sequence
+							total_check++;
+
+							// Check if the minOccurs & maxOccurs conditions where satisfied for each sub elements for this iteration of the sequence
+							for(typename XSD::Sequence<T>::type::const_iterator it(map.begin()), end(map.end()); it != end; ++it) {
+								unsigned int occurs = check[it->first];
+
+								if(occurs < it->second.GetMin()) {
+									ThrowException("The element \"" + it->first + "\" is not present enough times (" + ToString(occurs) + " times instead of min. " + ToString(it->second.GetMin()) + ") in element \"" + name + "\" to validate the schema.");
+								} else if(occurs > it->second.GetMax()) {
+									ThrowException("The element \"" + it->first + "\" is present too many times (" + ToString(occurs) + " times instead of max. " + ToString(it->second.GetMax()) + ") in element \"" + name + "\" to validate the schema.");
+								}
+
+								// Reset the counters for each element
+								check[it->first] = 0;
+							}
+						}
 
 						// Save the new position in the map
 						position = it;
@@ -438,16 +475,11 @@ namespace Assimp {
 					}
 				} else if(node_type == irr::io::EXN_ELEMENT_END) {
 					if(name.compare(node_name) == 0) {
-						// check if the minOccurs & maxOccurs conditions where satisfied
-						for(typename XSD::Sequence<T>::type::const_iterator it(map.begin()), end(map.end()); it != end; ++it) {
-							unsigned int occurs = check[it->first];
-
-							//TODO: FIXME
-							if(occurs < it->second.GetMin()) {
-								ThrowException("The element \"" + it->first + "\" is not present enough times (" + ToString(occurs) + " times instead of min. " + ToString(it->second.GetMin()) + ") in element \"" + name + "\" to validate the schema.");
-							} else if(occurs > it->second.GetMax()) {
-								ThrowException("The element \"" + it->first + "\" is present too many times (" + ToString(occurs) + " times instead of max. " + ToString(it->second.GetMax()) + ") in element \"" + name + "\" to validate the schema.");
-							}
+						// Check if the minOccurs & maxOccurs conditions where satisfied for the sequence
+						if(total_check < schema.GetMin()) {
+							ThrowException("The sequence \"" + name + "\" is not repeated enough times (" + ToString(total_check) + " times instead of min. " + ToString(schema.GetMin()) + ") to validate the schema.");
+						} else if(total_check > schema.GetMax()) {
+							ThrowException("The sequence \"" + name + "\" is repeated too many times (" + ToString(total_check) + " times instead of max. " + ToString(schema.GetMax()) + ") to validate the schema.");
 						}
 
 						// Ok, we can stop the loop
