@@ -425,14 +425,12 @@ namespace Assimp {
 						if(it->first.compare(node_name) == 0) {
 							position = it;
 							found = true;
-						}
+						} else {
+							++it;
 
-						++it;
+							if(it == map.end()) {
+								it = map.begin();
 
-						if(it == map.end()) {
-							it = map.begin();
-
-							if(! found) {
 								looped = true;
 							}
 						}
