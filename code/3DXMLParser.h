@@ -108,8 +108,6 @@ namespace Assimp {
 
 			void ReadCATMatConnection(const XMLParser* parser);
 
-			void ReadPLMRelation(const XMLParser* parser);
-			
 	}; // end of class _3DXMLParser
 
 } // end of namespace Assimp

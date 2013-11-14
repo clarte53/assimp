@@ -352,7 +352,7 @@ namespace Assimp {
 						// Ignore elements that are not mapped
 						SkipElement();
 
-						DefaultLogger::get()->warn("Skipping parsing of element \"" + node_name + "\".");
+						//DefaultLogger::get()->warn("Skipping parsing of element \"" + node_name + "\".");
 					}
 				} else if(node_type == irr::io::EXN_ELEMENT_END) {
 					if(name.compare(node_name) == 0) {
@@ -469,7 +469,7 @@ namespace Assimp {
 						// Ignore elements that are not mapped
 						SkipElement();
 						
-						DefaultLogger::get()->warn("Skipping parsing of element \"" + node_name + "\".");
+						//DefaultLogger::get()->warn("Skipping parsing of element \"" + node_name + "\".");
 					}
 				} else if(node_type == irr::io::EXN_ELEMENT_END) {
 					if(name.compare(node_name) == 0) {

@@ -519,8 +519,29 @@ namespace Assimp {
 	
 	// ------------------------------------------------------------------------------------------------
 	// Read the header section
-	void _3DXMLParser::ReadHeader(const XMLParser* /*parser*/) {
-		// Nothing to do (who cares about header information anyway)
+	void _3DXMLParser::ReadHeader(const XMLParser* parser) {
+		struct Params {
+			_3DXMLParser* me;
+		} params;
+
+		static const XMLParser::XSD::Choice<Params> mapping(([](){
+			XMLParser::XSD::Choice<Params>::type map;
+
+			// Parse SchemaVersion element
+			map.emplace("SchemaVersion", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
+				float version = *(parser->GetContent<float>(true));
+
+				if(version < 4.0) {
+					params.me->ThrowException(parser, "Unsupported version of 3DXML. Supported versions are 4.0 and later.");
+				}
+			}, 1, 1));
+
+			return std::move(map);
+		})(), 1, 1);
+
+		params.me = this;
+
+		parser->ParseElement(mapping, params);
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -1099,36 +1120,118 @@ namespace Assimp {
 	// ------------------------------------------------------------------------------------------------
 	// Read the CATMatConnection section
 	void _3DXMLParser::ReadCATMatConnection(const XMLParser* parser) {
+		enum Role {TOREFERENCE, MADEOF, DRESSBY};
+
 		struct Params {
 			_3DXMLParser* me;
+			//Optional<std::string> name_opt;
+			std::map<Role, std::list<_3DXMLStructure::URI>> relations;
+			Role current_role;
+			Role applied_role;
+			unsigned int layer;
+			unsigned int id;
 		} params;
 
 		static const XMLParser::XSD::Sequence<Params> mapping(([](){
 			XMLParser::XSD::Sequence<Params>::type map;
 			
 			// Parse PLM_ExternalID element
-			map.emplace_back("PLM_ExternalID", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
-				//TODO: content: string
-			}, 0, 1));
+			//map.emplace_back("PLM_ExternalID", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
+				// We actually don't care about the name of this CATMatConnection
+			//	params.name_opt = parser->GetContent<std::string>(true);
+			//}, 0, 1));
 			
 			// Parse IsAggregatedBy element
-			map.emplace_back("IsAggregatedBy", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
-				//TODO: content: indexLinkType (id in same file -> unsigned int)
-			}, 1, 1));
+			//map.emplace_back("IsAggregatedBy", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
+				// We also don't care about who aggregate this CATMatConnection
+			//	unsigned int aggregated_by = *(parser->GetContent<unsigned int>(true));
+			//}, 1, 1));
 			
 			// Parse PLMRelation element
 			map.emplace_back("PLMRelation", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
-				//TODO: content: PLMRelationType
+				static const XMLParser::XSD::Sequence<Params> mapping(([](){
+					XMLParser::XSD::Sequence<Params>::type map;
+
+					// Parse C_Semantics element
+					map.emplace_back("C_Semantics", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
+						std::string semantic = *(parser->GetContent<std::string>(true));
+
+						if(semantic.compare("Reference") != 0) {
+							params.me->ThrowException(parser, "In PLMRelation of CATMatConnection \"" + parser->ToString(params.id) + "\": unknown semantic type \"" + semantic + "\".");
+						}
+					}, 1, 1));
+
+					// Parse C_Role element
+					map.emplace_back("C_Role", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
+						static const std::map<std::string, Role> mapping(([](){
+							std::map<std::string, Role> map;
+
+							map.emplace("CATMaterialToReferenceLink", TOREFERENCE);
+							map.emplace("CATMaterialMadeOfLink", MADEOF);
+							map.emplace("CATMaterialDressByLink", DRESSBY);
+
+							return std::move(map);
+						})());
+
+						std::string role = *(parser->GetContent<std::string>(true));
+
+						std::map<std::string, Role>::const_iterator it = mapping.find(role);
+
+						if(it != mapping.end()) {
+							params.current_role = it->second;
+						} else {
+							params.me->ThrowException(parser, "In PLMRelation of CATMatConnection \"" + parser->ToString(params.id) + "\": unknown role type \"" + role + "\".");
+						}
+					}, 1, 1));
+
+					// Parse Ids element
+					map.emplace_back("Ids", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
+						static const XMLParser::XSD::Sequence<Params> mapping(([](){
+							XMLParser::XSD::Sequence<Params>::type map;
+
+							// Parse id element
+							map.emplace_back("id", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
+								std::string id = *(parser->GetContent<std::string>(true));
+
+								std::list<_3DXMLStructure::URI>& ids = params.relations[params.current_role];
+
+								ids.emplace_back();
+
+								ParseURI(parser, id, ids.back());
+							}, 1, 1));
+
+							return std::move(map);
+						})(), 1, XMLParser::XSD::unbounded);
+
+						parser->ParseElement(mapping, params);
+					}, 1, 1));
+
+					return std::move(map);
+				})(), 1, 1);
+
+				parser->ParseElement(mapping, params);
 			}, 1, XMLParser::XSD::unbounded));
 			
 			// Parse V_Layer element
 			map.emplace_back("V_Layer", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
-				//TODO: content: unsigned int
+				params.layer = *(parser->GetContent<unsigned int>(true)) - 1;
 			}, 1, 1));
 			
 			// Parse V_Applied element
 			map.emplace_back("V_Applied", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
-				//TODO: content: unsigned int
+				// 1: MadeOf, 2: DressBy
+				unsigned int applied = *(parser->GetContent<unsigned int>(true));
+
+				switch(applied) {
+					case 1:
+						params.applied_role = MADEOF;
+						break;
+					case 2:
+						params.applied_role = DRESSBY;
+						break;
+					default:
+						params.me->ThrowException(parser, "In CATMatConnection \"" + parser->ToString(params.id) + "\": invalid applied type \"" + parser->ToString(applied) + "\".");
+				}
 			}, 1, 1));
 
 			// TODO: V_Matrix_1 .. V_Matrix_12, content: float
@@ -1136,58 +1239,14 @@ namespace Assimp {
 			return std::move(map);
 		})(), 1, 1);
 
-		//TODO: attribute id, content unsigned int
-		//TODO: attribute name, content string (optional)
+		//params.name_opt = parser->GetAttribute<std::string>("name");
+		params.id = *(parser->GetAttribute<unsigned int>("id", true));
 
 		params.me = this;
 
 		parser->ParseElement(mapping, params);
-	}
-	
-	// ------------------------------------------------------------------------------------------------
-	// Read the PLMRelation section
-	void _3DXMLParser::ReadPLMRelation(const XMLParser* parser) {
-		struct Params {
-			_3DXMLParser* me;
-		} params;
 
-		static const XMLParser::XSD::Sequence<Params> mapping(([](){
-			XMLParser::XSD::Sequence<Params>::type map;
-			
-			// Parse C_Semantics element
-			map.emplace_back("C_Semantics", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
-				//TODO: content: string
-			}, 1, 1));
-			
-			// Parse C_Role element
-			map.emplace_back("C_Role", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
-				//TODO: content: string
-			}, 1, 1));
-			
-			// Parse Ids element
-			map.emplace_back("Ids", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
-				static const XMLParser::XSD::Sequence<Params> mapping(([](){
-					XMLParser::XSD::Sequence<Params>::type map;
-			
-					// Parse C_Semantics element
-					map.emplace_back("C_Semantics", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
-						//TODO: content: string
-					}, 1, 1));
-
-					return std::move(map);
-				})(), 1, XMLParser::XSD::unbounded);
-
-				parser->ParseElement(mapping, params);
-			}, 1, 1));
-
-			// TODO: V_Matrix_1 .. V_Matrix_12, content: float
-
-			return std::move(map);
-		})(), 1, 1);
-
-		params.me = this;
-
-		parser->ParseElement(mapping, params);
+		//TODO
 	}
 
 } // Namespace Assimp
