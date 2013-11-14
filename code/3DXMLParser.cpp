@@ -1125,10 +1125,8 @@ namespace Assimp {
 		struct Params {
 			_3DXMLParser* me;
 			//Optional<std::string> name_opt;
-			std::map<Role, std::list<_3DXMLStructure::URI>> relations;
+			_3DXMLStructure::CATMatConnection* connection;
 			Role current_role;
-			Role applied_role;
-			unsigned int layer;
 			unsigned int id;
 		} params;
 
@@ -1193,11 +1191,24 @@ namespace Assimp {
 							map.emplace_back("id", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
 								std::string id = *(parser->GetContent<std::string>(true));
 
-								std::list<_3DXMLStructure::URI>& ids = params.relations[params.current_role];
+								_3DXMLStructure::URI uri;
+								ParseURI(parser, id, uri);
 
-								ids.emplace_back();
+								if(! uri.id) {
+									params.me->ThrowException(parser, "In PLMRelation of CATMatConnection \"" + parser->ToString(params.id) + "\": the reference \"" + id + "\" has no id.");
+								}
 
-								ParseURI(parser, id, ids.back());
+								switch(params.current_role) {
+									case TOREFERENCE:
+										params.connection->references.emplace_back(uri.filename, *(uri.id));
+										break;
+									case MADEOF:
+									case DRESSBY:
+										params.connection->materials.emplace_back(uri.filename, *(uri.id));
+										break;
+									default:
+										params.me->ThrowException(parser, "In PLMRelation of CATMatConnection \"" + parser->ToString(params.id) + "\": invalid current role.");
+								}
 							}, 1, 1));
 
 							return std::move(map);
@@ -1214,39 +1225,40 @@ namespace Assimp {
 			
 			// Parse V_Layer element
 			map.emplace_back("V_Layer", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
-				params.layer = *(parser->GetContent<unsigned int>(true)) - 1;
+				params.connection->channel = *(parser->GetContent<unsigned int>(true)) - 1;
 			}, 1, 1));
 			
 			// Parse V_Applied element
-			map.emplace_back("V_Applied", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
+			/*map.emplace_back("V_Applied", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
 				// 1: MadeOf, 2: DressBy
 				unsigned int applied = *(parser->GetContent<unsigned int>(true));
 
+				Role applied_role;
 				switch(applied) {
 					case 1:
-						params.applied_role = MADEOF;
+						applied_role = MADEOF;
 						break;
 					case 2:
-						params.applied_role = DRESSBY;
+						applied_role = DRESSBY;
 						break;
 					default:
 						params.me->ThrowException(parser, "In CATMatConnection \"" + parser->ToString(params.id) + "\": invalid applied type \"" + parser->ToString(applied) + "\".");
 				}
-			}, 1, 1));
+			}, 1, 1));*/
 
 			// TODO: V_Matrix_1 .. V_Matrix_12, content: float
 
 			return std::move(map);
 		})(), 1, 1);
 
-		//params.name_opt = parser->GetAttribute<std::string>("name");
-		params.id = *(parser->GetAttribute<unsigned int>("id", true));
+		mContent.mat_connections.emplace_back();
 
 		params.me = this;
+		//params.name_opt = parser->GetAttribute<std::string>("name");
+		params.connection = &(mContent.mat_connections.back());
+		params.id = *(parser->GetAttribute<unsigned int>("id", true));
 
 		parser->ParseElement(mapping, params);
-
-		//TODO
 	}
 
 } // Namespace Assimp

@@ -197,12 +197,12 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::CATMatConnection::CATMatConnection(const ID& ref, const ID& mat) : reference(ref), material(mat) {
+	_3DXMLStructure::CATMatConnection::CATMatConnection() : channel(0), references(), materials() {
 
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::CATMatConnection::CATMatConnection(CATMatConnection&& other) : reference(std::move(other.reference)), material(std::move(other.material )) {
+	_3DXMLStructure::CATMatConnection::CATMatConnection(CATMatConnection&& other) : channel(other.channel), references(std::move(other.references)), materials(std::move(other.materials)) {
 
 	}
 
@@ -258,12 +258,12 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::_3DXMLStructure(aiScene* _scene) : scene(_scene), ref_root_index(), mat_root_index(), references_node(), references_mat(), representations(), materials(), files_to_parse() {
+	_3DXMLStructure::_3DXMLStructure(aiScene* _scene) : scene(_scene), ref_root_index(), mat_root_index(), references_node(), references_mat(), representations(), materials(), mat_connections(), files_to_parse() {
 	
 	}
 	
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::_3DXMLStructure(_3DXMLStructure&& other) : scene(other.scene), ref_root_index(std::move(other.ref_root_index)), mat_root_index(std::move(other.mat_root_index)), references_node(std::move(other.references_node)), references_mat(std::move(other.references_mat)), representations(std::move(other.representations)), materials(std::move(other.materials)), files_to_parse(std::move(other.files_to_parse)) {
+	_3DXMLStructure::_3DXMLStructure(_3DXMLStructure&& other) : scene(other.scene), ref_root_index(std::move(other.ref_root_index)), mat_root_index(std::move(other.mat_root_index)), references_node(std::move(other.references_node)), references_mat(std::move(other.references_mat)), representations(std::move(other.representations)), materials(std::move(other.materials)), mat_connections(std::move(other.mat_connections)), files_to_parse(std::move(other.files_to_parse)) {
 		other.scene = nullptr;
 	}
 

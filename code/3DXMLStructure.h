@@ -194,11 +194,13 @@ namespace Assimp {
 
 		struct CATMatConnection : public boost::noncopyable {
 
-			ID reference;
+			unsigned int channel;
 
-			ID material;
+			std::list<ID> references;
 
-			CATMatConnection(const ID& ref, const ID& mat);
+			std::list<ID> materials;
+
+			CATMatConnection();
 
 			CATMatConnection(CATMatConnection&& other);
 
@@ -317,6 +319,8 @@ namespace Assimp {
 		std::map<ID, ReferenceRep> representations;
 
 		std::map<ID, MaterialDomain> materials;
+
+		std::list<CATMatConnection> mat_connections;
 
 		std::set<std::string> files_to_parse;
 
