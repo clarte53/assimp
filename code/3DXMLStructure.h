@@ -266,9 +266,11 @@ namespace Assimp {
 					
 			std::string name;
 
-			Meshes meshes;
+			unsigned int nb_references;
 
 			std::map<unsigned int, std::list<unsigned int>> indexes;
+
+			Meshes meshes;
 
 			ReferenceRep();
 
