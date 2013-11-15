@@ -145,6 +145,8 @@ namespace Assimp {
 
 			std::list<MaterialApplication> materials;
 
+			unsigned int index;
+
 			MaterialAttributes();
 
 			MaterialAttributes(MaterialAttributes&& other);
@@ -268,9 +270,7 @@ namespace Assimp {
 
 			Meshes meshes;
 
-			unsigned int index_begin;
-
-			unsigned int index_end;
+			std::map<unsigned int, std::list<unsigned int>> indexes;
 
 			ReferenceRep();
 

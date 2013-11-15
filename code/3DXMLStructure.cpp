@@ -150,12 +150,12 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::MaterialAttributes::MaterialAttributes() : color(), materials() {
+	_3DXMLStructure::MaterialAttributes::MaterialAttributes() : color(), materials(), index(0) {
 	
 	}
 	
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::MaterialAttributes::MaterialAttributes(MaterialAttributes&& other) : color(other.color), materials(std::move(other.materials)) {
+	_3DXMLStructure::MaterialAttributes::MaterialAttributes(MaterialAttributes&& other) : color(other.color), materials(std::move(other.materials)), index(other.index) {
 	
 	}
 	
@@ -227,12 +227,12 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::ReferenceRep::ReferenceRep() : id(0), has_name(false), name(""), meshes(), index_begin(0), index_end(0) {
+	_3DXMLStructure::ReferenceRep::ReferenceRep() : id(0), has_name(false), name(""), meshes(), indexes() {
 	
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::ReferenceRep::ReferenceRep(ReferenceRep&& other) : id(other.id), has_name(other.has_name), name(std::move(other.name)), meshes(std::move(other.meshes)), index_begin(other.index_begin), index_end(other.index_end) {
+	_3DXMLStructure::ReferenceRep::ReferenceRep(ReferenceRep&& other) : id(other.id), has_name(other.has_name), name(std::move(other.name)), meshes(std::move(other.meshes)), indexes(std::move(other.indexes)) {
 
 	}
 

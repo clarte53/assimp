@@ -216,27 +216,27 @@ namespace Assimp {
 		}
 
 		// Get all the MaterialAttributes of the scene
-		std::map<_3DXMLStructure::ReferenceRep::MatID, unsigned int> attributes;
+		std::set<_3DXMLStructure::ReferenceRep::MatID, _3DXMLStructure::shared_less<_3DXMLStructure::MaterialAttributes>> attributes;
 		for(std::map<_3DXMLStructure::ID, _3DXMLStructure::ReferenceRep>::const_iterator it_rep(mContent.representations.begin()), end_rep(mContent.representations.end()); it_rep != end_rep; ++it_rep) {
 			for(_3DXMLStructure::ReferenceRep::Meshes::const_iterator it_mesh(it_rep->second.meshes.begin()), end_mesh(it_rep->second.meshes.end()); it_mesh != end_mesh; ++it_mesh) {
-				attributes.emplace(it_mesh->first, 0); // No need to check the output, we don't care if the element is inserted or is already present
+				attributes.insert(it_mesh->first); // No need to check the output, we don't care if the element is inserted or is already present
 			}
 		}
 
 		// Generate the final materials of the scene and store their indices
-		for(std::map<_3DXMLStructure::ReferenceRep::MatID, unsigned int>::iterator it_mat(attributes.begin()), end_mat(attributes.end()); it_mat != end_mat; ++ it_mat) {
+		for(std::set<_3DXMLStructure::ReferenceRep::MatID>::iterator it_mat(attributes.begin()), end_mat(attributes.end()); it_mat != end_mat; ++ it_mat) {
 			// The final material
 			std::unique_ptr<aiMaterial> material(nullptr);
 			
 			// If the material ID is defined (ie not the default material)
-			if(it_mat->first) {
+			if(*it_mat) {
 				// If the material ID contains some MaterialApplications (ie it is not just a simple color) 
-				if(! it_mat->first->materials.empty()) {
+				if(! (*it_mat)->materials.empty()) {
 					// List of the materials corresponding to the different applications
 					std::vector<std::pair<const _3DXMLStructure::MaterialApplication*, aiMaterial*>> mat_list_app;
 
 					// For each application
-					for(std::list<_3DXMLStructure::MaterialApplication>::const_iterator it_app(it_mat->first->materials.begin()), end_app(it_mat->first->materials.end()); it_app != end_app; ++it_app) {						
+					for(std::list<_3DXMLStructure::MaterialApplication>::const_iterator it_app((*it_mat)->materials.begin()), end_app((*it_mat)->materials.end()); it_app != end_app; ++it_app) {
 						// Find the corresponding CATMatReference which reference the material
 						std::map<_3DXMLStructure::ID, _3DXMLStructure::CATMatReference>::const_iterator it_mat_ref = mContent.references_mat.find(it_app->id);
 
@@ -301,11 +301,11 @@ namespace Assimp {
 				} else { // It must be a simple color material
 					material.reset(new aiMaterial());
 
-					material->AddProperty(&(it_mat->first->color), 1, AI_MATKEY_COLOR_DIFFUSE);
+					material->AddProperty(&((*it_mat)->color), 1, AI_MATKEY_COLOR_DIFFUSE);
 
-					if(it_mat->first->color.a != 1.0) {
+					if((*it_mat)->color.a != 1.0) {
 						// Also add transparency
-						material->AddProperty(&(it_mat->first->color.a), 1, AI_MATKEY_OPACITY);
+						material->AddProperty(&((*it_mat)->color.a), 1, AI_MATKEY_OPACITY);
 					}
 				}
 			} else {
@@ -321,7 +321,12 @@ namespace Assimp {
 
 			// Save the material and index
 			mContent.scene->Materials.Set(index, material.release());
-			it_mat->second = index;
+			
+			if(*it_mat) {
+				(*it_mat)->index = index;
+			} else if(index != 0) {
+				ThrowException(parser, "The default material should have index 0 instead of \"" + parser->ToString(index) + "\".");
+			}
 		}
 
 		// Build the materials defined in the CATMaterial section
@@ -409,9 +414,6 @@ namespace Assimp {
 		for(std::map<_3DXMLStructure::ID, _3DXMLStructure::ReferenceRep>::iterator it_rep(mContent.representations.begin()), end_rep(mContent.representations.end()); it_rep != end_rep; ++it_rep) {
 			unsigned int index = mContent.scene->Meshes.Size();
 
-			it_rep->second.index_begin = index;
-			it_rep->second.index_end = index; // incremented each time a mesh is added
-
 			for(_3DXMLStructure::ReferenceRep::Meshes::iterator it_mesh(it_rep->second.meshes.begin()), end_mesh(it_rep->second.meshes.end()); it_mesh != end_mesh; ++it_mesh) {
 				// Set the names of the parsed meshes with this ReferenceRep name
 				it_mesh->second.mesh->mName = it_rep->second.name;
@@ -419,19 +421,19 @@ namespace Assimp {
 				//TODO: use index from CATMatConnection if defined and default to the other method otherwise
 
 				// Set the index of the used material
-				std::map<_3DXMLStructure::ReferenceRep::MatID, unsigned int>::iterator it_mat = attributes.find(it_mesh->first);
+				std::set<_3DXMLStructure::ReferenceRep::MatID>::iterator it_mat = attributes.find(it_mesh->first);
 
 				if(it_mat != attributes.end()) {
-					it_mesh->second.mesh->mMaterialIndex = it_mat->second;
+					it_mesh->second.mesh->mMaterialIndex = (*it_mat ? (*it_mat)->index : 0);
+
+					// Save the index of the mesh depending for the special material index corresponding to mixed materials defined at the mesh level
+					it_rep->second.indexes[std::numeric_limits<unsigned int>::max()].push_back(index);
+
+					// Release the ownership of the mesh to the protected scene
+					mContent.scene->Meshes.Set(index++, it_mesh->second.mesh.release());
 				} else {
 					ThrowException(parser, "In Mesh \"" + it_rep->second.name + "\": no material defined.");
 				}
-
-				// Release the ownership of the mesh to the protected scene
-				mContent.scene->Meshes.Set(index++, it_mesh->second.mesh.release());
-
-				// Update the number of meshes in this ReferenceRep
-				it_rep->second.index_end++;
 			}
 		}
 	}
@@ -478,8 +480,12 @@ namespace Assimp {
 					const _3DXMLStructure::InstanceRep& rep = it_mesh->second;
 
 					if(rep.instance_of != nullptr) {
-						for(unsigned int i = node->Meshes.Size(), index = rep.instance_of->index_begin; index < rep.instance_of->index_end; i++, index++) {
-							node->Meshes.Set(i, index);
+						unsigned int i = node->Meshes.Size();
+
+						for(std::map<unsigned int, std::list<unsigned int>>::const_iterator it_index_mat(rep.instance_of->indexes.begin()), end_index_mat(rep.instance_of->indexes.end()); it_index_mat != end_index_mat; ++it_index_mat) {
+							for(std::list<unsigned int>::const_iterator it_index_mesh(it_index_mat->second.begin()), end_index_mesh(it_index_mat->second.end()); it_index_mesh != end_index_mesh; ++it_index_mesh) {
+								node->Meshes.Set(i++, *it_index_mesh);
+							}
 						}
 					} else {
 						ThrowException(parser, "One InstanceRep of Reference3D \"" + parser->ToString(ref.id) + "\" is unresolved.");
@@ -863,9 +869,8 @@ namespace Assimp {
 		// Get the container for this representation
 		_3DXMLStructure::ReferenceRep& rep = mContent.representations[_3DXMLStructure::ID(parser->GetFilename(), id)];
 		rep.id = id;
-		rep.index_begin = 0;
-		rep.index_end = 0;
 		rep.meshes.clear();
+		rep.indexes.clear();
 
 		// Check the representation format and call the correct parsing function accordingly
 		if(format.compare("TESSELLATED") == 0) {
