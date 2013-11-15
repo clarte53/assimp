@@ -54,7 +54,83 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Q3BSPZipArchive.h"
 #include "SceneCombiner.h"
 
+#include <chrono>
+#include <fstream>
+
 namespace Assimp {
+
+	#define PROFILER(msg) Profiler __profiler_##__FUNCTION__##msg(__FUNCTION__##"__"##msg)
+
+	class Profiler {
+
+		protected:
+
+			std::map<std::string, std::pair<std::chrono::microseconds, unsigned int>> stats;
+
+			Profiler() {}
+
+			Profiler(const Profiler&);
+
+			Profiler(Profiler&&);
+
+		public:
+
+			static Profiler& get() {
+				static Profiler instance;
+
+				return instance;
+			}
+
+			void add(const std::string& function, const std::chrono::microseconds& duration) {
+				auto it = stats.find(function);
+
+				if(it == stats.end()) {
+					auto insert = stats.emplace(function, std::make_pair(std::chrono::microseconds(0), 0));
+
+					if(insert.second) {
+						it = insert.first;
+					} else {
+						throw std::runtime_error("Impossible to add the element " + function + " to the map of profiling statistics.");
+					}
+				}
+
+				it->second.first += duration;
+				it->second.second++;
+			}
+
+			void save(const std::string& filename) {
+				std::ofstream file(filename, std::ios_base::out | std::ios_base::trunc);
+
+				if(file.is_open()) {
+					for(auto it(stats.begin()), end(stats.end()); it != end; ++it) {
+						file << it->first << ';' << ((long double) it->second.first.count()) / ((long double) it->second.second) << ';' << std::endl;
+					}
+
+					file.close();
+				}
+			}
+
+	}; // class Profiler
+
+	class ProfilerCall {
+
+		protected:
+
+			std::string function;
+
+			std::chrono::time_point<std::chrono::high_resolution_clock> start;
+
+		public:
+
+			ProfilerCall(const char* function) : function(function) {
+				start = std::chrono::high_resolution_clock::now();
+			}
+
+			virtual ~ProfilerCall() {
+				Profiler::get().add(function, std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start));
+			}
+
+	}; // class ProfilerCall
 
 	// ------------------------------------------------------------------------------------------------
 	// Constructor to be privately used by Importer
