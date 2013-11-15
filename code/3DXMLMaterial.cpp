@@ -272,7 +272,7 @@ namespace Assimp {
 		if(it != attributes.end()) {
 			it->second(params);
 		} else {
-			DefaultLogger::get()->warn("Unsupported attribute \"" + name + "\".");
+			//DefaultLogger::get()->warn("Unsupported attribute \"" + name + "\".");
 		}
 	}
 

@@ -78,11 +78,13 @@ namespace Assimp {
 			/** Aborts the file reading with an exception */
 			static void ThrowException(const XMLParser* parser, const std::string& error);
 
-			void BuildResources(const XMLParser* parser);
+			void BuildMaterials(const XMLParser* parser);
+
+			void BuildMeshes(const XMLParser* parser, _3DXMLStructure::ReferenceRep& rep, unsigned int material_index);
 
 			void BuildRoot(const XMLParser* parser, const std::string& main_file);
 
-			void BuildStructure(const XMLParser* parser, _3DXMLStructure::Reference3D& ref, aiNode* node);
+			void BuildStructure(const XMLParser* parser, _3DXMLStructure::Reference3D& ref, aiNode* node, Optional<unsigned int> material_index);
 
 			void ReadManifest(const XMLParser* parser, std::string& main_file);
 
