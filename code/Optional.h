@@ -47,6 +47,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <boost/noncopyable.hpp>
 
+// Hack for Visual Studio whose support for standard C++ is sometime approximative
+// TODO: check the version the day it will be supported to add this feature (useful to avoid hard to find bugs)
+#if defined(_MSC_VER)
+#define EXPLICIT
+#else
+#define EXPLICIT explicit
+#endif
+
 namespace Assimp {
 
 	template<typename T>
@@ -74,7 +82,7 @@ namespace Assimp {
 
 			inline Optional& operator=(Optional&& other) {mDefined = other.mDefined; mValue = std::move(other.mValue); return *this;}
 
-			inline explicit operator bool() const {return mDefined;}
+			inline EXPLICIT operator bool() const {return mDefined;}
 
 			inline const T* operator->() const {return &mValue;}
 
@@ -107,7 +115,7 @@ namespace Assimp {
 
 			inline Optional& operator=(Optional&& other) {mDefined = other.mDefined; mValue = other.mValue; other.mValue = nullptr; return *this;}
 
-			inline explicit operator bool() const {return mDefined;}
+			inline EXPLICIT operator bool() const {return mDefined;}
 
 			inline const T* operator->() const {return mValue;}
 
