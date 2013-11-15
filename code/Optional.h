@@ -74,7 +74,7 @@ namespace Assimp {
 
 			inline Optional& operator=(Optional&& other) {mDefined = other.mDefined; mValue = std::move(other.mValue); return *this;}
 
-			inline operator bool() const {return mDefined;}
+			inline explicit operator bool() const {return mDefined;}
 
 			inline const T* operator->() const {return &mValue;}
 
@@ -107,7 +107,7 @@ namespace Assimp {
 
 			inline Optional& operator=(Optional&& other) {mDefined = other.mDefined; mValue = other.mValue; other.mValue = nullptr; return *this;}
 
-			inline operator bool() const {return mDefined;}
+			inline explicit operator bool() const {return mDefined;}
 
 			inline const T* operator->() const {return mValue;}
 

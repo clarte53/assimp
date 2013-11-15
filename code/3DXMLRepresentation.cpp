@@ -672,7 +672,7 @@ namespace Assimp {
 				color.b = blue;
 
 				if(alpha) {
-					color.a = alpha;
+					color.a = *alpha;
 				} else {
 					color.a = 1.0;
 				}
@@ -830,7 +830,7 @@ namespace Assimp {
 				color.b = blue;
 
 				if(alpha) {
-					color.a = alpha;
+					color.a = *alpha;
 				} else {
 					color.a = 1.0;
 				}
