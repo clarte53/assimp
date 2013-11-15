@@ -231,6 +231,8 @@ namespace Assimp {
 
 			unsigned int nb_references;
 
+			Optional<unsigned int> material_index;
+
 			std::map<ID, Instance3D> instances;
 
 			std::map<ID, InstanceRep> meshes;

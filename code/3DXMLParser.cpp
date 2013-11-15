@@ -325,16 +325,19 @@ namespace Assimp {
 		}
 
 		// Build the materials defined in the CATMaterial section
-		std::map<_3DXMLStructure::ID, unsigned int> mesh_con_indexes;
 		std::map<std::list<_3DXMLStructure::ID>, unsigned int, _3DXMLStructure::list_less<_3DXMLStructure::ID>> mat_con_indexes;
 		for(std::list<_3DXMLStructure::CATMatConnection>::const_iterator it_con(mContent.mat_connections.begin()), end_con(mContent.mat_connections.end()); it_con != end_con; ++it_con) {
-			std::unique_ptr<aiMaterial> material(nullptr);
-			std::vector<aiMaterial*> materials;
+			unsigned int index;
 
 			auto it_con_indexes = mat_con_indexes.find(it_con->materials);
 
 			// Is the material already processed?
-			if(it_con_indexes == mat_con_indexes.end()) {
+			if(it_con_indexes != mat_con_indexes.end()) {
+				index = it_con_indexes->second;
+			} else {
+				std::unique_ptr<aiMaterial> material(nullptr);
+				std::vector<aiMaterial*> materials;
+
 				// The pointers of materials are not protected, so we must use try/catch to deallocate memory in case of exceptions
 				try{
 					// Get all the materials referenced in the CATMatConnection
@@ -383,25 +386,23 @@ namespace Assimp {
 				}
 
 				// Get the index for this material
-				unsigned int index = mContent.scene->Materials.Size();
+				index = mContent.scene->Materials.Size();
 
 				// Save the material and index
 				mContent.scene->Materials.Set(index, material.release());
 				mat_con_indexes.emplace(it_con->materials, index);
-
-				// Save the index of the material for each referenced mesh
-				for(std::list<_3DXMLStructure::ID>::const_iterator it_ref(it_con->references.begin()), end_ref(it_con->references.end()); it_ref != end_ref; ++it_ref) {
-					std::map<_3DXMLStructure::ID, _3DXMLStructure::Reference3D>::const_iterator it_mesh = mContent.references_node.find(*it_ref);
-
-					if(it_mesh != mContent.references_node.end()) {
-						//TODO
-					} else {
-						ThrowException(parser, "Invalid CATMatConnection referencing unknown Reference3D \"" + parser->ToString(it_ref->id) + "\".");
-					}
-				}
 			}
 
-			//TODO
+			// Save the index of the material for each referenced mesh
+			for(std::list<_3DXMLStructure::ID>::const_iterator it_ref(it_con->references.begin()), end_ref(it_con->references.end()); it_ref != end_ref; ++it_ref) {
+				std::map<_3DXMLStructure::ID, _3DXMLStructure::Reference3D>::iterator it_mesh = mContent.references_node.find(*it_ref);
+
+				if(it_mesh != mContent.references_node.end()) {
+					it_mesh->second.material_index = Optional<unsigned int>(index);
+				} else {
+					ThrowException(parser, "Invalid CATMatConnection referencing unknown Reference3D \"" + parser->ToString(it_ref->id) + "\".");
+				}
+			}
 		}
 
 		// Add the meshes into the scene
@@ -409,11 +410,13 @@ namespace Assimp {
 			unsigned int index = mContent.scene->Meshes.Size();
 
 			it_rep->second.index_begin = index;
-			it_rep->second.index_end = index;
+			it_rep->second.index_end = index; // incremented each time a mesh is added
 
 			for(_3DXMLStructure::ReferenceRep::Meshes::iterator it_mesh(it_rep->second.meshes.begin()), end_mesh(it_rep->second.meshes.end()); it_mesh != end_mesh; ++it_mesh) {
 				// Set the names of the parsed meshes with this ReferenceRep name
 				it_mesh->second.mesh->mName = it_rep->second.name;
+
+				//TODO: use index from CATMatConnection if defined and default to the other method otherwise
 
 				// Set the index of the used material
 				std::map<_3DXMLStructure::ReferenceRep::MatID, unsigned int>::iterator it_mat = attributes.find(it_mesh->first);

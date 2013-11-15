@@ -207,12 +207,12 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::Reference3D::Reference3D() : id(0), has_name(false), name(""), nb_references(0), instances(), meshes() {
+	_3DXMLStructure::Reference3D::Reference3D() : id(0), has_name(false), name(""), nb_references(0), material_index(), instances(), meshes() {
 	
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::Reference3D::Reference3D(Reference3D&& other) : id(other.id), has_name(other.has_name), name(std::move(other.name)), nb_references(other.nb_references), instances(std::move(other.instances)), meshes(std::move(other.meshes)) {
+	_3DXMLStructure::Reference3D::Reference3D(Reference3D&& other) : id(other.id), has_name(other.has_name), name(std::move(other.name)), nb_references(other.nb_references), material_index(std::move(other.material_index)), instances(std::move(other.instances)), meshes(std::move(other.meshes)) {
 	
 	}
 
