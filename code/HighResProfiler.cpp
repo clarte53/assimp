@@ -110,7 +110,7 @@ namespace Assimp {
 							double average = (((double) total.count()) / ((double) it->second.size())) * 1e-6;
 
 							file.precision(100);
-							file << it->first << ';'
+							file << '"' << it->first << '"' << ';'
 									<< average << ';'
 									<< total.count() << ';'
 									<< min.count() << ';'

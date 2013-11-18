@@ -941,7 +941,7 @@ namespace Assimp {
 
 		// Check the representation format and call the correct parsing function accordingly
 		if(format.compare("TESSELLATED") == 0) {
-			if(uri.extension.compare("3DRep") == 0) {
+			if(uri.extension.compare("3DRep") == 0) { PROFILER;
 				// Parse the geometry representation
 				_3DXMLRepresentation representation(mArchive, uri.filename, rep.meshes);
 
@@ -1166,7 +1166,7 @@ namespace Assimp {
 		// Check the representation format and call the correct parsing function accordingly
 		if(params.rendering) {
 			if(format.compare("TECHREP") == 0) {
-				if(uri.extension.compare("3DRep") == 0) {
+				if(uri.extension.compare("3DRep") == 0) { PROFILER;
 					_3DXMLMaterial material(mArchive, uri.filename, mat.material.get());
 				} else {
 					ThrowException(parser, "In MaterialDomain \"" + parser->ToString(id) + "\": unsupported extension \"" + uri.extension + "\" for associated file.");

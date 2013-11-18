@@ -57,17 +57,17 @@ namespace Assimp {
 	const unsigned int XMLParser::XSD::unbounded = std::numeric_limits<unsigned int>::max();
 
 	// ------------------------------------------------------------------------------------------------
-	XMLParser::XMLParser(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& file) : mFileName(file), mArchive(archive), mStream(nullptr), mReader(nullptr) {
+	XMLParser::XMLParser(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& file) : mFileName(file), mArchive(archive), mStream(nullptr), mReader(nullptr) { PROFILER;
 		Open(file);
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	XMLParser::~XMLParser() {
+	XMLParser::~XMLParser() { PROFILER;
 		Close();
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	void XMLParser::Open(const std::string& file) {
+	void XMLParser::Open(const std::string& file) { PROFILER;
 		if(mStream == nullptr && mReader == nullptr) {
 			mFileName = file;
 
@@ -99,7 +99,7 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	void XMLParser::Close() {
+	void XMLParser::Close() { PROFILER;
 		if(mStream != nullptr) {
 			mArchive->Close(mStream);
 			mStream = nullptr;
@@ -113,19 +113,19 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Aborts the file reading with an exception
-	void XMLParser::ThrowException(const std::string& error) const {
+	void XMLParser::ThrowException(const std::string& error) const { PROFILER;
 		throw DeadlyImportError(boost::str(boost::format("XML parser: %s - %s") % mFileName % error));
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	// Skip an element
-	void XMLParser::SkipElement() const {
+	void XMLParser::SkipElement() const { PROFILER;
 		SkipUntilEnd(mReader->getNodeName());
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	// Skip recursively until the end of element "name"
-	void XMLParser::SkipUntilEnd(const std::string& name) const {
+	void XMLParser::SkipUntilEnd(const std::string& name) const { PROFILER;
 		irr::io::EXML_NODE node_type = mReader->getNodeType();
 		bool is_same_name = name.compare(mReader->getNodeName()) == 0;
 		unsigned int depth = 0;
@@ -154,13 +154,13 @@ namespace Assimp {
 	
 	// ------------------------------------------------------------------------------------------------
 	template<>
-	std::string XMLParser::ToString(const std::string& value) const {
+	std::string XMLParser::ToString(const std::string& value) const { PROFILER;
 		return value;
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	template<>
-	std::string XMLParser::FromString(const std::string& string) const {
+	std::string XMLParser::FromString(const std::string& string) const { PROFILER;
 		return string;
 	}
 

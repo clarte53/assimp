@@ -45,15 +45,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef AI_HIGHRESPROFILER_H_INC
 #define AI_HIGHRESPROFILER_H_INC
 
-#if defined _DEBUG || ! defined(NDEBUG)
+//#if defined _DEBUG || ! defined(NDEBUG)
 #	define _TO_STRING(x) #x
 #	define TO_STRING(x) _TO_STRING(x)
 #	define _CONCAT(x,y) x##y
 #	define CONCAT(x,y) _CONCAT(x, y)
 #	define PROFILER Assimp::Profiling::HighResProfilerCall CONCAT(__profiler,__COUNTER__)(std::string(__FILE__) + ": " + __PRETTY_FUNCTION__ + " (" + TO_STRING(__LINE__) + ")")
-#else
-#	define PROFILER
-#endif
+//#else
+//#	define PROFILER
+//#endif
 
 #include <chrono>
 

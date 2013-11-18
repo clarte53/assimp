@@ -46,6 +46,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define AI_XMLPARSER_H_INC
 
 #include "irrXMLWrapper.h"
+#include "HighResProfiler.h"
 #include "Optional.h"
 #include "ParsingUtils.h"
 
@@ -279,37 +280,37 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Return the name of the file currently parsed
-	inline const std::string& XMLParser::GetFilename() const {
+	inline const std::string& XMLParser::GetFilename() const { PROFILER;
 		return mFileName;
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	// Go to the next element
-	inline bool XMLParser::Next() const {
+	inline bool XMLParser::Next() const { PROFILER;
 		return mReader->read();
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	// Test if the element has sub elements
-	inline bool XMLParser::HasElements() const {
+	inline bool XMLParser::HasElements() const { PROFILER;
 		return ! mReader->isEmptyElement();
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	// Check for element match
-	inline bool XMLParser::IsElement(const std::string& name) const {
+	inline bool XMLParser::IsElement(const std::string& name) const { PROFILER;
 		return mReader->getNodeType() == irr::io::EXN_ELEMENT && name.compare(mReader->getNodeName()) == 0;
 	}
 	
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
-	void XMLParser::ParseElement(const XSD::Element<T>& schema, T& params) const {
+	void XMLParser::ParseElement(const XSD::Element<T>& schema, T& params) const { PROFILER;
 		(schema.GetParser())(this, params);
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
-	void XMLParser::ParseElement(const XSD::Choice<T>& schema, T& params) const {
+	void XMLParser::ParseElement(const XSD::Choice<T>& schema, T& params) const { PROFILER;
 		irr::io::EXML_NODE node_type;
 		std::string node_name;
 
@@ -386,7 +387,7 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
-	void XMLParser::ParseElement(const XSD::Sequence<T>& schema, T& params) const {
+	void XMLParser::ParseElement(const XSD::Sequence<T>& schema, T& params) const { PROFILER;
 		irr::io::EXML_NODE node_type;
 		std::string node_name;
 
@@ -492,19 +493,19 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Return the name of a node
-	inline std::string  XMLParser::GetNodeName() const {
+	inline std::string  XMLParser::GetNodeName() const { PROFILER;
 		return mReader->getNodeName();
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
-	Optional<T> XMLParser::GetAttribute(int pIndex, bool mandatory) const {
+	Optional<T> XMLParser::GetAttribute(int pIndex, bool mandatory) const { PROFILER;
 		return GetAttribute<T>(mReader->getAttributeName(pIndex) , mandatory);
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
-	Optional<T> XMLParser::GetAttribute(const std::string& name, bool mandatory) const {
+	Optional<T> XMLParser::GetAttribute(const std::string& name, bool mandatory) const { PROFILER;
 		std::string value = mReader->getAttributeValueSafe(name.c_str());
 
 		if(value == "") {
@@ -520,7 +521,7 @@ namespace Assimp {
 	
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
-	Optional<T> XMLParser::GetContent(bool mandatory) const {
+	Optional<T> XMLParser::GetContent(bool mandatory) const { PROFILER;
 		// present node should be the beginning of an element
 		if(mReader->getNodeType() != irr::io::EXN_ELEMENT) {
 			ThrowException("The current node is not an xml element.");
@@ -557,7 +558,7 @@ namespace Assimp {
 	
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
-	std::string XMLParser::ToString(const T& value) const {
+	std::string XMLParser::ToString(const T& value) const { PROFILER;
 		std::stringstream stream;
 
 		stream << value;
@@ -572,7 +573,7 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
-	T XMLParser::FromString(const std::string& string) const {
+	T XMLParser::FromString(const std::string& string) const { PROFILER;
 		std::istringstream stream(string);
 		T value;
 
