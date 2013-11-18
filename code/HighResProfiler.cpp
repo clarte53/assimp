@@ -68,70 +68,76 @@ namespace Assimp {
 			return instance;
 		}
 
-		void HighResProfiler::add(const std::string& function, const std::chrono::microseconds& duration) {
-			auto it = mStats.find(function);
-
-			if(it == mStats.end()) {
-				auto insert = mStats.emplace(function, std::list<std::chrono::microseconds>());
-
-				if(insert.second) {
-					it = insert.first;
-				} else {
-					throw std::runtime_error("Impossible to add the element " + function + " to the map of profiling statistics.");
-				}
-			}
-
-			it->second.emplace_back(duration);
+		void HighResProfiler::add(const std::string& file, const std::string& function, const std::size_t& line, const std::chrono::microseconds& duration) {
+			mProgram.files[file].functions[function].blocs[line].durations.emplace_back(duration);
+			mProgram.files[file].functions[function].blocs[line].total += duration;
+			mProgram.files[file].functions[function].total += duration;
+			mProgram.files[file].total += duration;
+			mProgram.total += duration;
 		}
 
 		void HighResProfiler::save(const std::string& filename) {
-			if(! mStats.empty()) {
+			if(! mProgram.files.empty()) {
 				std::ofstream file(filename);
 
 				if(file.is_open()) {
-					file << "Location;Average time (seconds);Total time (microseconds);Min time (microseconds);Max time (microseconds);Number of iterations;" << std::endl;
+					file << "File;Function;Line;File of program (%);Function of file (%);Bloc of function (%);Average time (seconds);Total time (microseconds);Min time (microseconds);Max time (microseconds);Number of iterations;" << std::endl;
 
-					for(auto it(mStats.begin()), end(mStats.end()); it != end; ++it) {
-						if(! it->second.empty()) {
-							std::chrono::microseconds min(it->second.front());
-							std::chrono::microseconds max(it->second.front());
-							std::chrono::microseconds total(0);
+					for(auto it_file(mProgram.files.begin()), end_file(mProgram.files.end()); it_file != end_file; ++it_file) {
+						for(auto it_func(it_file->second.functions.begin()), end_func(it_file->second.functions.end()); it_func != end_func; ++it_func) {
+							for(auto it_line(it_func->second.blocs.begin()), end_line(it_func->second.blocs.end()); it_line != end_line; ++it_line) {
+								if(! it_line->second.durations.empty()) {
+									std::chrono::microseconds min(it_line->second.durations.front());
+									std::chrono::microseconds max(it_line->second.durations.front());
 
-							for(const std::chrono::microseconds& value: it->second) {
-								if(value < min) {
-									min = value;
-								} else if(value > max) {
-									max = value;
+									for(const std::chrono::microseconds& value: it_line->second.durations) {
+										if(value < min) {
+											min = value;
+										} else if(value > max) {
+											max = value;
+										}
+									}
+
+									file.precision(100);
+									file << '"' << it_file->first << '"' << ';'
+											<< '"' << it_func->first << '"' << ';'
+											<< it_line->first << ';'
+											<< (mProgram.total.count() != 0 ? ((double) it_file->second.total.count()) / ((double) mProgram.total.count()) : 0) << ';'
+											<< (it_file->second.total.count() != 0 ? ((double) it_func->second.total.count()) / ((double) it_file->second.total.count()) : 0) << ';'
+											<< (it_func->second.total.count() != 0 ? ((double) it_line->second.total.count()) / ((double) it_func->second.total.count()) : 0) << ';'
+											<< (it_line->second.durations.size() != 0 ? (((double) it_line->second.total.count()) / ((double) it_line->second.durations.size())) * 1e-6 : 0) << ';'
+											<< it_line->second.total.count() << ';'
+											<< min.count() << ';'
+											<< max.count() << ';'
+											<< it_line->second.durations.size() << ';' << std::endl;
 								}
 
-								total += value;
+								it_line->second.durations.clear();
+								it_line->second.total = std::chrono::microseconds(0);
 							}
 
-							double average = (((double) total.count()) / ((double) it->second.size())) * 1e-6;
-
-							file.precision(100);
-							file << '"' << it->first << '"' << ';'
-									<< average << ';'
-									<< total.count() << ';'
-									<< min.count() << ';'
-									<< max.count() << ';'
-									<< it->second.size() << ';' << std::endl;
+							it_func->second.blocs.clear();
+							it_func->second.total = std::chrono::microseconds(0);
 						}
+
+						it_file->second.functions.clear();
+						it_file->second.total = std::chrono::microseconds(0);
 					}
 
-					file.close();
+					mProgram.files.clear();
+					mProgram.total = std::chrono::microseconds(0);
 
-					mStats.clear();
+					file.close();
 				}
 			}
 		}
 
-		HighResProfilerCall::HighResProfilerCall(const std::string& function) : mFunction(function) {
+		HighResProfilerCall::HighResProfilerCall(const std::string& file, const std::string& function, const std::size_t& line) : mFile(file), mFunction(function), mLine(line) {
 			mStart = std::chrono::high_resolution_clock::now();
 		}
 
 		HighResProfilerCall::~HighResProfilerCall() {
-			HighResProfiler::get().add(mFunction, std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - mStart));
+			HighResProfiler::get().add(mFile, mFunction, mLine, std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - mStart));
 		}
 		
 	} // Namespace Profiling

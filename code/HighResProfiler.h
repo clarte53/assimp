@@ -56,7 +56,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #	define TO_STRING(x) _TO_STRING(x)
 #	define _CONCAT(x,y) x##y
 #	define CONCAT(x,y) _CONCAT(x, y)
-#	define PROFILER Assimp::Profiling::HighResProfilerCall CONCAT(__profiler,__COUNTER__)(std::string(__FILE__) + ": " + FUNCTION + " (" + TO_STRING(__LINE__) + ")")
+#	define PROFILER Assimp::Profiling::HighResProfilerCall CONCAT(__profiler,__COUNTER__)(TO_STRING(__FILE__), FUNCTION, __LINE__)
 //#else
 //#	define PROFILER
 //#endif
@@ -79,7 +79,48 @@ namespace Assimp {
 
 			protected:
 
-				std::map<std::string, std::list<std::chrono::microseconds>> mStats;
+				struct Bloc {
+
+					std::list<std::chrono::microseconds> durations;
+
+					std::chrono::microseconds total;
+
+					Bloc() : durations(), total(0) {}
+
+				}; // struct Bloc
+
+
+				struct Function {
+
+					std::map<std::size_t, Bloc> blocs;
+
+					std::chrono::microseconds total;
+
+					Function() : blocs(), total(0) {}
+
+				}; // struct Function
+
+				struct File {
+
+					std::map<std::string, Function> functions;
+
+					std::chrono::microseconds total;
+
+					File() : functions(), total(0) {}
+
+				}; // struct File
+
+				struct Program {
+
+					std::map<std::string, File> files;
+
+					std::chrono::microseconds total;
+
+					Program() : files(), total(0) {}
+
+				}; // struct Program
+
+				Program mProgram;
 
 				HighResProfiler();
 
@@ -93,7 +134,7 @@ namespace Assimp {
 
 				static HighResProfiler& get();
 
-				void add(const std::string& function, const std::chrono::microseconds& duration);
+				void add(const std::string& file, const std::string& function, const std::size_t& line, const std::chrono::microseconds& duration);
 
 				void save(const std::string& filename);
 
@@ -103,13 +144,17 @@ namespace Assimp {
 
 			protected:
 
+				std::string mFile;
+
 				std::string mFunction;
+
+				std::size_t mLine;
 
 				std::chrono::time_point<std::chrono::high_resolution_clock> mStart;
 
 			public:
 
-				HighResProfilerCall(const std::string& function);
+				HighResProfilerCall(const std::string& file, const std::string& function, const std::size_t& line);
 
 				virtual ~HighResProfilerCall();
 

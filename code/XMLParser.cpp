@@ -71,8 +71,8 @@ namespace Assimp {
 		if(mStream == nullptr && mReader == nullptr) {
 			mFileName = file;
 
-			if(mArchive->isOpen()) {
-				if(mArchive->Exists(mFileName.c_str())) {
+			if(mArchive->isOpen()) { PROFILER;
+				if(mArchive->Exists(mFileName.c_str())) { PROFILER;
 					// Open the manifest files
 					mStream = mArchive->Open(mFileName.c_str());
 					if(mStream == nullptr) {
@@ -82,9 +82,14 @@ namespace Assimp {
 						ThrowException(mFileName + " not found.");
 					}
 
+					PROFILER;
+
 					// generate a XML reader for it
 					// the pointer is automatically deleted at the end of the function, even if some exceptions are raised
 					std::unique_ptr<CIrrXML_IOStreamReader> IOWrapper(new CIrrXML_IOStreamReader(mStream));
+
+					PROFILER;
+
 					mReader = irr::io::createIrrXMLReader(IOWrapper.get());
 					if(mReader == nullptr) {
 						ThrowException("Unable to create XML parser for file \"" + mFileName + "\".");
