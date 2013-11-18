@@ -51,90 +51,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "3DXMLMaterial.h"
 #include "3DXMLRepresentation.h"
+#include "HighResProfiler.h"
 #include "Q3BSPZipArchive.h"
 #include "SceneCombiner.h"
 
-#include <chrono>
-#include <fstream>
-
 namespace Assimp {
-
-	#define PROFILER(msg) Profiler __profiler_##__FUNCTION__##msg(__FUNCTION__##"__"##msg)
-
-	class Profiler {
-
-		protected:
-
-			std::map<std::string, std::pair<std::chrono::microseconds, unsigned int>> stats;
-
-			Profiler() {}
-
-			Profiler(const Profiler&);
-
-			Profiler(Profiler&&);
-
-		public:
-
-			static Profiler& get() {
-				static Profiler instance;
-
-				return instance;
-			}
-
-			void add(const std::string& function, const std::chrono::microseconds& duration) {
-				auto it = stats.find(function);
-
-				if(it == stats.end()) {
-					auto insert = stats.emplace(function, std::make_pair(std::chrono::microseconds(0), 0));
-
-					if(insert.second) {
-						it = insert.first;
-					} else {
-						throw std::runtime_error("Impossible to add the element " + function + " to the map of profiling statistics.");
-					}
-				}
-
-				it->second.first += duration;
-				it->second.second++;
-			}
-
-			void save(const std::string& filename) {
-				std::ofstream file(filename, std::ios_base::out | std::ios_base::trunc);
-
-				if(file.is_open()) {
-					for(auto it(stats.begin()), end(stats.end()); it != end; ++it) {
-						file << it->first << ';' << ((long double) it->second.first.count()) / ((long double) it->second.second) << ';' << std::endl;
-					}
-
-					file.close();
-				}
-			}
-
-	}; // class Profiler
-
-	class ProfilerCall {
-
-		protected:
-
-			std::string function;
-
-			std::chrono::time_point<std::chrono::high_resolution_clock> start;
-
-		public:
-
-			ProfilerCall(const char* function) : function(function) {
-				start = std::chrono::high_resolution_clock::now();
-			}
-
-			virtual ~ProfilerCall() {
-				Profiler::get().add(function, std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start));
-			}
-
-	}; // class ProfilerCall
 
 	// ------------------------------------------------------------------------------------------------
 	// Constructor to be privately used by Importer
-	_3DXMLParser::_3DXMLParser(const std::string& file, aiScene* scene) : mArchive(new Q3BSP::Q3BSPZipArchive(file)), mContent(scene) {
+	_3DXMLParser::_3DXMLParser(const std::string& file, aiScene* scene) : mArchive(new Q3BSP::Q3BSPZipArchive(file)), mContent(scene) { PROFILER;
 		// Load the compressed archive
 		if (! mArchive->isOpen()) {
 			ThrowException(nullptr, "Failed to open file " + file + "." );
@@ -157,7 +82,7 @@ namespace Assimp {
 		}
 
 		// Parse other referenced 3DXML files until all references are resolved
-		while(mContent.files_to_parse.size() != 0) {
+		while(mContent.files_to_parse.size() != 0) { PROFILER;
 			std::set<std::string>::const_iterator it = mContent.files_to_parse.begin();
 
 			if(it != mContent.files_to_parse.end()) {
@@ -179,13 +104,13 @@ namespace Assimp {
 		BuildRoot(parser.get(), main_file);
 	}
 
-	_3DXMLParser::~_3DXMLParser() {
+	_3DXMLParser::~_3DXMLParser() { PROFILER;
 
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	// Parse one uri and split it into it's different components
-	void _3DXMLParser::ParseURI(const XMLParser* parser, const std::string& uri, _3DXMLStructure::URI& result) {
+	void _3DXMLParser::ParseURI(const XMLParser* parser, const std::string& uri, _3DXMLStructure::URI& result) { PROFILER;
 		static const unsigned int size_prefix = 10;
 
 		result.uri = uri;
@@ -229,7 +154,7 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Parse one the extension part of a filename
-	void _3DXMLParser::ParseExtension(const std::string& filename, std::string& extension) {
+	void _3DXMLParser::ParseExtension(const std::string& filename, std::string& extension) { PROFILER;
 		std::size_t pos = filename.find_last_of('.');
 
 		if(pos != filename.npos) {
@@ -241,7 +166,7 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Parse one numerical id from a string
-	void _3DXMLParser::ParseID(const std::string& data, unsigned int& id) {
+	void _3DXMLParser::ParseID(const std::string& data, unsigned int& id) { PROFILER;
 		std::istringstream stream(data);
 
 		stream >> id;
@@ -249,7 +174,7 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Aborts the file reading with an exception
-	void _3DXMLParser::ThrowException(const XMLParser* parser, const std::string& error) {
+	void _3DXMLParser::ThrowException(const XMLParser* parser, const std::string& error) { PROFILER;
 		if(parser != nullptr) {
 			throw DeadlyImportError(boost::str(boost::format("3DXML: %s - %s") % parser->GetFilename() % error));
 		} else {
@@ -259,9 +184,9 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Construct the materials from the parsed data
-	void _3DXMLParser::BuildMaterials(const XMLParser* parser) {
+	void _3DXMLParser::BuildMaterials(const XMLParser* parser) { PROFILER;
 		// Merge all the materials composing a CATMatReference into a single material
-		for(std::map<_3DXMLStructure::ID, _3DXMLStructure::CATMatReference>::iterator it(mContent.references_mat.begin()), end(mContent.references_mat.end()); it != end; ++it) {
+		for(std::map<_3DXMLStructure::ID, _3DXMLStructure::CATMatReference>::iterator it(mContent.references_mat.begin()), end(mContent.references_mat.end()); it != end; ++it) { PROFILER;
 			// Is the merged material already computed?
 			if(! it->second.merged_material) {
 				// List of the different instances of materials referenced by this CATMatReference
@@ -299,14 +224,14 @@ namespace Assimp {
 
 		// Get all the MaterialAttributes of the scene
 		std::set<_3DXMLStructure::ReferenceRep::MatID, _3DXMLStructure::shared_less<_3DXMLStructure::MaterialAttributes>> attributes;
-		for(std::map<_3DXMLStructure::ID, _3DXMLStructure::ReferenceRep>::const_iterator it_rep(mContent.representations.begin()), end_rep(mContent.representations.end()); it_rep != end_rep; ++it_rep) {
+		for(std::map<_3DXMLStructure::ID, _3DXMLStructure::ReferenceRep>::const_iterator it_rep(mContent.representations.begin()), end_rep(mContent.representations.end()); it_rep != end_rep; ++it_rep) { PROFILER;
 			for(_3DXMLStructure::ReferenceRep::Meshes::const_iterator it_mesh(it_rep->second.meshes.begin()), end_mesh(it_rep->second.meshes.end()); it_mesh != end_mesh; ++it_mesh) {
 				attributes.insert(it_mesh->first); // No need to check the output, we don't care if the element is inserted or is already present
 			}
 		}
 
 		// Generate the final materials of the scene and store their indices
-		for(auto it_mat(attributes.begin()), end_mat(attributes.end()); it_mat != end_mat; ++ it_mat) {
+		for(auto it_mat(attributes.begin()), end_mat(attributes.end()); it_mat != end_mat; ++ it_mat) { PROFILER;
 			// The final material
 			std::unique_ptr<aiMaterial> material(nullptr);
 			
@@ -413,7 +338,7 @@ namespace Assimp {
 
 		// Create a map of the different Instance3D for direct access
 		std::map<_3DXMLStructure::ID, _3DXMLStructure::Instance3D*> instances;
-		for(std::map<_3DXMLStructure::ID, _3DXMLStructure::Reference3D>::iterator it_ref(mContent.references_node.begin()), end_ref(mContent.references_node.end()); it_ref != end_ref; ++it_ref) {
+		for(std::map<_3DXMLStructure::ID, _3DXMLStructure::Reference3D>::iterator it_ref(mContent.references_node.begin()), end_ref(mContent.references_node.end()); it_ref != end_ref; ++it_ref) { PROFILER;
 			for(std::map<_3DXMLStructure::ID, _3DXMLStructure::Instance3D>::iterator it_inst(it_ref->second.instances.begin()), end_inst(it_ref->second.instances.end()); it_inst != end_inst; ++it_inst) {
 				instances.emplace(it_inst->first, &(it_inst->second));
 			}
@@ -421,7 +346,7 @@ namespace Assimp {
 
 		// Build the materials defined in the CATMaterial section
 		std::map<std::list<_3DXMLStructure::ID>, unsigned int, _3DXMLStructure::list_less<_3DXMLStructure::ID>> mat_con_indexes;
-		for(std::list<_3DXMLStructure::CATMatConnection>::const_iterator it_con(mContent.mat_connections.begin()), end_con(mContent.mat_connections.end()); it_con != end_con; ++it_con) {
+		for(std::list<_3DXMLStructure::CATMatConnection>::const_iterator it_con(mContent.mat_connections.begin()), end_con(mContent.mat_connections.end()); it_con != end_con; ++it_con) { PROFILER;
 			unsigned int index;
 
 			auto it_con_indexes = mat_con_indexes.find(it_con->materials);
@@ -489,7 +414,7 @@ namespace Assimp {
 			}
 
 			// Save the index of the material for each referenced mesh
-			for(std::list<_3DXMLStructure::ID>::const_iterator it_ref(it_con->references.begin()), end_ref(it_con->references.end()); it_ref != end_ref; ++it_ref) {
+			for(std::list<_3DXMLStructure::ID>::const_iterator it_ref(it_con->references.begin()), end_ref(it_con->references.end()); it_ref != end_ref; ++it_ref) { PROFILER;
 				std::map<_3DXMLStructure::ID, _3DXMLStructure::Instance3D*>::iterator it_inst = instances.find(*it_ref);
 
 				if(it_inst != instances.end()) {
@@ -503,7 +428,7 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Add the meshes to the scene
-	void _3DXMLParser::BuildMeshes(const XMLParser* parser, _3DXMLStructure::ReferenceRep& rep, unsigned int material_index) {
+	void _3DXMLParser::BuildMeshes(const XMLParser* parser, _3DXMLStructure::ReferenceRep& rep, unsigned int material_index) { PROFILER;
 		static const unsigned int mixed_material_index = std::numeric_limits<unsigned int>::max();
 
 		// Decrement the counter of instances to this Reference3D (used for memory managment)
@@ -555,7 +480,7 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Create the root node
-	void _3DXMLParser::BuildRoot(const XMLParser* parser, const std::string& main_file) {
+	void _3DXMLParser::BuildRoot(const XMLParser* parser, const std::string& main_file) { PROFILER;
 		if(mContent.ref_root_index) {
 			std::map<_3DXMLStructure::ID, _3DXMLStructure::Reference3D>::iterator it_root = mContent.references_node.find(_3DXMLStructure::ID(main_file, *(mContent.ref_root_index)));
 
@@ -582,7 +507,7 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Add the meshes indices and children nodes into the given node recursively
-	void _3DXMLParser::BuildStructure(const XMLParser* parser, _3DXMLStructure::Reference3D& ref, aiNode* node, Optional<unsigned int> material_index) {
+	void _3DXMLParser::BuildStructure(const XMLParser* parser, _3DXMLStructure::Reference3D& ref, aiNode* node, Optional<unsigned int> material_index) { PROFILER;
 		static const unsigned int mixed_material_index = std::numeric_limits<unsigned int>::max();
 
 		// Decrement the counter of instances to this Reference3D (used for memory managment)
@@ -666,7 +591,7 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Read the name of the main XML file in the Manifest
-	void _3DXMLParser::ReadManifest(const XMLParser* parser, std::string& main_file) {
+	void _3DXMLParser::ReadManifest(const XMLParser* parser, std::string& main_file) { PROFILER;
 		struct Params {
 			std::string* file;
 			bool found;
@@ -703,7 +628,7 @@ namespace Assimp {
 	
 	// ------------------------------------------------------------------------------------------------
 	// Parse a 3DXML file
-	void _3DXMLParser::ReadFile(const XMLParser* parser) {
+	void _3DXMLParser::ReadFile(const XMLParser* parser) { PROFILER;
 		struct Params {
 			_3DXMLParser* me;
 		} params;
@@ -759,7 +684,7 @@ namespace Assimp {
 	
 	// ------------------------------------------------------------------------------------------------
 	// Read the header section
-	void _3DXMLParser::ReadHeader(const XMLParser* parser) {
+	void _3DXMLParser::ReadHeader(const XMLParser* parser) { PROFILER;
 		struct Params {
 			_3DXMLParser* me;
 		} params;
@@ -786,7 +711,7 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Read the product structure section
-	void _3DXMLParser::ReadProductStructure(const XMLParser* parser) {
+	void _3DXMLParser::ReadProductStructure(const XMLParser* parser) { PROFILER;
 		struct Params {
 			_3DXMLParser* me;
 		} params;
@@ -818,7 +743,7 @@ namespace Assimp {
 	
 	// ------------------------------------------------------------------------------------------------
 	// Read the Reference3D section
-	void _3DXMLParser::ReadReference3D(const XMLParser* parser) {
+	void _3DXMLParser::ReadReference3D(const XMLParser* parser) { PROFILER;
 		struct Params {
 			Optional<std::string> name_opt;
 		} params;
@@ -860,7 +785,7 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Read the Instance3D section
-	void _3DXMLParser::ReadInstance3D(const XMLParser* parser) {
+	void _3DXMLParser::ReadInstance3D(const XMLParser* parser) { PROFILER;
 		struct Params {
 			_3DXMLParser* me;
 			Optional<std::string> name_opt;
@@ -968,7 +893,7 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Read the ReferenceRep section
-	void _3DXMLParser::ReadReferenceRep(const XMLParser* parser) {
+	void _3DXMLParser::ReadReferenceRep(const XMLParser* parser) { PROFILER;
 		struct Params {
 			Optional<std::string> name_opt;
 		} params;
@@ -1046,7 +971,7 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Read the InstanceRep section
-	void _3DXMLParser::ReadInstanceRep(const XMLParser* parser) {
+	void _3DXMLParser::ReadInstanceRep(const XMLParser* parser) { PROFILER;
 		struct Params {
 			_3DXMLParser* me;
 			Optional<std::string> name_opt;
@@ -1124,7 +1049,7 @@ namespace Assimp {
 	
 	// ------------------------------------------------------------------------------------------------
 	// Read the CATMaterialRef section
-	void _3DXMLParser::ReadCATMaterialRef(const XMLParser* parser) {
+	void _3DXMLParser::ReadCATMaterialRef(const XMLParser* parser) { PROFILER;
 		struct Params {
 			_3DXMLParser* me;
 		} params;
@@ -1153,7 +1078,7 @@ namespace Assimp {
 	
 	// ------------------------------------------------------------------------------------------------
 	// Read the CATMatReference section
-	void _3DXMLParser::ReadCATMatReference(const XMLParser* parser) {
+	void _3DXMLParser::ReadCATMatReference(const XMLParser* parser) { PROFILER;
 		struct Params {
 			Optional<std::string> name_opt;
 		} params;
@@ -1195,7 +1120,7 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Read the MaterialDomain section
-	void _3DXMLParser::ReadMaterialDomain(const XMLParser* parser) {
+	void _3DXMLParser::ReadMaterialDomain(const XMLParser* parser) { PROFILER;
 		struct Params {
 			Optional<std::string> name_opt;
 			bool rendering;
@@ -1266,7 +1191,7 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Read the MaterialDomainInstance section
-	void _3DXMLParser::ReadMaterialDomainInstance(const XMLParser* parser) {
+	void _3DXMLParser::ReadMaterialDomainInstance(const XMLParser* parser) { PROFILER;
 		struct Params {
 			_3DXMLParser* me;
 			Optional<std::string> name_opt;
@@ -1341,7 +1266,7 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Read the CATMaterial section
-	void _3DXMLParser::ReadCATMaterial(const XMLParser* parser) {
+	void _3DXMLParser::ReadCATMaterial(const XMLParser* parser) { PROFILER;
 		struct Params {
 			_3DXMLParser* me;
 		} params;
@@ -1362,7 +1287,7 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Read the CATMatConnection section
-	void _3DXMLParser::ReadCATMatConnection(const XMLParser* parser) {
+	void _3DXMLParser::ReadCATMatConnection(const XMLParser* parser) { PROFILER;
 		enum Role {TOREFERENCE, MADEOF, DRESSBY};
 
 		struct Params {

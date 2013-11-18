@@ -48,13 +48,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef ASSIMP_BUILD_NO_Q3BSP_IMPORTER
 
 #include "3DXMLMaterial.h"
+#include "HighResProfiler.h"
 
 #include <cmath>
 
 namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLMaterial::_3DXMLMaterial(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, aiMaterial* material) : mReader(archive, filename), mMaterial(material) {
+	_3DXMLMaterial::_3DXMLMaterial(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, aiMaterial* material) : mReader(archive, filename), mMaterial(material) { PROFILER;
 		struct Params {
 			_3DXMLMaterial* me;
 		} params;
@@ -84,18 +85,18 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLMaterial::~_3DXMLMaterial() {
+	_3DXMLMaterial::~_3DXMLMaterial() { PROFILER;
 
 	}
 	
 	// ------------------------------------------------------------------------------------------------
 	// Aborts the file reading with an exception
-	void _3DXMLMaterial::ThrowException(const std::string& error) const {
+	void _3DXMLMaterial::ThrowException(const std::string& error) const { PROFILER;
 		throw DeadlyImportError(boost::str(boost::format("3DXML: %s - %s") % mReader.GetFilename() % error));
 	}
 	
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLMaterial::ReadFeature() {
+	void _3DXMLMaterial::ReadFeature() { PROFILER;
 		struct Params {
 			_3DXMLMaterial* me;
 		} params;
@@ -122,7 +123,7 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLMaterial::ReadAttribute() {
+	void _3DXMLMaterial::ReadAttribute() { PROFILER;
 		/*
 		enum Type {EXTERNAL, SPECOBJECT, COMPONENT, STRING, INT, DOUBLE, OCTET, BOOLEAN};
 

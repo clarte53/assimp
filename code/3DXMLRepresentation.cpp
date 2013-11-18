@@ -50,13 +50,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "3DXMLRepresentation.h"
 
 #include "3DXMLParser.h"
+#include "HighResProfiler.h"
 
 #include <cctype>
 
 namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLRepresentation::_3DXMLRepresentation(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, _3DXMLStructure::ReferenceRep::Meshes& meshes) : mReader(archive, filename), mMeshes(meshes), mCurrentSurface(nullptr), mCurrentLine(nullptr), mDependencies() {
+	_3DXMLRepresentation::_3DXMLRepresentation(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, _3DXMLStructure::ReferenceRep::Meshes& meshes) : mReader(archive, filename), mMeshes(meshes), mCurrentSurface(nullptr), mCurrentLine(nullptr), mDependencies() { PROFILER;
 		struct Params {
 			_3DXMLRepresentation* me;
 		} params;
@@ -86,22 +87,22 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLRepresentation::~_3DXMLRepresentation() {
+	_3DXMLRepresentation::~_3DXMLRepresentation() { PROFILER;
 
 	}
 
-	const std::set<_3DXMLStructure::ID>& _3DXMLRepresentation::GetDependencies() const {
+	const std::set<_3DXMLStructure::ID>& _3DXMLRepresentation::GetDependencies() const { PROFILER;
 		return mDependencies;
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	// Aborts the file reading with an exception
-	void _3DXMLRepresentation::ThrowException(const std::string& error) const {
+	void _3DXMLRepresentation::ThrowException(const std::string& error) const { PROFILER;
 		throw DeadlyImportError(boost::str(boost::format("3DXML: %s - %s") % mReader.GetFilename() % error));
 	}
 	
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::ReferenceRep::Mesh& _3DXMLRepresentation::GetMesh(const _3DXMLStructure::ReferenceRep::MatID& material) const {
+	_3DXMLStructure::ReferenceRep::Mesh& _3DXMLRepresentation::GetMesh(const _3DXMLStructure::ReferenceRep::MatID& material) const { PROFILER;
 		auto position = mMeshes.find(material);
 
 		if(position == mMeshes.end()) {
@@ -118,7 +119,7 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLRepresentation::ParseArray(const std::string& content, std::vector<aiVector3D>& array) const {
+	void _3DXMLRepresentation::ParseArray(const std::string& content, std::vector<aiVector3D>& array) const { PROFILER;
 		std::istringstream stream(content);
 		float x, y, z;
 
@@ -138,7 +139,7 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLRepresentation::ParseArray(const std::string& content, Array<aiVector3D>& array, unsigned int start_index) const {
+	void _3DXMLRepresentation::ParseArray(const std::string& content, Array<aiVector3D>& array, unsigned int start_index) const { PROFILER;
 		std::istringstream stream(content);
 		float x, y, z;
 
@@ -159,7 +160,7 @@ namespace Assimp {
 	}
 	
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLRepresentation::ParseMultiArray(const std::string& content, MultiArray<aiColor4D>& array, unsigned int channel, unsigned int start_index, bool alpha) const {
+	void _3DXMLRepresentation::ParseMultiArray(const std::string& content, MultiArray<aiColor4D>& array, unsigned int channel, unsigned int start_index, bool alpha) const { PROFILER;
 		std::istringstream stream(content);
 		float r, g, b, a;
 
@@ -188,7 +189,7 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLRepresentation::ParseMultiArray(const std::string& content, MultiArray<aiVector3D>& array, unsigned int channel, unsigned int start_index, unsigned int dimension) const {
+	void _3DXMLRepresentation::ParseMultiArray(const std::string& content, MultiArray<aiVector3D>& array, unsigned int channel, unsigned int start_index, unsigned int dimension) const { PROFILER;
 		static const std::size_t dim_max = 3;
 
 		float values[dim_max] = {0, 0, 0};
@@ -216,7 +217,7 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLRepresentation::ParseTriangles(const std::string& content, std::list<std::vector<unsigned int>>& triangles) const {
+	void _3DXMLRepresentation::ParseTriangles(const std::string& content, std::list<std::vector<unsigned int>>& triangles) const { PROFILER;
 		std::istringstream stream(content);
 		unsigned int value;
 
@@ -248,7 +249,7 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLRepresentation::ReadVisualizationRep() {
+	void _3DXMLRepresentation::ReadVisualizationRep() { PROFILER;
 		std::string type = *(mReader.GetAttribute<std::string>("xsi:type", true));
 
 		if(type.compare("BagRepType") == 0) {
@@ -261,7 +262,7 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLRepresentation::ReadBagRep() {
+	void _3DXMLRepresentation::ReadBagRep() { PROFILER;
 		struct Params {
 			_3DXMLRepresentation* me;
 		} params;
@@ -281,7 +282,7 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLRepresentation::ReadPolygonalRep() {
+	void _3DXMLRepresentation::ReadPolygonalRep() { PROFILER;
 		struct Params {
 			_3DXMLRepresentation* me;
 		} params;
@@ -322,7 +323,7 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLRepresentation::ReadFaces() {
+	void _3DXMLRepresentation::ReadFaces() { PROFILER;
 		struct Params {
 			_3DXMLRepresentation* me;
 		} params;
@@ -449,7 +450,7 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLRepresentation::ReadEdges() {
+	void _3DXMLRepresentation::ReadEdges() { PROFILER;
 		struct Params {
 			_3DXMLRepresentation* me;
 			std::vector<std::pair<_3DXMLStructure::ReferenceRep::MatID, std::vector<aiVector3D>>>* lines;
@@ -520,7 +521,7 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLRepresentation::ReadVertexBuffer() {
+	void _3DXMLRepresentation::ReadVertexBuffer() { PROFILER;
 		struct Params {
 			_3DXMLRepresentation* me;
 			std::unique_ptr<aiMesh> mesh;
@@ -650,7 +651,7 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLRepresentation::ReadSurfaceAttributes() {
+	void _3DXMLRepresentation::ReadSurfaceAttributes() { PROFILER;
 		struct Params {
 			_3DXMLRepresentation* me;
 		} params;
@@ -696,7 +697,7 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLRepresentation::ReadMaterialApplication() {
+	void _3DXMLRepresentation::ReadMaterialApplication() { PROFILER;
 		struct Params {
 			_3DXMLRepresentation* me;
 			_3DXMLStructure::MaterialAttributes* attributes;
@@ -809,7 +810,7 @@ namespace Assimp {
 	}
 	
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLRepresentation::ReadLineAttributes() {
+	void _3DXMLRepresentation::ReadLineAttributes() { PROFILER;
 		struct Params {
 			_3DXMLRepresentation* me;
 		} params;

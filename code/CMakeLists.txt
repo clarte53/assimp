@@ -163,6 +163,8 @@ SET( 3DXML_SRCS
 	3DXMLRepresentation.cpp
 	3DXMLStructure.h
 	3DXMLStructure.cpp
+	HighResProfiler.h
+	HighResProfiler.cpp
 	Optional.h
 	XMLParser.h
 	XMLParser.cpp
