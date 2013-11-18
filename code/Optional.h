@@ -50,9 +50,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // Hack for Visual Studio whose support for standard C++ is sometime approximative
 // TODO: check the version the day it will be supported to add this feature (useful to avoid hard to find bugs)
 #if defined(_MSC_VER)
-#define EXPLICIT
+#	define EXPLICIT
 #else
-#define EXPLICIT explicit
+#	define EXPLICIT explicit
 #endif
 
 namespace Assimp {

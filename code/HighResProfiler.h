@@ -46,14 +46,28 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define AI_HIGHRESPROFILER_H_INC
 
 //#if defined _DEBUG || ! defined(NDEBUG)
+#	if defined(__GNUC__)
+#		define FUNCTION __PRETTY_FUNCTION__
+#	else
+#		define FUNCTION __FUNCTION__
+#	endif
+
 #	define _TO_STRING(x) #x
 #	define TO_STRING(x) _TO_STRING(x)
 #	define _CONCAT(x,y) x##y
 #	define CONCAT(x,y) _CONCAT(x, y)
-#	define PROFILER Assimp::Profiling::HighResProfilerCall CONCAT(__profiler,__COUNTER__)(std::string(__FILE__) + ": " + __PRETTY_FUNCTION__ + " (" + TO_STRING(__LINE__) + ")")
+#	define PROFILER Assimp::Profiling::HighResProfilerCall CONCAT(__profiler,__COUNTER__)(std::string(__FILE__) + ": " + FUNCTION + " (" + TO_STRING(__LINE__) + ")")
 //#else
 //#	define PROFILER
 //#endif
+
+// Hack for Visual Studio whose support for standard C++ is sometime approximative
+// TODO: check the version the day it will be supported to add this feature (useful to avoid hard to find bugs)
+#if defined(_MSC_VER)
+#	define DELETE
+#else
+#	define DELETE = delete
+#endif
 
 #include <chrono>
 
@@ -69,9 +83,9 @@ namespace Assimp {
 
 				HighResProfiler();
 
-				HighResProfiler(const HighResProfiler&) = delete;
+				HighResProfiler(const HighResProfiler&) DELETE;
 
-				HighResProfiler(HighResProfiler&&) = delete;
+				HighResProfiler(HighResProfiler&&) DELETE;
 
 				virtual ~HighResProfiler();
 
