@@ -245,20 +245,42 @@ namespace Assimp {
 
 		struct ReferenceRep : public boost::noncopyable {
 
-			struct Mesh : public boost::noncopyable {
+			class Geometry : public boost::noncopyable {
 
-				std::unique_ptr<aiMesh> mesh;
+				protected:
 
-				unsigned int processed;
+					std::unique_ptr<aiMesh> mMesh;
 
-				Mesh();
+					std::unique_ptr<aiMesh> mLines;
 
-				Mesh(Mesh&& other);
+					unsigned int mProcessed;
 
-			}; // struct Mesh
+				public:
+
+					Geometry();
+
+					Geometry(Geometry&& other);
+
+					std::unique_ptr<aiMesh>& GetMesh();
+
+					std::unique_ptr<aiMesh>& GetLines();
+
+					inline unsigned int& GetProcessed() {
+						return mProcessed;
+					}
+
+					inline bool HasMesh() const {
+						return mMesh && (mMesh->mNumVertices != 0 || mMesh->mNumFaces != 0);
+					}
+					
+					inline bool HasLines() const {
+						return mLines && (mLines->mNumVertices != 0 || mLines->mNumFaces != 0);
+					}
+
+			}; // class Geometry
 
 			typedef std::shared_ptr<_3DXMLStructure::MaterialAttributes> MatID;
-			typedef std::map<MatID, Mesh, shared_less<_3DXMLStructure::MaterialAttributes>> Meshes;
+			typedef std::map<MatID, Geometry, shared_less<_3DXMLStructure::MaterialAttributes>> Meshes;
 					
 			unsigned int id;
 					

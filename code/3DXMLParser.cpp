@@ -446,34 +446,47 @@ namespace Assimp {
 			// Get a reference to the list of indexes to use
 			std::list<unsigned int>& list_indexes = rep.indexes[material_index];
 
-			for(_3DXMLStructure::ReferenceRep::Meshes::iterator it_mesh(rep.meshes.begin()), end_mesh(rep.meshes.end()); it_mesh != end_mesh; ++it_mesh) {
-				// Duplicate the mesh for the new material
-				aiMesh* mesh_ptr = NULL;
+			for(_3DXMLStructure::ReferenceRep::Meshes::iterator it_meshes(rep.meshes.begin()), end_meshes(rep.meshes.end()); it_meshes != end_meshes; ++it_meshes) {
+				std::list<std::unique_ptr<aiMesh>*> meshes;
 
-				if(rep.nb_references == 0) {
-					mesh_ptr = it_mesh->second.mesh.release();
-				} else {
-					SceneCombiner::Copy(&mesh_ptr, it_mesh->second.mesh.get());
+				if(it_meshes->second.HasMesh()) {
+					meshes.emplace_back(&(it_meshes->second.GetMesh()));
 				}
-
-				// Save the new mesh in the scene
-				mContent.scene->Meshes.Set(index_mesh, mesh_ptr);
-
-				// Get the index of the material
-				unsigned int index_mat = material_index;
-				if(material_index == mixed_material_index) {
-					// Get the index of the material defined for this specific mesh
-					index_mat = (it_mesh->first ? it_mesh->first->index : 0);
+				if(it_meshes->second.HasLines()) {
+					meshes.emplace_back(&(it_meshes->second.GetLines()));
 				}
+				
+				for(std::list<std::unique_ptr<aiMesh>*>::iterator it_mesh(meshes.begin()), end_mesh(meshes.end()); it_mesh != end_mesh; ++it_mesh) {
+					if(**it_mesh) {
+						// Duplicate the mesh for the new material
+						aiMesh* mesh_ptr = NULL;
 
-				// Save the index of the material to use
-				mesh_ptr->mMaterialIndex = index_mat;
+						if(rep.nb_references == 0) {
+							mesh_ptr = (*it_mesh)->release();
+						} else {
+							SceneCombiner::Copy(&mesh_ptr, (*it_mesh)->get());
+						}
 
-				// Save the index of the mesh depending for the special material index corresponding to mixed materials defined at the mesh level
-				list_indexes.push_back(index_mesh);
+						// Save the new mesh in the scene
+						mContent.scene->Meshes.Set(index_mesh, mesh_ptr);
 
-				// Increment the index for the next mesh
-				index_mesh++;
+						// Get the index of the material
+						unsigned int index_mat = material_index;
+						if(material_index == mixed_material_index) {
+							// Get the index of the material defined for this specific mesh
+							index_mat = (it_meshes->first ? it_meshes->first->index : 0);
+						}
+
+						// Save the index of the material to use
+						mesh_ptr->mMaterialIndex = index_mat;
+
+						// Save the index of the mesh depending for the special material index corresponding to mixed materials defined at the mesh level
+						list_indexes.push_back(index_mesh);
+
+						// Increment the index for the next mesh
+						index_mesh++;
+					}
+				}
 			}
 		}
 	}
@@ -947,7 +960,12 @@ namespace Assimp {
 
 				for(_3DXMLStructure::ReferenceRep::Meshes::iterator it_mesh(rep.meshes.begin()), end_mesh(rep.meshes.end()); it_mesh != end_mesh; ++it_mesh) {
 					// Set the names of the parsed meshes with this ReferenceRep name
-					it_mesh->second.mesh->mName = rep.name;
+					if(it_mesh->second.HasMesh()) {
+						it_mesh->second.GetMesh()->mName = rep.name;
+					}
+					if(it_mesh->second.HasLines()) {
+						it_mesh->second.GetLines()->mName = rep.name;
+					}
 				}
 
 				// Get the dependencies for this geometry

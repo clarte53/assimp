@@ -81,7 +81,7 @@ namespace Assimp {
 			/** Aborts the file reading with an exception */
 			void ThrowException(const std::string& error) const;
 
-			_3DXMLStructure::ReferenceRep::Mesh& GetMesh(const _3DXMLStructure::ReferenceRep::MatID& material) const;
+			_3DXMLStructure::ReferenceRep::Geometry& GetGeometry(const _3DXMLStructure::ReferenceRep::MatID& material) const;
 
 			void ParseArray(const std::string& content, std::vector<aiVector3D>& array) const;
 
