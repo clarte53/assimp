@@ -475,14 +475,16 @@ namespace Assimp {
 					return std::move(map);
 				})(), 1, 1);
 
-				std::string vertices = *(parser->GetAttribute<std::string>("vertices", true));
+				Optional<std::string> vertices = parser->GetAttribute<std::string>("vertices");
 
 				_3DXMLStructure::ReferenceRep::MatID old_line = params.me->mCurrentLine;
 
 				parser->ParseElement(mapping, params);
 
 				std::vector<aiVector3D> lines;
-				params.me->ParseArray(vertices, lines);
+				if(vertices) {
+					params.me->ParseArray(*vertices, lines);
+				}
 
 				if(! lines.empty()) {
 					_3DXMLStructure::ReferenceRep::Mesh& mesh_data = params.me->GetMesh(params.me->mCurrentLine);
@@ -607,46 +609,44 @@ namespace Assimp {
 
 		mReader.ParseElement(mapping, params);
 
-		if(params.mesh->Vertices.Size() == 0) {
-			ThrowException("The vertex buffer does not contain any vertex.");
-		}
+		if(params.mesh->Vertices.Size() != 0) {
+			// Duplicate the vertices to avoid different faces sharing the same (and to pass the ValidateDataStructure test...)
+			for(_3DXMLStructure::ReferenceRep::Meshes::iterator it(mMeshes.begin()), end(mMeshes.end()); it != end; ++it) {
+				aiMesh* mesh = it->second.mesh.get();
 
-		// Duplicate the vertices to avoid different faces sharing the same (and to pass the ValidateDataStructure test...)
-		for(_3DXMLStructure::ReferenceRep::Meshes::iterator it(mMeshes.begin()), end(mMeshes.end()); it != end; ++it) {
-			aiMesh* mesh = it->second.mesh.get();
+				unsigned int vertice_index = mesh->Vertices.Size();
 
-			unsigned int vertice_index = mesh->Vertices.Size();
+				for(unsigned int i = it->second.processed; i < mesh->mNumFaces; i++) {
+					aiFace& face = mesh->mFaces[i];
 
-			for(unsigned int i = it->second.processed; i < mesh->mNumFaces; i++) {
-				aiFace& face = mesh->mFaces[i];
+					for(unsigned int j = 0; j < face.mNumIndices; j++) {
+						unsigned int index = face.mIndices[j];
 
-				for(unsigned int j = 0; j < face.mNumIndices; j++) {
-					unsigned int index = face.mIndices[j];
+						face.Indices.Set(j, vertice_index);
 
-					face.Indices.Set(j, vertice_index);
+						if(params.mesh->HasPositions()) {
+							mesh->Vertices.Set(vertice_index, params.mesh->mVertices[index]);
+						}
+						if(params.mesh->HasNormals()) {
+							mesh->Normals.Set(vertice_index, params.mesh->mNormals[index]);
+						}
+						if(params.mesh->HasTangentsAndBitangents()) {
+							mesh->Tangents.Set(vertice_index, params.mesh->mTangents[index]);
+							mesh->Bitangents.Set(vertice_index, params.mesh->mBitangents[index]);
+						}
+						for(unsigned int k = 0; k < params.mesh->GetNumUVChannels(); k++) {
+							mesh->TextureCoords.Get(k).Set(vertice_index, params.mesh->mTextureCoords[k][index]);
+						}
+						for(unsigned int k = 0; k < params.mesh->GetNumColorChannels(); k++) {
+							mesh->Colors.Get(k).Set(vertice_index, params.mesh->mColors[k][index]);
+						}
 
-					if(params.mesh->HasPositions()) {
-						mesh->Vertices.Set(vertice_index, params.mesh->mVertices[index]);
+						vertice_index++;
 					}
-					if(params.mesh->HasNormals()) {
-						mesh->Normals.Set(vertice_index, params.mesh->mNormals[index]);
-					}
-					if(params.mesh->HasTangentsAndBitangents()) {
-						mesh->Tangents.Set(vertice_index, params.mesh->mTangents[index]);
-						mesh->Bitangents.Set(vertice_index, params.mesh->mBitangents[index]);
-					}
-					for(unsigned int k = 0; k < params.mesh->GetNumUVChannels(); k++) {
-						mesh->TextureCoords.Get(k).Set(vertice_index, params.mesh->mTextureCoords[k][index]);
-					}
-					for(unsigned int k = 0; k < params.mesh->GetNumColorChannels(); k++) {
-						mesh->Colors.Get(k).Set(vertice_index, params.mesh->mColors[k][index]);
-					}
-
-					vertice_index++;
 				}
-			}
 
-			it->second.processed = mesh->mNumFaces;
+				it->second.processed = mesh->mNumFaces;
+			}
 		}
 	}
 

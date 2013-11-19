@@ -46,6 +46,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define AI_HIGHRESPROFILER_H_INC
 
 //#if defined _DEBUG || ! defined(NDEBUG)
+#if defined(PROFILING)
 #	if defined(__GNUC__)
 #		define FUNCTION __PRETTY_FUNCTION__
 #	else
@@ -57,9 +58,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #	define _CONCAT(x,y) x##y
 #	define CONCAT(x,y) _CONCAT(x, y)
 #	define PROFILER Assimp::Profiling::HighResProfilerCall CONCAT(__profiler,__COUNTER__)(TO_STRING(__FILE__), FUNCTION, __LINE__)
-//#else
-//#	define PROFILER
-//#endif
+#else
+#	define PROFILER
+#endif
 
 // Hack for Visual Studio whose support for standard C++ is sometime approximative
 // TODO: check the version the day it will be supported to add this feature (useful to avoid hard to find bugs)
