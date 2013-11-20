@@ -101,11 +101,11 @@ namespace Assimp {
 	}
 	
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::ReferenceRep::Geometry& _3DXMLRepresentation::GetGeometry(const _3DXMLStructure::ReferenceRep::MatID& material) const { PROFILER;
+	_3DXMLStructure::ReferenceRep::Geometry& _3DXMLRepresentation::GetGeometry(const _3DXMLStructure::MaterialAttributes::ID& material) const { PROFILER;
 		auto position = mMeshes.find(material);
 
 		if(position == mMeshes.end()) {
-			auto insert = mMeshes.emplace(material, _3DXMLStructure::ReferenceRep::Geometry());
+			auto insert = mMeshes.emplace(material, std::unique_ptr<_3DXMLStructure::ReferenceRep::Geometry>(new _3DXMLStructure::ReferenceRep::Geometry()));
 
 			if(! insert.second) {
 				ThrowException("Impossible to create a new mesh for the new material.");
@@ -114,7 +114,7 @@ namespace Assimp {
 			position = insert.first;
 		}
 
-		return position->second;
+		return *(position->second.get());
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -310,8 +310,8 @@ namespace Assimp {
 			return std::move(map);
 		})(), 0, XMLParser::XSD::unbounded);
 
-		_3DXMLStructure::ReferenceRep::MatID old_surface = mCurrentSurface;
-		_3DXMLStructure::ReferenceRep::MatID old_line = mCurrentLine;
+		_3DXMLStructure::MaterialAttributes::ID old_surface = mCurrentSurface;
+		_3DXMLStructure::MaterialAttributes::ID old_line = mCurrentLine;
 
 		params.me = this;
 
@@ -352,7 +352,7 @@ namespace Assimp {
 				Optional<std::string> strips = parser->GetAttribute<std::string>("strips");
 				Optional<std::string> fans = parser->GetAttribute<std::string>("fans");
 				
-				_3DXMLStructure::ReferenceRep::MatID old_surface = params.me->mCurrentSurface;
+				_3DXMLStructure::MaterialAttributes::ID old_surface = params.me->mCurrentSurface;
 
 				parser->ParseElement(mapping, params);
 
@@ -441,7 +441,7 @@ namespace Assimp {
 			return std::move(map);
 		})(), 1, 1);
 
-		_3DXMLStructure::ReferenceRep::MatID old_surface = mCurrentSurface;
+		_3DXMLStructure::MaterialAttributes::ID old_surface = mCurrentSurface;
 
 		params.me = this;
 
@@ -477,7 +477,7 @@ namespace Assimp {
 
 				Optional<std::string> vertices = parser->GetAttribute<std::string>("vertices");
 
-				_3DXMLStructure::ReferenceRep::MatID old_line = params.me->mCurrentLine;
+				_3DXMLStructure::MaterialAttributes::ID old_line = params.me->mCurrentLine;
 
 				parser->ParseElement(mapping, params);
 
@@ -509,7 +509,7 @@ namespace Assimp {
 			return std::move(map);
 		})(), 1, 1);
 
-		_3DXMLStructure::ReferenceRep::MatID old_line = mCurrentLine;
+		_3DXMLStructure::MaterialAttributes::ID old_line = mCurrentLine;
 
 		params.me = this;
 
@@ -608,12 +608,12 @@ namespace Assimp {
 		if(params.mesh->Vertices.Size() != 0) {
 			// Duplicate the vertices to avoid different faces sharing the same (and to pass the ValidateDataStructure test...)
 			for(_3DXMLStructure::ReferenceRep::Meshes::iterator it(mMeshes.begin()), end(mMeshes.end()); it != end; ++it) {
-				if(it->second.HasMesh()) {
-					aiMesh* mesh = it->second.GetMesh().get();
+				if(it->second->HasMesh()) {
+					aiMesh* mesh = it->second->GetMesh().get();
 
 					unsigned int vertice_index = mesh->Vertices.Size();
 
-					for(unsigned int i = it->second.GetProcessed(); i < mesh->mNumFaces; i++) {
+					for(unsigned int i = it->second->GetProcessed(); i < mesh->mNumFaces; i++) {
 						aiFace& face = mesh->mFaces[i];
 
 						for(unsigned int j = 0; j < face.mNumIndices; j++) {
@@ -642,7 +642,7 @@ namespace Assimp {
 						}
 					}
 
-					it->second.GetProcessed() = mesh->mNumFaces;
+					it->second->GetProcessed() = mesh->mNumFaces;
 				}
 			}
 		}
@@ -686,7 +686,8 @@ namespace Assimp {
 		})(), 1, 1);
 
 		if(mReader.HasElements()) {
-			mCurrentSurface = _3DXMLStructure::ReferenceRep::MatID(new _3DXMLStructure::MaterialAttributes());
+			// Create the new surface attributes
+			mCurrentSurface = _3DXMLStructure::MaterialAttributes::ID(new _3DXMLStructure::MaterialAttributes());
 
 			params.me = this;
 
@@ -839,7 +840,8 @@ namespace Assimp {
 		})(), 1, 1);
 
 		if(mReader.HasElements()) {
-			mCurrentLine = _3DXMLStructure::ReferenceRep::MatID(new _3DXMLStructure::MaterialAttributes());
+			// Create the new line attributes
+			mCurrentLine = _3DXMLStructure::MaterialAttributes::ID(new _3DXMLStructure::MaterialAttributes());
 
 			params.me = this;
 			//TODO: support lineType & thickness?

@@ -222,16 +222,8 @@ namespace Assimp {
 			}
 		}
 
-		// Get all the MaterialAttributes of the scene
-		std::set<_3DXMLStructure::ReferenceRep::MatID, _3DXMLStructure::shared_less<_3DXMLStructure::MaterialAttributes>> attributes;
-		for(std::map<_3DXMLStructure::ID, _3DXMLStructure::ReferenceRep>::const_iterator it_rep(mContent.representations.begin()), end_rep(mContent.representations.end()); it_rep != end_rep; ++it_rep) { PROFILER;
-			for(_3DXMLStructure::ReferenceRep::Meshes::const_iterator it_mesh(it_rep->second.meshes.begin()), end_mesh(it_rep->second.meshes.end()); it_mesh != end_mesh; ++it_mesh) {
-				attributes.insert(it_mesh->first); // No need to check the output, we don't care if the element is inserted or is already present
-			}
-		}
-
 		// Generate the final materials of the scene and store their indices
-		for(auto it_mat(attributes.begin()), end_mat(attributes.end()); it_mat != end_mat; ++ it_mat) { PROFILER;
+		for(auto it_mat(mContent.mat_attributes.begin()), end_mat(mContent.mat_attributes.end()); it_mat != end_mat; ++ it_mat) { PROFILER;
 			// The final material
 			std::unique_ptr<aiMaterial> material(nullptr);
 			
@@ -449,11 +441,11 @@ namespace Assimp {
 			for(_3DXMLStructure::ReferenceRep::Meshes::iterator it_meshes(rep.meshes.begin()), end_meshes(rep.meshes.end()); it_meshes != end_meshes; ++it_meshes) {
 				std::list<std::unique_ptr<aiMesh>*> meshes;
 
-				if(it_meshes->second.HasMesh()) {
-					meshes.emplace_back(&(it_meshes->second.GetMesh()));
+				if(it_meshes->second->HasMesh()) {
+					meshes.emplace_back(&(it_meshes->second->GetMesh()));
 				}
-				if(it_meshes->second.HasLines()) {
-					meshes.emplace_back(&(it_meshes->second.GetLines()));
+				if(it_meshes->second->HasLines()) {
+					meshes.emplace_back(&(it_meshes->second->GetLines()));
 				}
 				
 				for(std::list<std::unique_ptr<aiMesh>*>::iterator it_mesh(meshes.begin()), end_mesh(meshes.end()); it_mesh != end_mesh; ++it_mesh) {
@@ -535,8 +527,6 @@ namespace Assimp {
 					const _3DXMLStructure::InstanceRep& rep = it_mesh->second;
 
 					if(rep.instance_of != nullptr) {
-						unsigned int i = node->Meshes.Size();
-
 						if(! rep.instance_of->meshes.empty()) {
 							// Get the index of material to use
 							unsigned int index_mat = mixed_material_index;
@@ -552,6 +542,7 @@ namespace Assimp {
 
 							// Add the indexes of the meshes to the current node
 							if(it_list != rep.instance_of->indexes.end() && ! it_list->second.empty()) {
+								unsigned int i = 0; // Because (node->Meshes.Size() == 0)
 								for(std::list<unsigned int>::const_iterator it_index_mesh(it_list->second.begin()), end_index_mesh(it_list->second.end()); it_index_mesh != end_index_mesh; ++it_index_mesh) {
 									node->Meshes.Set(i++, *it_index_mesh);
 								}
@@ -965,11 +956,36 @@ namespace Assimp {
 
 				for(_3DXMLStructure::ReferenceRep::Meshes::iterator it_mesh(rep.meshes.begin()), end_mesh(rep.meshes.end()); it_mesh != end_mesh; ++it_mesh) {
 					// Set the names of the parsed meshes with this ReferenceRep name
-					if(it_mesh->second.HasMesh()) {
-						it_mesh->second.GetMesh()->mName = rep.name;
+					if(it_mesh->second->HasMesh()) {
+						it_mesh->second->GetMesh()->mName = rep.name;
 					}
-					if(it_mesh->second.HasLines()) {
-						it_mesh->second.GetLines()->mName = rep.name;
+					if(it_mesh->second->HasLines()) {
+						it_mesh->second->GetLines()->mName = rep.name;
+					}
+
+					// Check if the surface attributes already exist
+					std::set<_3DXMLStructure::MaterialAttributes::ID>::iterator it = mContent.mat_attributes.find(it_mesh->first);
+
+					if(it == mContent.mat_attributes.end()) {
+						// Add the MaterialAttribute to the list of existing attributes
+						std::pair<std::set<_3DXMLStructure::MaterialAttributes::ID>::iterator, bool> result = mContent.mat_attributes.insert(it_mesh->first);
+
+						if(! result.second) {
+							ThrowException(parser, "In ReferenceRep \"" + parser->ToString(id) + "\": impossible to add the new material attributes.");
+						}
+					} else {
+						// Set the current material attributes to be a reference of the shared MaterialAttributes
+						std::unique_ptr<_3DXMLStructure::ReferenceRep::Geometry> geometry(it_mesh->second.release());
+
+						it_mesh = rep.meshes.erase(it_mesh);
+
+						std::pair<_3DXMLStructure::ReferenceRep::Meshes::iterator, bool> result = rep.meshes.emplace(std::make_pair(*it, std::move(geometry)));
+
+						if(result.second) {
+							it_mesh = result.first;
+						} else {
+							ThrowException(parser, "In ReferenceRep \"" + parser->ToString(id) + "\": impossible to replace the material attributes with a shared version.");
+						}
 					}
 				}
 

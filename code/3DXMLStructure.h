@@ -141,6 +141,8 @@ namespace Assimp {
 
 		struct MaterialAttributes : public boost::noncopyable {
 
+			typedef std::shared_ptr<MaterialAttributes> ID;
+
 			aiColor4D color;
 
 			std::list<MaterialApplication> materials;
@@ -279,8 +281,7 @@ namespace Assimp {
 
 			}; // class Geometry
 
-			typedef std::shared_ptr<_3DXMLStructure::MaterialAttributes> MatID;
-			typedef std::map<MatID, Geometry, shared_less<_3DXMLStructure::MaterialAttributes>> Meshes;
+			typedef std::map<MaterialAttributes::ID, std::unique_ptr<Geometry>, shared_less<MaterialAttributes>> Meshes;
 					
 			unsigned int id;
 					
@@ -347,6 +348,8 @@ namespace Assimp {
 		std::map<ID, ReferenceRep> representations;
 
 		std::map<ID, MaterialDomain> materials;
+
+		std::set<MaterialAttributes::ID, shared_less<MaterialAttributes>> mat_attributes;
 
 		std::list<CATMatConnection> mat_connections;
 

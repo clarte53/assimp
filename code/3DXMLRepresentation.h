@@ -61,10 +61,10 @@ namespace Assimp {
 			_3DXMLStructure::ReferenceRep::Meshes& mMeshes;
 
 			/** The material of the mesh currently parsed */
-			_3DXMLStructure::ReferenceRep::MatID mCurrentSurface;
+			_3DXMLStructure::MaterialAttributes::ID mCurrentSurface;
 
 			/** The material of the lines currently parsed */
-			_3DXMLStructure::ReferenceRep::MatID mCurrentLine;
+			_3DXMLStructure::MaterialAttributes::ID mCurrentLine;
 
 			std::set<_3DXMLStructure::ID> mDependencies;
 
@@ -81,7 +81,7 @@ namespace Assimp {
 			/** Aborts the file reading with an exception */
 			void ThrowException(const std::string& error) const;
 
-			_3DXMLStructure::ReferenceRep::Geometry& GetGeometry(const _3DXMLStructure::ReferenceRep::MatID& material) const;
+			_3DXMLStructure::ReferenceRep::Geometry& GetGeometry(const _3DXMLStructure::MaterialAttributes::ID& material) const;
 
 			void ParseArray(const std::string& content, std::vector<aiVector3D>& array) const;
 
