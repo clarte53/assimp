@@ -537,25 +537,30 @@ namespace Assimp {
 					if(rep.instance_of != nullptr) {
 						unsigned int i = node->Meshes.Size();
 
-						// Get the index of material to use
-						unsigned int index_mat = mixed_material_index;
-						if(material_index) {
-							index_mat = *material_index;
-						}
+						if(! rep.instance_of->meshes.empty()) {
+							// Get the index of material to use
+							unsigned int index_mat = mixed_material_index;
+							if(material_index) {
+								index_mat = *material_index;
+							}
 
-						// Add the meshes to the scene if necessary
-						BuildMeshes(parser, *(rep.instance_of), index_mat);
+							// Add the meshes to the scene if necessary
+							BuildMeshes(parser, *(rep.instance_of), index_mat);
 
-						// Get the list of indexes of the meshes for the specified material
-						std::map<unsigned int, std::list<unsigned int>>::const_iterator it_list = rep.instance_of->indexes.find(index_mat);
+							// Get the list of indexes of the meshes for the specified material
+							std::map<unsigned int, std::list<unsigned int>>::const_iterator it_list = rep.instance_of->indexes.find(index_mat);
 
-						// Add the indexes of the meshes to the current node
-						if(it_list != rep.instance_of->indexes.end() && ! it_list->second.empty()) {
-							for(std::list<unsigned int>::const_iterator it_index_mesh(it_list->second.begin()), end_index_mesh(it_list->second.end()); it_index_mesh != end_index_mesh; ++it_index_mesh) {
-								node->Meshes.Set(i++, *it_index_mesh);
+							// Add the indexes of the meshes to the current node
+							if(it_list != rep.instance_of->indexes.end() && ! it_list->second.empty()) {
+								for(std::list<unsigned int>::const_iterator it_index_mesh(it_list->second.begin()), end_index_mesh(it_list->second.end()); it_index_mesh != end_index_mesh; ++it_index_mesh) {
+									node->Meshes.Set(i++, *it_index_mesh);
+								}
+							} else {
+								ThrowException(parser, "No mesh corresponds to the given material \"" + parser->ToString(index_mat) + "\".");
 							}
 						} else {
-							ThrowException(parser, "No mesh corresponds to the given material \"" + parser->ToString(index_mat) + "\".");
+							// If the representation format is not supported, it is normal to have empty ReferenceRep. Therefore, we should gracefully ignore such nodes.
+							DefaultLogger::get()->warn("No meshes defined in ReferenceRep \"" + parser->ToString(rep.instance_of->id) + "\".");
 						}
 					} else {
 						ThrowException(parser, "One InstanceRep of Reference3D \"" + parser->ToString(ref.id) + "\" is unresolved.");
@@ -983,7 +988,8 @@ namespace Assimp {
 				ThrowException(parser, "In ReferenceRep \"" + parser->ToString(id) + "\": unsupported extension \"" + uri.extension + "\" for associated file.");
 			}
 		} else {
-			ThrowException(parser, "In ReferenceRep \"" + parser->ToString(id) + "\": unsupported representation format \"" + format + "\".");
+			// Unsupported format. We warn the user and ignore it
+			DefaultLogger::get()->warn("In ReferenceRep \"" + parser->ToString(id) + "\": unsupported representation format \"" + format + "\".");
 		}
 	}
 
@@ -1144,23 +1150,23 @@ namespace Assimp {
 			bool rendering;
 		} params;
 
-		static const XMLParser::XSD::Sequence<Params> mapping(([](){
-			XMLParser::XSD::Sequence<Params>::type map;
+		static const XMLParser::XSD::Choice<Params> mapping(([](){ // Fix for Virtools. Schema: Sequence
+			XMLParser::XSD::Choice<Params>::type map; // Fix for Virtools. Schema: Sequence
 
 			// Parse PLM_ExternalID element
-			map.emplace_back("PLM_ExternalID", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
+			map.emplace("PLM_ExternalID", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
 				params.name_opt = parser->GetContent<std::string>(true);
 			}, 0, 1));
 
 			// Parse V_MatDomain element
-			map.emplace_back("V_MatDomain", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
+			map.emplace("V_MatDomain", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
 				std::string domain = *(parser->GetContent<std::string>(true));
 
 				params.rendering = (domain.compare("Rendering") == 0);
 			}, 0, 1));
 
 			return std::move(map);
-		})(), 1, 1);
+		})(), 0, 2); // Fix for Virtools. Schema: {1, 1}
 
 		params.rendering = false;
 		params.name_opt = parser->GetAttribute<std::string>("name");
