@@ -209,6 +209,9 @@ namespace Assimp {
 				float result = (float) value; // Cast to the appropriate type, after all computation are done to minimize the rounding errors
 
 				params.me->mMaterial->AddProperty(&result, 1, AI_MATKEY_SHININESS);
+
+				aiShadingMode shading = aiShadingMode_Blinn;
+				params.me->mMaterial->AddProperty((int*) &shading, 1, AI_MATKEY_SHADING_MODEL);
 			});
 
 			//TODO: EmissiveCoeff
