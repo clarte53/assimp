@@ -133,7 +133,7 @@ class Array {
 		}
 		
 		inline T Get(unsigned int index) {
-			#ifdef _DEBUG  
+			#ifdef ASSIMP_BUILD_DEBUG  
 				if(mData == NULL || (*mData) == NULL || index >= Size()) {
 					throw std::out_of_range("Invalid index to unallocated memory");
 				}
@@ -248,7 +248,7 @@ class Array<T*> {
 		}
 		
 		inline T& Get(unsigned int index) {
-			#ifdef _DEBUG  
+			#ifdef ASSIMP_BUILD_DEBUG  
 				if(mData == NULL || (*mData) == NULL || index >= Size()) {
 					throw std::out_of_range("Invalid index to unallocated memory");
 				}
@@ -327,7 +327,7 @@ class MultiArray {
 		}
 		
 		inline Array<T>& Get(unsigned int index) const {
-			#ifdef _DEBUG  
+			#ifdef ASSIMP_BUILD_DEBUG  
 				if(mData == NULL || index >= Size()) {
 					throw std::out_of_range("Invalid index to unallocated memory");
 				}
@@ -337,7 +337,7 @@ class MultiArray {
 		}
 		
 		inline void Set(unsigned int index, Array<T>* value, bool dealloc = true) const {
-			#ifdef _DEBUG  
+			#ifdef ASSIMP_BUILD_DEBUG  
 				if(mData == NULL || index >= Size()) {
 					throw std::out_of_range("Invalid index to unallocated memory");
 				}
@@ -381,7 +381,7 @@ class FixedArray {
 		}
 		
 		inline T Get(unsigned int index) const {
-			#ifdef _DEBUG  
+			#ifdef ASSIMP_BUILD_DEBUG  
 				if(mData == NULL || index >= Size()) {
 					throw std::out_of_range("Invalid index to unallocated memory");
 				}
@@ -391,7 +391,7 @@ class FixedArray {
 		}
 		
 		inline void Set(unsigned int index, const T& value) const {
-			#ifdef _DEBUG  
+			#ifdef ASSIMP_BUILD_DEBUG  
 				if(mData == NULL || index >= Size()) {
 					throw std::out_of_range("Invalid index to unallocated memory");
 				}
