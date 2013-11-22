@@ -276,12 +276,45 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::_3DXMLStructure(aiScene* _scene) : scene(_scene), ref_root_index(), mat_root_index(), references_node(), references_mat(), representations(), materials(), mat_attributes(), mat_connections(), files_to_parse() {
+	_3DXMLStructure::Dependencies::Dependencies() : files_parsed(), files_to_parse() {
+
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	_3DXMLStructure::Dependencies::Dependencies(Dependencies&& other) : files_parsed(std::move(other.files_parsed)), files_to_parse(std::move(other.files_to_parse)) {
+
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	void _3DXMLStructure::Dependencies::add(const std::string& file) {
+		auto done = files_parsed.find(file);
+
+		if(done == files_parsed.end()) {
+			files_to_parse.insert(file);
+		}
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	std::string _3DXMLStructure::Dependencies::next() {
+		std::string result = "";
+
+		if(! files_to_parse.empty()) {
+			result = *(files_to_parse.begin());
+
+			files_parsed.insert(result);
+			files_to_parse.erase(result);
+		}
+
+		return result;
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	_3DXMLStructure::_3DXMLStructure(aiScene* _scene) : scene(_scene), ref_root_index(), references_node(), representations(), mat_root_index(), references_mat(), materials(), mat_connections(), dependencies() {
 	
 	}
 	
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::_3DXMLStructure(_3DXMLStructure&& other) : scene(other.scene), ref_root_index(std::move(other.ref_root_index)), mat_root_index(std::move(other.mat_root_index)), references_node(std::move(other.references_node)), references_mat(std::move(other.references_mat)), representations(std::move(other.representations)), materials(std::move(other.materials)), mat_attributes(std::move(other.mat_attributes)), mat_connections(std::move(other.mat_connections)), files_to_parse(std::move(other.files_to_parse)) {
+	_3DXMLStructure::_3DXMLStructure(_3DXMLStructure&& other) : scene(other.scene), ref_root_index(std::move(other.ref_root_index)), references_node(std::move(other.references_node)), representations(std::move(other.representations)), mat_root_index(std::move(other.mat_root_index)), references_mat(std::move(other.references_mat)), materials(std::move(other.materials)), mat_connections(std::move(other.mat_connections)), dependencies(std::move(other.dependencies)) {
 		other.scene = nullptr;
 	}
 

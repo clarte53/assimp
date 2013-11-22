@@ -73,28 +73,22 @@ namespace Assimp {
 		ReadManifest(parser.get(), main_file);
 
 		// Add the main file to the list of files to parse
-		mContent.files_to_parse.insert(main_file);
+		mContent.dependencies.add(main_file);
 
 		// Add the material reference file to the list of file to parse if it exist
 		std::string mat_file = "CATMaterialRef.3dxml";
 		if(mArchive->Exists(mat_file.c_str())) {
-			mContent.files_to_parse.insert(mat_file);
+			mContent.dependencies.add(mat_file);
 		}
 
 		// Parse other referenced 3DXML files until all references are resolved
-		while(mContent.files_to_parse.size() != 0) { PROFILER;
-			std::set<std::string>::const_iterator it = mContent.files_to_parse.begin();
+		std::string filename;
+		while((filename = mContent.dependencies.next()) != "") { PROFILER;
+			// Create a xml parser for the file
+			parser.reset(new XMLParser(mArchive, filename));
 
-			if(it != mContent.files_to_parse.end()) {
-				// Create a xml parser for the file
-				parser.reset(new XMLParser(mArchive, *it));
-				
-				// Parse the 3DXML file
-				ReadFile(parser.get());
-
-				// Remove the file from the list of files to parse
-				it = mContent.files_to_parse.erase(it);
-			}
+			// Parse the 3DXML file
+			ReadFile(parser.get());
 		}
 
 		// Construct the materials & meshes from the parsed data
@@ -222,8 +216,47 @@ namespace Assimp {
 			}
 		}
 
+		// Update the ReferenceRep to share the same MaterialAttributes
+		std::set<_3DXMLStructure::MaterialAttributes::ID, _3DXMLStructure::shared_less<_3DXMLStructure::MaterialAttributes>> mat_attributes;
+		for(std::map<_3DXMLStructure::ID, _3DXMLStructure::ReferenceRep>::iterator it_rep(mContent.representations.begin()), end_rep(mContent.representations.end()); it_rep != end_rep; ++it_rep) {
+			for(_3DXMLStructure::ReferenceRep::Meshes::iterator it_mesh(it_rep->second.meshes.begin()), end_mesh(it_rep->second.meshes.end()); it_mesh != end_mesh; ++it_mesh) {
+				// Set the names of the parsed meshes with this ReferenceRep name
+				if(it_mesh->second->HasMesh()) {
+					it_mesh->second->GetMesh()->mName = it_rep->second.name;
+				}
+				if(it_mesh->second->HasLines()) {
+					it_mesh->second->GetLines()->mName = it_rep->second.name;
+				}
+
+				// Check if the surface attributes already exist
+				std::set<_3DXMLStructure::MaterialAttributes::ID>::iterator it = mat_attributes.find(it_mesh->first);
+
+				if(it == mat_attributes.end()) {
+					// Add the MaterialAttribute to the list of existing attributes
+					std::pair<std::set<_3DXMLStructure::MaterialAttributes::ID>::iterator, bool> result = mat_attributes.insert(it_mesh->first);
+
+					if(! result.second) {
+						ThrowException(parser, "In ReferenceRep \"" + parser->ToString(it_rep->second.id) + "\": impossible to add the new material attributes.");
+					}
+				} else {
+					// Set the current material attributes to be a reference of the shared MaterialAttributes
+					std::unique_ptr<_3DXMLStructure::ReferenceRep::Geometry> geometry(it_mesh->second.release());
+
+					it_mesh = it_rep->second.meshes.erase(it_mesh);
+
+					std::pair<_3DXMLStructure::ReferenceRep::Meshes::iterator, bool> result = it_rep->second.meshes.emplace(std::make_pair(*it, std::move(geometry)));
+
+					if(result.second) {
+						it_mesh = result.first;
+					} else {
+						ThrowException(parser, "In ReferenceRep \"" + parser->ToString(it_rep->second.id) + "\": impossible to replace the material attributes with shared attributes.");
+					}
+				}
+			}
+		}
+
 		// Generate the final materials of the scene and store their indices
-		for(auto it_mat(mContent.mat_attributes.begin()), end_mat(mContent.mat_attributes.end()); it_mat != end_mat; ++ it_mat) { PROFILER;
+		for(auto it_mat(mat_attributes.begin()), end_mat(mat_attributes.end()); it_mat != end_mat; ++ it_mat) { PROFILER;
 			// The final material
 			std::unique_ptr<aiMaterial> material(nullptr);
 			
@@ -823,13 +856,8 @@ namespace Assimp {
 				// Parse the URI to get its different components
 				params.me->ParseURI(parser, uri, params.instance_of);
 
-				// If the reference is on another file and does not already exist, add it to the list of files to parse
-				if(params.instance_of.external && params.instance_of.id &&
-						params.instance_of.filename.compare(parser->GetFilename()) != 0 &&
-						params.me->mContent.references_node.find(_3DXMLStructure::ID(params.instance_of.filename, *(params.instance_of.id))) == params.me->mContent.references_node.end()) {
-
-					params.me->mContent.files_to_parse.emplace(params.instance_of.filename);
-				}
+				// Add the reference to the list of dependencies
+				params.me->mContent.dependencies.add(params.instance_of.filename);
 			}, 1, 1));
 
 			// Parse RelativeMatrix element
@@ -954,51 +982,12 @@ namespace Assimp {
 				// Parse the geometry representation
 				_3DXMLRepresentation representation(mArchive, uri.filename, rep.meshes);
 
-				for(_3DXMLStructure::ReferenceRep::Meshes::iterator it_mesh(rep.meshes.begin()), end_mesh(rep.meshes.end()); it_mesh != end_mesh; ++it_mesh) {
-					// Set the names of the parsed meshes with this ReferenceRep name
-					if(it_mesh->second->HasMesh()) {
-						it_mesh->second->GetMesh()->mName = rep.name;
-					}
-					if(it_mesh->second->HasLines()) {
-						it_mesh->second->GetLines()->mName = rep.name;
-					}
-
-					// Check if the surface attributes already exist
-					std::set<_3DXMLStructure::MaterialAttributes::ID>::iterator it = mContent.mat_attributes.find(it_mesh->first);
-
-					if(it == mContent.mat_attributes.end()) {
-						// Add the MaterialAttribute to the list of existing attributes
-						std::pair<std::set<_3DXMLStructure::MaterialAttributes::ID>::iterator, bool> result = mContent.mat_attributes.insert(it_mesh->first);
-
-						if(! result.second) {
-							ThrowException(parser, "In ReferenceRep \"" + parser->ToString(id) + "\": impossible to add the new material attributes.");
-						}
-					} else {
-						// Set the current material attributes to be a reference of the shared MaterialAttributes
-						std::unique_ptr<_3DXMLStructure::ReferenceRep::Geometry> geometry(it_mesh->second.release());
-
-						it_mesh = rep.meshes.erase(it_mesh);
-
-						std::pair<_3DXMLStructure::ReferenceRep::Meshes::iterator, bool> result = rep.meshes.emplace(std::make_pair(*it, std::move(geometry)));
-
-						if(result.second) {
-							it_mesh = result.first;
-						} else {
-							ThrowException(parser, "In ReferenceRep \"" + parser->ToString(id) + "\": impossible to replace the material attributes with a shared version.");
-						}
-					}
-				}
-
 				// Get the dependencies for this geometry
 				const std::set<_3DXMLStructure::ID>& dependencies = representation.GetDependencies();
 
 				// Add the dependencies to the list of files to parse if necessary
 				for(std::set<_3DXMLStructure::ID>::const_iterator it(dependencies.begin()), end(dependencies.end()); it != end; ++it) {
-					auto found = mContent.materials.find(*it);
-
-					if(found == mContent.materials.end()) {
-						mContent.files_to_parse.emplace(it->filename);
-					}
+					mContent.dependencies.add(it->filename);
 				}
 			} else {
 				ThrowException(parser, "In ReferenceRep \"" + parser->ToString(id) + "\": unsupported extension \"" + uri.extension + "\" for associated file.");
@@ -1047,13 +1036,8 @@ namespace Assimp {
 				// Parse the URI to get its different components
 				params.me->ParseURI(parser, uri, instance_of);
 
-				// If the reference is on another file and does not already exist, add it to the list of files to parse
-				if(instance_of.external && instance_of.id &&
-						instance_of.filename.compare(parser->GetFilename()) != 0 &&
-						params.me->mContent.references_node.find(_3DXMLStructure::ID(instance_of.filename, *(instance_of.id))) == params.me->mContent.references_node.end()) {
-
-					params.me->mContent.files_to_parse.emplace(instance_of.filename);
-				}
+				// Add the file to the list of dependencies
+				params.me->mContent.dependencies.add(instance_of.filename);
 
 				if(instance_of.id) {
 					// Create the refered ReferenceRep if necessary
@@ -1267,13 +1251,8 @@ namespace Assimp {
 				// Parse the URI to get its different components
 				params.me->ParseURI(parser, uri, instance_of);
 
-				// If the reference is on another file and does not already exist, add it to the list of files to parse
-				if(instance_of.external && instance_of.id &&
-						instance_of.filename.compare(parser->GetFilename()) != 0 &&
-						params.me->mContent.references_mat.find(_3DXMLStructure::ID(instance_of.filename, *(instance_of.id))) == params.me->mContent.references_mat.end()) {
-
-					params.me->mContent.files_to_parse.emplace(instance_of.filename);
-				}
+				// Add the file to the dependencies
+				params.me->mContent.dependencies.add(instance_of.filename);
 
 				if(instance_of.id) {
 					// Create the refered ReferenceRep if necessary
@@ -1405,6 +1384,8 @@ namespace Assimp {
 								if(! uri.id) {
 									params.me->ThrowException(parser, "In PLMRelation of CATMatConnection \"" + parser->ToString(params.id) + "\": the reference \"" + id + "\" has no id.");
 								}
+
+								params.me->mContent.dependencies.add(uri.filename);
 
 								switch(params.current_role) {
 									case TOREFERENCE:

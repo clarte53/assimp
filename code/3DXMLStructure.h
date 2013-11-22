@@ -335,29 +335,62 @@ namespace Assimp {
 
 		}; // struct InstanceRep
 
-		aiScene* scene;
+		class Dependencies : public boost::noncopyable {
 
-		Optional<unsigned int> ref_root_index;
+			protected:
 
-		Optional<unsigned int> mat_root_index;
+				std::set<std::string> files_parsed;
 
-		std::map<ID, Reference3D> references_node;
+				std::set<std::string> files_to_parse;
 
-		std::map<ID, CATMatReference> references_mat;
+			public:
 
-		std::map<ID, ReferenceRep> representations;
+				Dependencies();
 
-		std::map<ID, MaterialDomain> materials;
+				Dependencies(Dependencies&& other);
 
-		std::set<MaterialAttributes::ID, shared_less<MaterialAttributes>> mat_attributes;
+				void add(const std::string& file);
 
-		std::list<CATMatConnection> mat_connections;
+				std::string next();
 
-		std::set<std::string> files_to_parse;
+		}; // class Dependencies
 
 		_3DXMLStructure(aiScene* _scene);
 
 		_3DXMLStructure(_3DXMLStructure&& other);
+
+		// ------------------------------------------------------------------------------------------------
+		// Owned by _3DXMLParser::Build* section
+
+		aiScene* scene;
+
+		// ------------------------------------------------------------------------------------------------
+		// Owned by _3DXMLParser::ReadProductStructure section
+
+		Optional<unsigned int> ref_root_index;
+
+		std::map<ID, Reference3D> references_node;
+
+		std::map<ID, ReferenceRep> representations;
+
+		// ------------------------------------------------------------------------------------------------
+		// Owned by _3DXMLParser::ReadCATMaterialRef section
+
+		Optional<unsigned int> mat_root_index;
+
+		std::map<ID, CATMatReference> references_mat;
+
+		std::map<ID, MaterialDomain> materials;
+
+		// ------------------------------------------------------------------------------------------------
+		// Owned by _3DXMLParser::ReadCATMaterial section
+
+		std::list<CATMatConnection> mat_connections;
+
+		// ------------------------------------------------------------------------------------------------
+		// Shared content
+
+		Dependencies dependencies;
 
 	}; // struct _3DXMLStructure
 
