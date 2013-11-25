@@ -555,7 +555,8 @@ namespace Assimp {
 
 		if(node != nullptr) {
 			// Copy the indexes of the meshes contained into this instance into the proper aiNode
-			if(node->Meshes.Size() == 0) {
+			if(node->mNumMeshes == 0) {
+				unsigned int index_node = 0; // Because (node->mNumMeshes == 0)
 				for(std::map<_3DXMLStructure::ID, _3DXMLStructure::InstanceRep>::const_iterator it_mesh(ref.meshes.begin()), end_mesh(ref.meshes.end()); it_mesh != end_mesh; ++it_mesh) {
 					const _3DXMLStructure::InstanceRep& rep = it_mesh->second;
 
@@ -575,9 +576,8 @@ namespace Assimp {
 
 							// Add the indexes of the meshes to the current node
 							if(it_list != rep.instance_of->indexes.end() && ! it_list->second.empty()) {
-								unsigned int i = 0; // Because (node->Meshes.Size() == 0)
 								for(std::list<unsigned int>::const_iterator it_index_mesh(it_list->second.begin()), end_index_mesh(it_list->second.end()); it_index_mesh != end_index_mesh; ++it_index_mesh) {
-									node->Meshes.Set(i++, *it_index_mesh);
+									node->Meshes.Set(index_node++, *it_index_mesh);
 								}
 							} else {
 								ThrowException(parser, "No mesh corresponds to the given material \"" + parser->ToString(index_mat) + "\".");
@@ -593,7 +593,7 @@ namespace Assimp {
 			}
 
 			// Copy the children nodes of this instance into the proper node
-			if(node->Children.Size() == 0) {
+			if(node->mNumChildren == 0) {
 				for(std::map<_3DXMLStructure::ID, _3DXMLStructure::Instance3D>::iterator it_child(ref.instances.begin()), end_child(ref.instances.end()); it_child != end_child; ++ it_child) {
 					_3DXMLStructure::Instance3D& child = it_child->second;
 
