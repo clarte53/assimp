@@ -61,12 +61,14 @@ class Array {
 	protected:
 		
 		void Update(unsigned int size) {
-			if((*mData) != mLastReference) {
-				mReservedMemory = (*mSize);
-				mLastReference = (*mData);
+			if(mData != NULL) {
+				if((*mData) != mLastReference) {
+					mReservedMemory = (*mSize);
+					mLastReference = (*mData);
+				}
+
+				Reserve(size);
 			}
-			
-			Reserve(size);
 		}
 		
 		void Reserve(unsigned int size) {
@@ -107,7 +109,7 @@ class Array {
 		}
 		
 		virtual ~Array() {
-			
+			// We do not deallocate the memory as assimp classes already do it.
 		}
 		
 		void Create(T** data, unsigned int* size) {
@@ -128,12 +130,23 @@ class Array {
 			mReservedMemory = 0;
 		}
 		
+		void Reset() {
+			// Save the size to restore it in case it is shared between different arrays
+			unsigned int size = (*mSize);
+
+			Clear();
+
+			mData = NULL;
+			(*mSize) = size;
+			mSize = NULL;
+		}
+
 		inline unsigned int Size() const {
 			return (*mSize);
 		}
 		
 		inline T Get(unsigned int index) {
-			#ifdef ASSIMP_BUILD_DEBUG  
+			#ifdef ASSIMP_BUILD_DEBUG
 				if(mData == NULL || (*mData) == NULL || index >= Size()) {
 					throw std::out_of_range("Invalid index to unallocated memory");
 				}
@@ -146,9 +159,11 @@ class Array {
 		
 		// Warning: copy the value into the data array
 		inline void Set(unsigned int index, const T& value) {
-			Update(index + 1);
-			
-			(*mData)[index] = value;
+			if(mData != NULL) {
+				Update(index + 1);
+
+				(*mData)[index] = value;
+			}
 		}
 		
 	protected:
@@ -171,12 +186,14 @@ class Array<T*> {
 	protected:
 	
 		void Update(unsigned int size) {
-			if((*mData) != mLastReference) {
-				mReservedMemory = (*mSize);
-				mLastReference = (*mData);
+			if(mData != NULL) {
+				if((*mData) != mLastReference) {
+					mReservedMemory = (*mSize);
+					mLastReference = (*mData);
+				}
+
+				Reserve(size);
 			}
-			
-			Reserve(size);
 		}
 
 		void Reserve(unsigned int size) {
@@ -217,7 +234,7 @@ class Array<T*> {
 		}
 		
 		virtual ~Array() {
-			
+			// We do not deallocate the memory as assimp classes already do it.
 		}
 		
 		void Create(T*** data, unsigned int* size) {
@@ -243,12 +260,23 @@ class Array<T*> {
 			mReservedMemory = 0;
 		}
 		
+		void Reset() {
+			// Save the size to restore it in case it is shared between different arrays
+			unsigned int size = (*mSize);
+
+			Clear();
+
+			mData = NULL;
+			(*mSize) = size;
+			mSize = NULL;
+		}
+
 		inline unsigned int Size() const {
 			return (*mSize);
 		}
 		
 		inline T& Get(unsigned int index) {
-			#ifdef ASSIMP_BUILD_DEBUG  
+			#ifdef ASSIMP_BUILD_DEBUG
 				if(mData == NULL || (*mData) == NULL || index >= Size()) {
 					throw std::out_of_range("Invalid index to unallocated memory");
 				}
@@ -261,9 +289,11 @@ class Array<T*> {
 		
 		// Warning: copy the pointer into the data array but does not take ownership of it (you still have to free the associated memory)
 		inline void Set(unsigned int index, T* value) {
-			Update(index + 1);
-			
-			(*mData)[index] = value;
+			if(mData != NULL) {
+				Update(index + 1);
+
+				(*mData)[index] = value;
+			}
 		}
 		
 	protected:
@@ -327,7 +357,7 @@ class MultiArray {
 		}
 		
 		inline Array<T>& Get(unsigned int index) const {
-			#ifdef ASSIMP_BUILD_DEBUG  
+			#ifdef ASSIMP_BUILD_DEBUG
 				if(mData == NULL || index >= Size()) {
 					throw std::out_of_range("Invalid index to unallocated memory");
 				}
@@ -337,7 +367,7 @@ class MultiArray {
 		}
 		
 		inline void Set(unsigned int index, Array<T>* value, bool dealloc = true) const {
-			#ifdef ASSIMP_BUILD_DEBUG  
+			#ifdef ASSIMP_BUILD_DEBUG
 				if(mData == NULL || index >= Size()) {
 					throw std::out_of_range("Invalid index to unallocated memory");
 				}
@@ -381,7 +411,7 @@ class FixedArray {
 		}
 		
 		inline T Get(unsigned int index) const {
-			#ifdef ASSIMP_BUILD_DEBUG  
+			#ifdef ASSIMP_BUILD_DEBUG
 				if(mData == NULL || index >= Size()) {
 					throw std::out_of_range("Invalid index to unallocated memory");
 				}
@@ -391,7 +421,7 @@ class FixedArray {
 		}
 		
 		inline void Set(unsigned int index, const T& value) const {
-			#ifdef ASSIMP_BUILD_DEBUG  
+			#ifdef ASSIMP_BUILD_DEBUG
 				if(mData == NULL || index >= Size()) {
 					throw std::out_of_range("Invalid index to unallocated memory");
 				}

@@ -180,7 +180,7 @@ namespace Assimp {
 				array.Set(index++, aiVector3D(x, y, z));
 			}
 		} catch(...) {
-			array.Clear();
+			array.Reset();
 		}
 	}
 	
@@ -223,7 +223,7 @@ namespace Assimp {
 				data.Set(index++, aiColor4D(r, g, b, a));
 			}
 		} catch(...) {
-			data.Clear();
+			data.Reset();
 		}
 	}
 
@@ -254,7 +254,7 @@ namespace Assimp {
 				data.Set(index++, aiVector3D(values[0], values[1], values[2]));
 			}
 		} catch(...) {
-			data.Clear();
+			data.Reset();
 		}
 	}
 
