@@ -144,7 +144,7 @@ namespace Assimp {
 					SkipSpacesAndLineEnd(&str);
 				}
 
-				array.emplace_back(x, y, z);
+				array.emplace_back((float) x, (float) y, (float) z);
 			}
 		} catch(...) {
 			array.clear();
@@ -177,7 +177,7 @@ namespace Assimp {
 					SkipSpacesAndLineEnd(&str);
 				}
 
-				array.Set(index++, aiVector3D(x, y, z));
+				array.Set(index++, aiVector3D((float) x, (float) y, (float) z));
 			}
 		} catch(...) {
 			array.Reset();
@@ -220,7 +220,7 @@ namespace Assimp {
 					SkipSpacesAndLineEnd(&str);
 				}
 
-				data.Set(index++, aiColor4D(r, g, b, a));
+				data.Set(index++, aiColor4D((float) r, (float) g, (float) b, (float) a));
 			}
 		} catch(...) {
 			data.Reset();
@@ -251,7 +251,7 @@ namespace Assimp {
 					SkipSpacesAndLineEnd(&str);
 				}
 
-				data.Set(index++, aiVector3D(values[0], values[1], values[2]));
+				data.Set(index++, aiVector3D((float) values[0], (float) values[1], (float) values[2]));
 			}
 		} catch(...) {
 			data.Reset();
@@ -278,7 +278,7 @@ namespace Assimp {
 				}
 
 				if(*str != '\0') {
-					value = strtoul10_64(str, &str);
+					value = static_cast<unsigned int>(strtoul10_64(str, &str));
 
 					SkipSpacesAndLineEnd(&str);
 
