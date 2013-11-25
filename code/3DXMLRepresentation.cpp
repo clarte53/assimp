@@ -122,19 +122,19 @@ namespace Assimp {
 	// ------------------------------------------------------------------------------------------------
 	void _3DXMLRepresentation::ParseArray(const std::string& content, std::vector<aiVector3D>& array) const { PROFILER;
 		const char* str = content.c_str();
-		float x, y, z;
+		double x, y, z;
 
 		try {
 			while(*str != '\0') {
-				str = fast_atoreal_move<float>(str, x);
+				str = fast_atoreal_move<double>(str, x, false);
 
 				SkipSpacesAndLineEnd(&str);
 
-				str = fast_atoreal_move<float>(str, y);
+				str = fast_atoreal_move<double>(str, y, false);
 
 				SkipSpacesAndLineEnd(&str);
 
-				str = fast_atoreal_move<float>(str, z);
+				str = fast_atoreal_move<double>(str, z, false);
 
 				SkipSpacesAndLineEnd(&str);
 
@@ -154,20 +154,20 @@ namespace Assimp {
 	// ------------------------------------------------------------------------------------------------
 	void _3DXMLRepresentation::ParseArray(const std::string& content, Array<aiVector3D>& array, unsigned int start_index) const { PROFILER;
 		const char* str = content.c_str();
-		float x, y, z;
+		double x, y, z;
 		unsigned int index = start_index;
 
 		try {
 			while(*str != '\0') {
-				str = fast_atoreal_move<float>(str, x);
+				str = fast_atoreal_move<double>(str, x, false);
 
 				SkipSpacesAndLineEnd(&str);
 
-				str = fast_atoreal_move<float>(str, y);
+				str = fast_atoreal_move<double>(str, y, false);
 
 				SkipSpacesAndLineEnd(&str);
 
-				str = fast_atoreal_move<float>(str, z);
+				str = fast_atoreal_move<double>(str, z, false);
 
 				SkipSpacesAndLineEnd(&str);
 
@@ -187,27 +187,27 @@ namespace Assimp {
 	// ------------------------------------------------------------------------------------------------
 	void _3DXMLRepresentation::ParseMultiArray(const std::string& content, MultiArray<aiColor4D>& array, unsigned int channel, unsigned int start_index, bool alpha) const { PROFILER;
 		const char* str = content.c_str();
-		float r, g, b, a;
+		double r, g, b, a;
 		unsigned int index = start_index;
 
 		Array<aiColor4D>& data = array.Get(channel);
 
 		try {
 			while(*str != '\0') {
-				str = fast_atoreal_move<float>(str, r);
+				str = fast_atoreal_move<double>(str, r, false);
 
 				SkipSpacesAndLineEnd(&str);
 
-				str = fast_atoreal_move<float>(str, g);
+				str = fast_atoreal_move<double>(str, g, false);
 
 				SkipSpacesAndLineEnd(&str);
 
-				str = fast_atoreal_move<float>(str, b);
+				str = fast_atoreal_move<double>(str, b, false);
 
 				SkipSpacesAndLineEnd(&str);
 
 				if(alpha) {
-					str = fast_atoreal_move<float>(str, a);
+					str = fast_atoreal_move<double>(str, a, false);
 
 					SkipSpacesAndLineEnd(&str);
 				} else {
@@ -232,7 +232,7 @@ namespace Assimp {
 		const char* str = content.c_str();
 		static const std::size_t dim_max = 3;
 
-		float values[dim_max] = {0, 0, 0};
+		double values[dim_max] = {0, 0, 0};
 		unsigned int index = start_index;
 		
 		Array<aiVector3D>& data = array.Get(channel);
@@ -240,7 +240,7 @@ namespace Assimp {
 		try {
 			while(*str != '\0') {
 				for(unsigned int i = 0; i < dimension; i++) {
-					str = fast_atoreal_move<float>(str, values[i]);
+					str = fast_atoreal_move<double>(str, values[i], false);
 
 					SkipSpacesAndLineEnd(&str);
 				}
