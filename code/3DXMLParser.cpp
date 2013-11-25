@@ -114,12 +114,13 @@ namespace Assimp {
 
 			std::size_t begin = uri.find_last_of(':');
 			std::size_t end = uri.find_last_of('#');
+			std::size_t ext = uri.find_last_of('.');
 
 			if(begin == uri.npos) {
 				ThrowException(parser, "The URI \"" + uri + "\" has an invalid format.");
 			}
 
-			if(end != uri.npos) {
+			if(end != uri.npos && end > ext) {
 				std::string id_str = uri.substr(end + 1, uri.npos);
 				unsigned int id;
 
@@ -190,7 +191,9 @@ namespace Assimp {
 
 				// Get all the instances
 				for(std::map<_3DXMLStructure::ID, _3DXMLStructure::MaterialDomainInstance>::const_iterator it_dom(it->second.materials.begin()), end_dom(it->second.materials.end()); it_dom != end_dom; ++it_dom) {
-					mat_list_ref.push_back(it_dom->second.instance_of->material.get());
+					if(it_dom->second.instance_of->material) {
+						mat_list_ref.push_back(it_dom->second.instance_of->material.get());
+					}
 				}
 
 				// If we have at least one instance
@@ -211,7 +214,9 @@ namespace Assimp {
 					}
 					material_ptr->AddProperty(&name, AI_MATKEY_NAME);
 				} else {
-					ThrowException(parser, "In CATMatReference \"" + parser->ToString(it->second.id) + "\": invalid reference without any instance.");
+					it->second.merged_material.reset(nullptr);
+
+					DefaultLogger::get()->error("In CATMatReference \"" + parser->ToString(it->second.id) + "\": no materials defined.");
 				}
 			}
 		}
@@ -255,6 +260,24 @@ namespace Assimp {
 			}
 		}
 
+		auto create_color_material = [](std::unique_ptr<aiMaterial>& material, const std::string& name, const aiColor4D& color) {
+			material.reset(new aiMaterial());
+
+			aiString name_str(name);
+			material->AddProperty(&name_str, AI_MATKEY_NAME);
+
+			material->AddProperty(&color, 1, AI_MATKEY_COLOR_AMBIENT);
+			material->AddProperty(&color, 1, AI_MATKEY_COLOR_DIFFUSE);
+
+			if(color.a != 1.0) {
+				// Also add transparency
+				material->AddProperty(&color.a, 1, AI_MATKEY_OPACITY);
+			}
+		};
+
+		unsigned int generated_mat_counter = 1;
+		unsigned int color_mat_counter = 1;
+
 		// Generate the final materials of the scene and store their indices
 		for(auto it_mat(mat_attributes.begin()), end_mat(mat_attributes.end()); it_mat != end_mat; ++ it_mat) { PROFILER;
 			// The final material
@@ -274,7 +297,9 @@ namespace Assimp {
 
 						// Found?
 						if(it_mat_ref != mContent.references_mat.end()) {
-							mat_list_app.emplace_back(std::make_pair(&(*it_app), it_mat_ref->second.merged_material.get()));
+							if(it_mat_ref->second.merged_material) {
+								mat_list_app.emplace_back(std::make_pair(&(*it_app), it_mat_ref->second.merged_material.get()));
+							}
 						}  else {
 							ThrowException(parser, "Invalid MaterialApplication referencing unknown CATMatReference \"" + parser->ToString(it_app->id.id) + "\".");
 						}
@@ -308,18 +333,23 @@ namespace Assimp {
 							mat_list_final.push_back(mat);
 						}
 					
-						// Merge the different applications together based on their channel
-						aiMaterial* material_ptr = NULL;
-						SceneCombiner::MergeMaterials(&material_ptr, mat_list_final.begin(), mat_list_final.end());
+						if(! mat_list_final.empty()) {
+							// Merge the different applications together based on their channel
+							aiMaterial* material_ptr = NULL;
+							SceneCombiner::MergeMaterials(&material_ptr, mat_list_final.begin(), mat_list_final.end());
 
-						// Save the final material
-						material.reset(material_ptr);
+							// Save the final material
+							material.reset(material_ptr);
 
-						// Cleaning up memory
-						for(std::vector<aiMaterial*>::iterator it(mat_list_final.begin()), end(mat_list_final.end()); it != end; ++it) {
-							delete *it;
+							// Cleaning up memory
+							for(std::vector<aiMaterial*>::iterator it(mat_list_final.begin()), end(mat_list_final.end()); it != end; ++it) {
+								delete *it;
+							}
+							mat_list_final.clear();
+						} else {
+							// Generate a substitute material
+							create_color_material(material, "Generated material " + parser->ToString(generated_mat_counter++), aiColor4D(0.5, 0.5, 0.5, 1.0));
 						}
-						mat_list_final.clear();
 					} catch(...) {
 						// Cleaning up memory
 						for(std::vector<aiMaterial*>::iterator it(mat_list_final.begin()), end(mat_list_final.end()); it != end; ++it) {
@@ -331,21 +361,11 @@ namespace Assimp {
 						throw;
 					}
 				} else { // It must be a simple color material
-					material.reset(new aiMaterial());
-
-					material->AddProperty(&((*it_mat)->color), 1, AI_MATKEY_COLOR_DIFFUSE);
-
-					if((*it_mat)->color.a != 1.0) {
-						// Also add transparency
-						material->AddProperty(&((*it_mat)->color.a), 1, AI_MATKEY_OPACITY);
-					}
+					create_color_material(material, "Material test " + parser->ToString(color_mat_counter++), (*it_mat)->color);
 				}
 			} else {
 				// Default material
-				material.reset(new aiMaterial());
-
-				aiString name("Default Material");
-				material->AddProperty(&name, AI_MATKEY_NAME);
+				create_color_material(material, "Default material", aiColor4D(0.5, 0.5, 0.5, 1.0));
 			}
 
 			// Get the index for this material
@@ -979,15 +999,20 @@ namespace Assimp {
 		// Check the representation format and call the correct parsing function accordingly
 		if(format.compare("TESSELLATED") == 0) {
 			if(uri.extension.compare("3DRep") == 0) { PROFILER;
-				// Parse the geometry representation
-				_3DXMLRepresentation representation(mArchive, uri.filename, rep.meshes);
+				try {
+					// Parse the geometry representation
+					_3DXMLRepresentation representation(mArchive, uri.filename, rep.meshes);
 
-				// Get the dependencies for this geometry
-				const std::set<_3DXMLStructure::ID>& dependencies = representation.GetDependencies();
+					// Get the dependencies for this geometry
+					const std::set<_3DXMLStructure::ID>& dependencies = representation.GetDependencies();
 
-				// Add the dependencies to the list of files to parse if necessary
-				for(std::set<_3DXMLStructure::ID>::const_iterator it(dependencies.begin()), end(dependencies.end()); it != end; ++it) {
-					mContent.dependencies.add(it->filename);
+					// Add the dependencies to the list of files to parse if necessary
+					for(std::set<_3DXMLStructure::ID>::const_iterator it(dependencies.begin()), end(dependencies.end()); it != end; ++it) {
+						mContent.dependencies.add(it->filename);
+					}
+				} catch(DeadlyImportError& error) {
+					DefaultLogger::get()->error("In ReferenceRep \"" + parser->ToString(id) + "\": unable to load the representation.");
+					DefaultLogger::get()->error(error.what());
 				}
 			} else {
 				ThrowException(parser, "In ReferenceRep \"" + parser->ToString(id) + "\": unsupported extension \"" + uri.extension + "\" for associated file.");
@@ -1177,30 +1202,9 @@ namespace Assimp {
 
 		parser->ParseElement(mapping, params);
 
-		// Parse the external URI to the file containing the representation
-		ParseURI(parser, file, uri);
-		if(! uri.external) {
-			ThrowException(parser, "In MaterialDomain \"" + parser->ToString(id) + "\": invalid associated file \"" + file + "\". The field must reference another file in the same archive.");
-		}
-
 		// Get the container for this representation
 		_3DXMLStructure::MaterialDomain& mat = mContent.materials[_3DXMLStructure::ID(parser->GetFilename(), id)];
 		mat.id = id;
-
-		// Check the representation format and call the correct parsing function accordingly
-		if(params.rendering) {
-			if(format.compare("TECHREP") == 0) {
-				if(uri.extension.compare("3DRep") == 0) { PROFILER;
-					_3DXMLMaterial material(mArchive, uri.filename, mat.material.get());
-				} else {
-					ThrowException(parser, "In MaterialDomain \"" + parser->ToString(id) + "\": unsupported extension \"" + uri.extension + "\" for associated file.");
-				}
-			} else {
-				ThrowException(parser, "In MaterialDomain \"" + parser->ToString(id) + "\": unsupported representation format \"" + format + "\".");
-			}
-		} else {
-			//ThrowException(parser, "In MaterialDomain \"" + parser->ToString(id) + "\": unsupported material domain.");
-		}
 
 		// Test if the name exist, otherwise use the id as name
 		if(params.name_opt) {
@@ -1210,6 +1214,34 @@ namespace Assimp {
 			// No name: take the id as the name
 			mat.name = parser->ToString(id);
 			mat.has_name = false;
+		}
+
+		// Parse the external URI to the file containing the representation
+		ParseURI(parser, file, uri);
+		if(! uri.external) {
+			ThrowException(parser, "In MaterialDomain \"" + parser->ToString(id) + "\": invalid associated file \"" + file + "\". The field must reference another file in the same archive.");
+		}
+
+		// Check the representation format and call the correct parsing function accordingly
+		if(params.rendering) {
+			if(format.compare("TECHREP") == 0) {
+				if(uri.extension.compare("3DRep") == 0) { PROFILER;
+					try {
+						_3DXMLMaterial material(mArchive, uri.filename, mat.material.get());
+					} catch(DeadlyImportError& error) {
+						mat.material.reset(nullptr);
+
+						DefaultLogger::get()->error("In MaterialDomain \"" + parser->ToString(id) + "\": unable to load the material.");
+						DefaultLogger::get()->error(error.what());
+					}
+				} else {
+					ThrowException(parser, "In MaterialDomain \"" + parser->ToString(id) + "\": unsupported extension \"" + uri.extension + "\" for associated file.");
+				}
+			} else {
+				ThrowException(parser, "In MaterialDomain \"" + parser->ToString(id) + "\": unsupported representation format \"" + format + "\".");
+			}
+		} else {
+			//ThrowException(parser, "In MaterialDomain \"" + parser->ToString(id) + "\": unsupported material domain.");
 		}
 	}
 
