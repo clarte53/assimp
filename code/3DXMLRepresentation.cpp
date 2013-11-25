@@ -50,7 +50,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "3DXMLRepresentation.h"
 
 #include "3DXMLParser.h"
+#include "fast_atof.h"
 #include "HighResProfiler.h"
+#include "ParsingUtils.h"
 
 #include <cctype>
 
@@ -119,131 +121,172 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	void _3DXMLRepresentation::ParseArray(const std::string& content, std::vector<aiVector3D>& array) const { PROFILER;
-		std::istringstream stream(content);
+		const char* str = content.c_str();
 		float x, y, z;
 
-		while(! stream.eof()) {
-			stream >> x >> y >> z;
+		try {
+			while(*str != '\0') {
+				str = fast_atoreal_move<float>(str, x);
 
-			if(! stream.eof()) {
-				stream.ignore(std::numeric_limits<std::streamsize>::max(), ',');
+				SkipSpacesAndLineEnd(&str);
+
+				str = fast_atoreal_move<float>(str, y);
+
+				SkipSpacesAndLineEnd(&str);
+
+				str = fast_atoreal_move<float>(str, z);
+
+				SkipSpacesAndLineEnd(&str);
+
+				if(*str == ',') {
+					++str;
+
+					SkipSpacesAndLineEnd(&str);
+				}
+
+				array.emplace_back(x, y, z);
 			}
-
-			if(stream.fail()) {
-				ThrowException("Can not convert array value to \"aiVector3D\".");
-			}
-
-			array.push_back(aiVector3D(x, y, z));
+		} catch(...) {
+			array.clear();
 		}
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	void _3DXMLRepresentation::ParseArray(const std::string& content, Array<aiVector3D>& array, unsigned int start_index) const { PROFILER;
-		std::istringstream stream(content);
+		const char* str = content.c_str();
 		float x, y, z;
-
 		unsigned int index = start_index;
-		while(! stream.eof()) {
-			stream >> x >> y >> z;
 
-			if(! stream.eof()) {
-				stream.ignore(std::numeric_limits<std::streamsize>::max(), ',');
+		try {
+			while(*str != '\0') {
+				str = fast_atoreal_move<float>(str, x);
+
+				SkipSpacesAndLineEnd(&str);
+
+				str = fast_atoreal_move<float>(str, y);
+
+				SkipSpacesAndLineEnd(&str);
+
+				str = fast_atoreal_move<float>(str, z);
+
+				SkipSpacesAndLineEnd(&str);
+
+				if(*str == ',') {
+					++str;
+
+					SkipSpacesAndLineEnd(&str);
+				}
+
+				array.Set(index++, aiVector3D(x, y, z));
 			}
-
-			if(stream.fail()) {
-				ThrowException("Can not convert array value to \"aiVector3D\".");
-			}
-
-			array.Set(index++, aiVector3D(x, y, z));
+		} catch(...) {
+			array.Clear();
 		}
 	}
 	
 	// ------------------------------------------------------------------------------------------------
 	void _3DXMLRepresentation::ParseMultiArray(const std::string& content, MultiArray<aiColor4D>& array, unsigned int channel, unsigned int start_index, bool alpha) const { PROFILER;
-		std::istringstream stream(content);
+		const char* str = content.c_str();
 		float r, g, b, a;
+		unsigned int index = start_index;
 
 		Array<aiColor4D>& data = array.Get(channel);
 
-		unsigned int index = start_index;
-		while(! stream.eof()) {
-			stream >> r >> g >> b;
+		try {
+			while(*str != '\0') {
+				str = fast_atoreal_move<float>(str, r);
 
-			if(alpha) {
-				stream >> a;
-			} else {
-				a = 0;
+				SkipSpacesAndLineEnd(&str);
+
+				str = fast_atoreal_move<float>(str, g);
+
+				SkipSpacesAndLineEnd(&str);
+
+				str = fast_atoreal_move<float>(str, b);
+
+				SkipSpacesAndLineEnd(&str);
+
+				if(alpha) {
+					str = fast_atoreal_move<float>(str, a);
+
+					SkipSpacesAndLineEnd(&str);
+				} else {
+					a = 0.0f;
+				}
+
+				if(*str == ',') {
+					++str;
+
+					SkipSpacesAndLineEnd(&str);
+				}
+
+				data.Set(index++, aiColor4D(r, g, b, a));
 			}
-
-			if(! stream.eof()) {
-				stream.ignore(std::numeric_limits<std::streamsize>::max(), ',');
-			}
-
-			if(stream.fail()) {
-				ThrowException("Can not convert array value to \"aiColor4D\".");
-			}
-
-			data.Set(index++, aiColor4D(r, g, b, a));
+		} catch(...) {
+			data.Clear();
 		}
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	void _3DXMLRepresentation::ParseMultiArray(const std::string& content, MultiArray<aiVector3D>& array, unsigned int channel, unsigned int start_index, unsigned int dimension) const { PROFILER;
+		const char* str = content.c_str();
 		static const std::size_t dim_max = 3;
 
 		float values[dim_max] = {0, 0, 0};
-		
-		std::istringstream stream(content);
+		unsigned int index = start_index;
 		
 		Array<aiVector3D>& data = array.Get(channel);
 
-		unsigned int index = start_index;
-		while(! stream.eof()) {
-			for(unsigned int i = 0; i < dimension; i++) {
-				stream >> values[i];
-			}
-			
-			if(! stream.eof()) {
-				stream.ignore(std::numeric_limits<std::streamsize>::max(), ',');
-			}
+		try {
+			while(*str != '\0') {
+				for(unsigned int i = 0; i < dimension; i++) {
+					str = fast_atoreal_move<float>(str, values[i]);
 
-			if(stream.fail()) {
-				ThrowException("Can not convert array value to \"aiVector3D\".");
-			}
+					SkipSpacesAndLineEnd(&str);
+				}
 
-			data.Set(index++, aiVector3D(values[0], values[1], values[2]));
+				if(*str == ',') {
+					++str;
+
+					SkipSpacesAndLineEnd(&str);
+				}
+
+				data.Set(index++, aiVector3D(values[0], values[1], values[2]));
+			}
+		} catch(...) {
+			data.Clear();
 		}
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	void _3DXMLRepresentation::ParseTriangles(const std::string& content, std::list<std::vector<unsigned int>>& triangles) const { PROFILER;
-		std::istringstream stream(content);
+		const char* str = content.c_str();
 		unsigned int value;
 
 		triangles.emplace_back();
 		triangles.back().reserve(128); // better use too much memory than to have multiple reallocations
 
-		while(! stream.eof()) {
-			int next = stream.peek();
-			while(! stream.eof() && (next == ',' || next == ' ')) {
-				if(next == ',') {
-					triangles.emplace_back();
-					triangles.back().reserve(128); // better use too much memory than to have multiple reallocations
+		try {
+			while(*str != '\0') {
+				while(*str != '\0' && (*str == ',' || *str == ' ')) {
+					if(*str == ',') {
+						triangles.emplace_back();
+						triangles.back().reserve(128); // better use too much memory than to have multiple reallocations
+					}
+
+					++str;
 				}
 
-				stream.get();
-				next = stream.peek();
-			}
+				if(*str != '\0') {
+					value = strtoul10_64(str, &str);
 
-			if(! stream.eof()) {
-				stream >> value;
+					SkipSpacesAndLineEnd(&str);
 
-				if(stream.fail()) {
-					ThrowException("Can not convert face value to \"unsigned int\".");
+					triangles.back().push_back(value);
 				}
-
-				triangles.back().push_back(value);
 			}
+		} catch(...) {
+			triangles.clear();
 		}
 	}
 
