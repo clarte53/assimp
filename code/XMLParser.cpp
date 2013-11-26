@@ -57,7 +57,38 @@ namespace Assimp {
 	const unsigned int XMLParser::XSD::unbounded = std::numeric_limits<unsigned int>::max();
 
 	// ------------------------------------------------------------------------------------------------
-	XMLParser::XMLParser(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& file) : mFileName(file), mArchive(archive), mStream(nullptr), mReader(nullptr) { PROFILER;
+	void XMLParser::OpenInArchive(const std::string& file) { PROFILER;
+		if(mArchive->Exists(file.c_str())) { PROFILER;
+			// Open the manifest files
+			mStream = mArchive->Open(file.c_str());
+			if(mStream == nullptr) {
+				// because Q3BSPZipArchive (now) correctly close all open files automatically on destruction,
+				// we do not have to worry about closing the stream explicitly on exceptions
+
+				ThrowException(file + " not found.");
+			}
+
+			PROFILER;
+
+			// generate a XML reader for it
+			// the pointer is automatically deleted at the end of the function, even if some exceptions are raised
+			std::unique_ptr<CIrrXML_IOStreamReader> IOWrapper(new CIrrXML_IOStreamReader(mStream));
+
+			PROFILER;
+
+			mReader = irr::io::createIrrXMLReader(IOWrapper.get());
+			if(mReader == nullptr) {
+				ThrowException("Unable to create XML parser for file \"" + file + "\".");
+			}
+
+			mFileName = file;
+		} else {
+			ThrowException("The file \"" + file + "\" does not exist in the zip archive.");
+		}
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	XMLParser::XMLParser(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& file) : mFileName(""), mArchive(archive), mStream(nullptr), mReader(nullptr) { PROFILER;
 		Open(file);
 	}
 
@@ -69,33 +100,15 @@ namespace Assimp {
 	// ------------------------------------------------------------------------------------------------
 	void XMLParser::Open(const std::string& file) { PROFILER;
 		if(mStream == nullptr && mReader == nullptr) {
-			mFileName = file;
-
 			if(mArchive->isOpen()) { PROFILER;
-				if(mArchive->Exists(mFileName.c_str())) { PROFILER;
-					// Open the manifest files
-					mStream = mArchive->Open(mFileName.c_str());
-					if(mStream == nullptr) {
-						// because Q3BSPZipArchive (now) correctly close all open files automatically on destruction,
-						// we do not have to worry about closing the stream explicitly on exceptions
+				try {
+					OpenInArchive(file);
+				} catch(...) {
+					// Try with a different filename encoding
+					std::string filename = file;
+					BaseImporter::ConvertUTF8toISO8859_1(filename);
 
-						ThrowException(mFileName + " not found.");
-					}
-
-					PROFILER;
-
-					// generate a XML reader for it
-					// the pointer is automatically deleted at the end of the function, even if some exceptions are raised
-					std::unique_ptr<CIrrXML_IOStreamReader> IOWrapper(new CIrrXML_IOStreamReader(mStream));
-
-					PROFILER;
-
-					mReader = irr::io::createIrrXMLReader(IOWrapper.get());
-					if(mReader == nullptr) {
-						ThrowException("Unable to create XML parser for file \"" + mFileName + "\".");
-					}
-				} else {
-					ThrowException("The file \"" + mFileName + "\" does not exist in the zip archive.");
+					OpenInArchive(filename);
 				}
 			} else {
 				ThrowException("The zip archive can not be opened.");

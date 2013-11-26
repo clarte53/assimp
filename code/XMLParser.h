@@ -154,6 +154,8 @@ namespace Assimp {
 			/** XML reader, member for everyday use */
 			irr::io::IrrXMLReader* mReader;
 
+			void OpenInArchive(const std::string& file);
+
 		public:
 
 			XMLParser(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& file);
