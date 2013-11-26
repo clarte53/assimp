@@ -178,6 +178,23 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
+	// Construct a new colored material
+	void _3DXMLParser::BuildColorMaterial(std::unique_ptr<aiMaterial>& material, const std::string& name, const aiColor4D& color) {
+		material.reset(new aiMaterial());
+
+		aiString name_str(name);
+		material->AddProperty(&name_str, AI_MATKEY_NAME);
+
+		material->AddProperty(&color, 1, AI_MATKEY_COLOR_AMBIENT);
+		material->AddProperty(&color, 1, AI_MATKEY_COLOR_DIFFUSE);
+
+		if(color.a != 1.0) {
+			// Also add transparency
+			material->AddProperty(&color.a, 1, AI_MATKEY_OPACITY);
+		}
+	}
+
+	// ------------------------------------------------------------------------------------------------
 	// Construct the materials from the parsed data
 	void _3DXMLParser::BuildMaterials(const XMLParser* parser) { PROFILER;
 		// Merge all the materials composing a CATMatReference into a single material
@@ -260,25 +277,9 @@ namespace Assimp {
 			}
 		}
 
-		auto create_color_material = [](std::unique_ptr<aiMaterial>& material, const std::string& name, const aiColor4D& color) {
-			material.reset(new aiMaterial());
-
-			aiString name_str(name);
-			material->AddProperty(&name_str, AI_MATKEY_NAME);
-
-			material->AddProperty(&color, 1, AI_MATKEY_COLOR_AMBIENT);
-			material->AddProperty(&color, 1, AI_MATKEY_COLOR_DIFFUSE);
-
-			if(color.a != 1.0) {
-				// Also add transparency
-				material->AddProperty(&color.a, 1, AI_MATKEY_OPACITY);
-			}
-		};
-
+		// Generate the final materials of the scene and store their indices
 		unsigned int generated_mat_counter = 1;
 		unsigned int color_mat_counter = 1;
-
-		// Generate the final materials of the scene and store their indices
 		for(auto it_mat(mat_attributes.begin()), end_mat(mat_attributes.end()); it_mat != end_mat; ++ it_mat) { PROFILER;
 			// The final material
 			std::unique_ptr<aiMaterial> material(nullptr);
@@ -348,7 +349,7 @@ namespace Assimp {
 							mat_list_final.clear();
 						} else {
 							// Generate a substitute material
-							create_color_material(material, "Generated material " + parser->ToString(generated_mat_counter++), aiColor4D(0.5, 0.5, 0.5, 1.0));
+							BuildColorMaterial(material, "Generated material " + parser->ToString(generated_mat_counter++), aiColor4D(0.5, 0.5, 0.5, 1.0));
 						}
 					} catch(...) {
 						// Cleaning up memory
@@ -361,11 +362,11 @@ namespace Assimp {
 						throw;
 					}
 				} else { // It must be a simple color material
-					create_color_material(material, "Material test " + parser->ToString(color_mat_counter++), (*it_mat)->color);
+					BuildColorMaterial(material, "Material test " + parser->ToString(color_mat_counter++), (*it_mat)->color);
 				}
 			} else {
 				// Default material
-				create_color_material(material, "Default material", aiColor4D(0.5, 0.5, 0.5, 1.0));
+				BuildColorMaterial(material, "Default material", aiColor4D(0.5, 0.5, 0.5, 1.0));
 			}
 
 			// Get the index for this material

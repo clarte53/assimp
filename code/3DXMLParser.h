@@ -78,6 +78,8 @@ namespace Assimp {
 			/** Aborts the file reading with an exception */
 			static void ThrowException(const XMLParser* parser, const std::string& error);
 
+			static void BuildColorMaterial(std::unique_ptr<aiMaterial>& material, const std::string& name, const aiColor4D& color);
+
 			void BuildMaterials(const XMLParser* parser);
 
 			void BuildMeshes(const XMLParser* parser, _3DXMLStructure::ReferenceRep& rep, unsigned int material_index);
