@@ -549,6 +549,14 @@ namespace Assimp {
 					// mRootNode is contained inside the scene, which is already protected against memory leaks
 					mContent.scene->mRootNode = new aiNode(root.name);
 
+					// Set up the global orientation of the scene. In 3DXML, the Z axis is used as the up axis.
+					mContent.scene->mRootNode->mTransformation *= aiMatrix4x4(
+						 1,  0,  0,  0,
+						 0,  0,  1,  0,
+						 0, -1,  0,  0,
+						 0,  0,  0,  1
+					);
+
 					// Build the hierarchy recursively
 					BuildStructure(parser, root, mContent.scene->mRootNode, Optional<unsigned int>());
 				} else {
