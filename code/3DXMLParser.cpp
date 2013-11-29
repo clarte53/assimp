@@ -197,17 +197,24 @@ namespace Assimp {
 	// ------------------------------------------------------------------------------------------------
 	// Construct the materials from the parsed data
 	void _3DXMLParser::BuildMaterials(const XMLParser* parser) { PROFILER;
+		// Add the textures to the scene
+		unsigned int index_tex = 0;
+		for(std::map<_3DXMLStructure::ID, _3DXMLStructure::CATRepresentationImage>::iterator it_tex(mContent.textures.begin()), end_tex(mContent.textures.end()); it_tex != end_tex; ++it_tex, ++index_tex) { PROFILER;
+			it_tex->second.index = index_tex;
+			mContent.scene->Textures.Set(index_tex, it_tex->second.texture.release());
+		}
+
 		// Merge all the materials composing a CATMatReference into a single material
-		for(std::map<_3DXMLStructure::ID, _3DXMLStructure::CATMatReference>::iterator it(mContent.references_mat.begin()), end(mContent.references_mat.end()); it != end; ++it) { PROFILER;
+		for(std::map<_3DXMLStructure::ID, _3DXMLStructure::CATMatReference>::iterator it_ref(mContent.references_mat.begin()), end_ref(mContent.references_mat.end()); it_ref != end_ref; ++it_ref) { PROFILER;
 			// Is the merged material already computed?
-			if(! it->second.merged_material) {
+			if(! it_ref->second.merged_material) {
 				// List of the different instances of materials referenced by this CATMatReference
 				// (Normally, in schema 4.3 it should be only 1 instance, but we have no garantees that it will remain the case in future versions.
 				// Therefore we merge the different instanciated materials together)
 				std::vector<aiMaterial*> mat_list_ref;
 
 				// Get all the instances
-				for(std::map<_3DXMLStructure::ID, _3DXMLStructure::MaterialDomainInstance>::const_iterator it_dom(it->second.materials.begin()), end_dom(it->second.materials.end()); it_dom != end_dom; ++it_dom) {
+				for(std::map<_3DXMLStructure::ID, _3DXMLStructure::MaterialDomainInstance>::const_iterator it_dom(it_ref->second.materials.begin()), end_dom(it_ref->second.materials.end()); it_dom != end_dom; ++it_dom) {
 					if(it_dom->second.instance_of->material) {
 						mat_list_ref.push_back(it_dom->second.instance_of->material.get());
 					}
@@ -220,20 +227,20 @@ namespace Assimp {
 					SceneCombiner::MergeMaterials(&material_ptr, mat_list_ref.begin(), mat_list_ref.end());
 
 					// Save the merged material
-					it->second.merged_material.reset(material_ptr);
+					it_ref->second.merged_material.reset(material_ptr);
 
 					// Save the name of the material
 					aiString name;
-					if(it->second.has_name) {
-						name = it->second.name;
+					if(it_ref->second.has_name) {
+						name = it_ref->second.name;
 					} else {
-						name = parser->ToString(it->second.id);
+						name = parser->ToString(it_ref->second.id);
 					}
 					material_ptr->AddProperty(&name, AI_MATKEY_NAME);
 				} else {
-					it->second.merged_material.reset(nullptr);
+					it_ref->second.merged_material.reset(nullptr);
 
-					DefaultLogger::get()->error("In CATMatReference \"" + parser->ToString(it->second.id) + "\": no materials defined.");
+					DefaultLogger::get()->error("In CATMatReference \"" + parser->ToString(it_ref->second.id) + "\": no materials defined.");
 				}
 			}
 		}

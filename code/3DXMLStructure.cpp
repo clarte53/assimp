@@ -187,12 +187,12 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::CATRepresentationImage::CATRepresentationImage() : id(0), has_name(false), name(""), texture(new aiTexture()) {
+	_3DXMLStructure::CATRepresentationImage::CATRepresentationImage() : id(0), has_name(false), name(""), index(0), texture(new aiTexture()) {
 
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::CATRepresentationImage::CATRepresentationImage(CATRepresentationImage&& other) : id(other.id), has_name(other.has_name), name(std::move(other.name)), texture(std::move(other.texture)) {
+	_3DXMLStructure::CATRepresentationImage::CATRepresentationImage(CATRepresentationImage&& other) : id(other.id), has_name(other.has_name), index(other.index), name(std::move(other.name)), texture(std::move(other.texture)) {
 
 	}
 

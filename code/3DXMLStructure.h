@@ -197,6 +197,8 @@ namespace Assimp {
 
 				std::string name;
 
+				unsigned int index;
+
 				std::unique_ptr<aiTexture> texture;
 
 				CATRepresentationImage();
