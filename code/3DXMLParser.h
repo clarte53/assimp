@@ -112,6 +112,10 @@ namespace Assimp {
 
 			void ReadMaterialDomainInstance(const XMLParser* parser);
 			
+			void ReadCATRepImage(const XMLParser* parser);
+
+			void ReadCATRepresentationImage(const XMLParser* parser);
+
 			void ReadCATMaterial(const XMLParser* parser);
 
 			void ReadCATMatConnection(const XMLParser* parser);

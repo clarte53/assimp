@@ -189,6 +189,22 @@ namespace Assimp {
 
 		}; // struct MaterialDomainInstance
 
+		struct CATRepresentationImage : public boost::noncopyable {
+
+				unsigned int id;
+
+				bool has_name;
+
+				std::string name;
+
+				std::unique_ptr<aiTexture> texture;
+
+				CATRepresentationImage();
+
+				CATRepresentationImage(CATRepresentationImage&& other);
+
+		}; // struct CATRepresentationImage
+
 		struct CATMatReference : public boost::noncopyable {
 
 			unsigned int id;
@@ -381,6 +397,11 @@ namespace Assimp {
 		std::map<ID, CATMatReference> references_mat;
 
 		std::map<ID, MaterialDomain> materials;
+
+		// ------------------------------------------------------------------------------------------------
+		// Owned by _3DXMLParser::ReadCATRepImage section
+
+		std::map<ID, CATRepresentationImage> textures;
 
 		// ------------------------------------------------------------------------------------------------
 		// Owned by _3DXMLParser::ReadCATMaterial section

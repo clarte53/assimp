@@ -726,7 +726,7 @@ namespace Assimp {
 			map.emplace_back("CATMaterialRef", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){params.me->ReadCATMaterialRef(parser);}, 0, 1));
 
 			// Parse CATRepImage element
-			//map.emplace_back("CATRepImage", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){params.me->ReadCATRepImage(parser);}, 0, 1));
+			map.emplace_back("CATRepImage", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){params.me->ReadCATRepImage(parser);}, 0, 1));
 
 			// Parse CATMaterial element
 			map.emplace_back("CATMaterial", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){params.me->ReadCATMaterial(parser);}, 0, 1));
@@ -983,12 +983,6 @@ namespace Assimp {
 
 		parser->ParseElement(mapping, params);
 
-		// Parse the external URI to the file containing the representation
-		ParseURI(parser, file, uri);
-		if(! uri.external) {
-			ThrowException(parser, "In ReferenceRep \"" + parser->ToString(id) + "\": invalid associated file \"" + file + "\". The field must reference another file in the same archive.");
-		}
-
 		// Get the container for this representation
 		_3DXMLStructure::ReferenceRep& rep = mContent.representations[_3DXMLStructure::ID(parser->GetFilename(), id)];
 		rep.id = id;
@@ -1003,6 +997,12 @@ namespace Assimp {
 			// No name: take the id as the name
 			rep.name = parser->ToString(id);
 			rep.has_name = false;
+		}
+
+		// Parse the external URI to the file containing the representation
+		ParseURI(parser, file, uri);
+		if(! uri.external) {
+			ThrowException(parser, "In ReferenceRep \"" + parser->ToString(id) + "\": invalid associated file \"" + file + "\". The field must reference another file in the same archive.");
 		}
 
 		// Check the representation format and call the correct parsing function accordingly
@@ -1321,6 +1321,110 @@ namespace Assimp {
 			// No name: take the id as the name
 			params.material->name = parser->ToString(params.id);
 			params.material->has_name = false;
+		}
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	// Read the CATRepImage section
+	void _3DXMLParser::ReadCATRepImage(const XMLParser* parser) {
+		struct Params {
+			_3DXMLParser* me;
+		} params;
+
+		static const XMLParser::XSD::Sequence<Params> mapping(([](){
+			XMLParser::XSD::Sequence<Params>::type map;
+
+			// Parse CATRepresentationImage element
+			map.emplace_back("CATRepresentationImage", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){params.me->ReadCATRepresentationImage(parser);}, 0, XMLParser::XSD::unbounded));
+
+			return std::move(map);
+		})(), 1, 1);
+
+		params.me = this;
+
+		parser->ParseElement(mapping, params);
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	// Read the CATRepresentationImage section
+	void _3DXMLParser::ReadCATRepresentationImage(const XMLParser* parser) {
+		struct Params {
+			Optional<std::string> name_opt;
+		} params;
+
+		static const XMLParser::XSD::Sequence<Params> mapping(([](){
+			XMLParser::XSD::Sequence<Params>::type map;
+
+			// Parse PLM_ExternalID element
+			map.emplace_back("PLM_ExternalID", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
+				params.name_opt = parser->GetContent<std::string>(true);
+			}, 0, 1));
+
+			return std::move(map);
+		})(), 1, 1);
+
+		params.name_opt = parser->GetAttribute<std::string>("name");
+		unsigned int id = *(parser->GetAttribute<unsigned int>("id", true));
+		std::string format = *(parser->GetAttribute<std::string>("format", true));
+		std::string file = *(parser->GetAttribute<std::string>("associatedFile", true));
+		_3DXMLStructure::URI uri;
+
+		parser->ParseElement(mapping, params);
+
+		// Get the container for this representation
+		_3DXMLStructure::CATRepresentationImage& img = mContent.textures[_3DXMLStructure::ID(parser->GetFilename(), id)];
+		img.id = id;
+
+		// Test if the name exist, otherwise use the id as name
+		if(params.name_opt) {
+			img.name = *(params.name_opt);
+			img.has_name = true;
+		} else {
+			// No name: take the id as the name
+			img.name = parser->ToString(id);
+			img.has_name = false;
+		}
+
+		// Parse the external URI to the file containing the representation
+		ParseURI(parser, file, uri);
+		if(! uri.external) {
+			ThrowException(parser, "In CATRepresentationImage \"" + parser->ToString(id) + "\": invalid associated file \"" + file + "\". The field must reference a texture file in the same archive.");
+		}
+
+		try {
+			aiTexture* texture = img.texture.get();
+
+			if(mArchive->isOpen()) {
+				if(mArchive->Exists(uri.filename.c_str())) {
+					// Open the manifest files
+					IOStream* stream = mArchive->Open(uri.filename.c_str());
+					if(stream == nullptr) {
+						// because Q3BSPZipArchive (now) correctly close all open files automatically on destruction,
+						// we do not have to worry about closing the stream explicitly on exceptions
+
+						ThrowException(parser, uri.filename + " not found.");
+					}
+
+					// Assume compressed textures are used, even if it is not the case.
+					// Therefore, the user can load the data directly in whichever way he needs.
+					texture->mHeight = 0;
+					texture->mWidth = stream->FileSize();
+
+					std::transform(uri.extension.begin(), uri.extension.end(), uri.extension.begin(), ::tolower);
+					uri.extension.copy(texture->achFormatHint, 3);
+
+					stream->Read((void*) texture->pcData, texture->mWidth, 1);
+				} else {
+					ThrowException(parser, "The texture file \"" + uri.filename + "\" does not exist in the zip archive.");
+				}
+			} else {
+				ThrowException(parser, "The zip archive can not be opened.");
+			}
+		} catch(DeadlyImportError& error) {
+			img.texture.reset(nullptr);
+
+			DefaultLogger::get()->error("In CATRepresentationImage \"" + parser->ToString(id) + "\": unable to load the texture \"" + uri.filename + "\".");
+			DefaultLogger::get()->error(error.what());
 		}
 	}
 
