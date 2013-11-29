@@ -441,9 +441,27 @@ ADD_UNMANAGED_OPTION(aiScene);
 /////// aiTexel 
 // Done
 
-/////// TODO: aiTexture 
-%ignore aiString::achFormatHint;
-%ignore aiString::pcData;
+/////// aiTexture 
+%ignore aiTexture::pcData;
+%typemap(csbody) aiTexture %{
+  private HandleRef swigCPtr;
+  protected bool swigCMemOwn;
+  protected System.IntPtr data;
+
+  internal aiTexture(IntPtr cPtr, bool cMemoryOwn) {
+    swigCMemOwn = cMemoryOwn;
+    swigCPtr = new HandleRef(this, cPtr);
+	data = Marshal.ReadIntPtr(cPtr, 2 * sizeof(uint) + 4 * sizeof(char));
+  }
+
+  internal static HandleRef getCPtr(aiTexture obj) {
+    return (obj == null) ? new HandleRef(null, IntPtr.Zero) : obj.swigCPtr;
+  }
+
+  public byte GetData(int index) {
+    return Marshal.ReadByte(data, index);
+  }
+%}
 
 /////// aiUVTransform 
 // Done
