@@ -48,6 +48,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef ASSIMP_BUILD_NO_Q3BSP_IMPORTER
 
 #include "3DXMLMaterial.h"
+
+#include "3DXMLParser.h"
 #include "HighResProfiler.h"
 
 #include <cmath>
@@ -55,7 +57,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLMaterial::_3DXMLMaterial(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, aiMaterial* material) : mReader(archive, filename), mMaterial(material) { PROFILER;
+	_3DXMLMaterial::_3DXMLMaterial(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, aiMaterial* material, _3DXMLStructure::Dependencies& dependencies) : mReader(archive, filename), mMaterial(material), mDependencies(dependencies) { PROFILER;
 		struct Params {
 			_3DXMLMaterial* me;
 		} params;
@@ -267,8 +269,17 @@ namespace Assimp {
 			//TODO: AlphaTest
 
 			map.emplace("TextureImage", [](Params& params) {
-				aiString file(params.me->ReadValue<std::string>(params.value));
+				std::string value = params.me->ReadValue<std::string>(params.value);
 
+				_3DXMLStructure::URI uri;
+
+				_3DXMLParser::ParseURI(&params.me->mReader, value, uri);
+
+				if(uri.id) {
+					params.me->mDependencies.add(uri.filename);
+				}
+
+				aiString file(value);
 				params.me->mMaterial->AddProperty(&file, AI_MATKEY_TEXTURE_DIFFUSE(0));
 			});
 

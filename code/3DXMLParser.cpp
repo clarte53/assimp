@@ -1049,15 +1049,7 @@ namespace Assimp {
 			if(uri.extension.compare("3DRep") == 0) { PROFILER;
 				try {
 					// Parse the geometry representation
-					_3DXMLRepresentation representation(mArchive, uri.filename, rep.meshes);
-
-					// Get the dependencies for this geometry
-					const std::set<_3DXMLStructure::ID>& dependencies = representation.GetDependencies();
-
-					// Add the dependencies to the list of files to parse if necessary
-					for(std::set<_3DXMLStructure::ID>::const_iterator it(dependencies.begin()), end(dependencies.end()); it != end; ++it) {
-						mContent.dependencies.add(it->filename);
-					}
+					_3DXMLRepresentation representation(mArchive, uri.filename, rep.meshes, mContent.dependencies);
 				} catch(DeadlyImportError& error) {
 					DefaultLogger::get()->error("In ReferenceRep \"" + parser->ToString(id) + "\": unable to load the representation.");
 					DefaultLogger::get()->error(error.what());
@@ -1275,7 +1267,7 @@ namespace Assimp {
 			if(format.compare("TECHREP") == 0) {
 				if(uri.extension.compare("3DRep") == 0) { PROFILER;
 					try {
-						_3DXMLMaterial material(mArchive, uri.filename, mat.material.get());
+						_3DXMLMaterial material(mArchive, uri.filename, mat.material.get(), mContent.dependencies);
 					} catch(DeadlyImportError& error) {
 						mat.material.reset(nullptr);
 

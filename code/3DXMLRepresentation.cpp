@@ -59,7 +59,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLRepresentation::_3DXMLRepresentation(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, _3DXMLStructure::ReferenceRep::Meshes& meshes) : mReader(archive, filename), mMeshes(meshes), mCurrentSurface(nullptr), mCurrentLine(nullptr), mDependencies() { PROFILER;
+	_3DXMLRepresentation::_3DXMLRepresentation(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, _3DXMLStructure::ReferenceRep::Meshes& meshes, _3DXMLStructure::Dependencies& dependencies) : mReader(archive, filename), mMeshes(meshes), mCurrentSurface(nullptr), mCurrentLine(nullptr), mDependencies(dependencies) { PROFILER;
 		struct Params {
 			_3DXMLRepresentation* me;
 		} params;
@@ -90,10 +90,6 @@ namespace Assimp {
 	// ------------------------------------------------------------------------------------------------
 	_3DXMLRepresentation::~_3DXMLRepresentation() { PROFILER;
 
-	}
-
-	const std::set<_3DXMLStructure::ID>& _3DXMLRepresentation::GetDependencies() const { PROFILER;
-		return mDependencies;
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -762,11 +758,9 @@ namespace Assimp {
 				params.attributes->materials.emplace_back(uri.filename, *(uri.id));
 
 				// If the reference is on another file and does not already exist, add it to the list of files to parse
-				_3DXMLStructure::ID& id = params.attributes->materials.back().id;
-				if(uri.external && uri.id && uri.filename.compare(parser->GetFilename()) != 0 &&
-						params.me->mDependencies.find(id) == params.me->mDependencies.end()) {
+				if(uri.external && uri.id && uri.filename.compare(parser->GetFilename()) != 0) {
 
-					params.me->mDependencies.emplace(id);
+					params.me->mDependencies.add(uri.filename);
 				}
 			}, 1, 1));
 			

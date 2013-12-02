@@ -66,15 +66,13 @@ namespace Assimp {
 			/** The material of the lines currently parsed */
 			_3DXMLStructure::MaterialAttributes::ID mCurrentLine;
 
-			std::set<_3DXMLStructure::ID> mDependencies;
+			_3DXMLStructure::Dependencies& mDependencies;
 
 		public: 
 
-			_3DXMLRepresentation(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, _3DXMLStructure::ReferenceRep::Meshes& meshes);
+			_3DXMLRepresentation(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, _3DXMLStructure::ReferenceRep::Meshes& meshes, _3DXMLStructure::Dependencies& dependencies);
 
 			virtual ~_3DXMLRepresentation();
-
-			const std::set<_3DXMLStructure::ID>& GetDependencies() const;
 
 		protected:
 
