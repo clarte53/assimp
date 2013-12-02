@@ -250,6 +250,28 @@ namespace Assimp {
 				params.me->mMaterial->AddProperty(&value, 1, AI_MATKEY_REFRACTI);
 			});
 
+			//TODO: MappingType
+			//TODO: PreviewType
+			//TODO: TranslationU
+			//TODO: TranslationV
+			//TODO: Rotation
+			//TODO: ScaleU
+			//TODO: ScaleV
+			//TODO: FlipU
+			//TODO: FlipV
+			//TODO: TextureDimension
+			//TODO: TextureFunction
+			//TODO: WrappingModeU
+			//TODO: WrappingModeV
+			//TODO: Filtering
+			//TODO: AlphaTest
+
+			map.emplace("TextureImage", [](Params& params) {
+				aiString file(params.me->ReadValue<std::string>(params.value));
+
+				params.me->mMaterial->AddProperty(&file, AI_MATKEY_TEXTURE_DIFFUSE(0));
+			});
+
 			return std::move(map);
 		}());
 

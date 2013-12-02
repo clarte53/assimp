@@ -81,6 +81,12 @@ namespace Assimp {
 			mContent.dependencies.add(mat_file);
 		}
 
+		// Add the image reference file to the list of file to parse if it exist
+		std::string img_file = "CATRepImage.3dxml";
+		if(mArchive->Exists(img_file.c_str())) {
+			mContent.dependencies.add(img_file);
+		}
+
 		// Parse other referenced 3DXML files until all references are resolved
 		std::string filename;
 		while((filename = mContent.dependencies.next()) != "") { PROFILER;
@@ -228,6 +234,32 @@ namespace Assimp {
 
 					// Save the merged material
 					it_ref->second.merged_material.reset(material_ptr);
+
+					// Set the texture to use the correct index in the scene
+					aiString texture_name;
+					if(material_ptr->Get(AI_MATKEY_TEXTURE_DIFFUSE(0), texture_name) == AI_SUCCESS) {
+						material_ptr->RemoveProperty(AI_MATKEY_TEXTURE_DIFFUSE(0));
+
+						_3DXMLStructure::URI uri;
+
+						ParseURI(parser, texture_name.C_Str(), uri);
+
+						if(uri.id) {
+							std::map<_3DXMLStructure::ID, _3DXMLStructure::CATRepresentationImage>::iterator it_img = mContent.textures.find(_3DXMLStructure::ID(uri.filename, *uri.id));
+
+							if(it_img != mContent.textures.end()) {
+								aiString texture_index;
+								texture_index.data[0] = '*'; // Special prefix for embeded textures
+								texture_index.length = 1 + ASSIMP_itoa10(texture_index.data + 1, MAXLEN - 1, it_img->second.index);
+
+								material_ptr->AddProperty(&texture_index, AI_MATKEY_TEXTURE_DIFFUSE(0));
+							} else {
+								ThrowException(parser, "In CATMatReference \"" + parser->ToString(it_ref->second.id) + "\": texture \"" + uri.uri + "\" not found.");
+							}
+						} else {
+							ThrowException(parser, "In CATMatReference \"" + parser->ToString(it_ref->second.id) + "\": invalid reference to texture \"" + uri.uri + "\" without id.");
+						}
+					}
 
 					// Save the name of the material
 					aiString name;
