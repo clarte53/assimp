@@ -1418,9 +1418,19 @@ namespace Assimp {
 					texture->mWidth = stream->FileSize();
 
 					std::transform(uri.extension.begin(), uri.extension.end(), uri.extension.begin(), ::tolower);
-					uri.extension.copy(texture->achFormatHint, 3);
 
-					stream->Read((void*) texture->pcData, texture->mWidth, 1);
+					if(uri.extension.compare("jpeg") == 0) {
+						uri.extension = "jpg";
+					}
+
+					uri.extension.copy(texture->achFormatHint, 3);
+					texture->achFormatHint[3] = '\0';
+
+					texture->pcData = (aiTexel*) new unsigned char[texture->mWidth];
+					size_t readSize = stream->Read((void*) texture->pcData, texture->mWidth, 1);
+
+					(void) readSize;
+					ai_assert(readSize == texture->mWidth);
 				} else {
 					ThrowException(parser, "The texture file \"" + uri.filename + "\" does not exist in the zip archive.");
 				}
