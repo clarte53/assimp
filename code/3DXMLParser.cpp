@@ -1431,6 +1431,8 @@ namespace Assimp {
 
 					(void) readSize;
 					ai_assert(readSize == texture->mWidth);
+
+					mArchive->Close(stream);
 				} else {
 					ThrowException(parser, "The texture file \"" + uri.filename + "\" does not exist in the zip archive.");
 				}
