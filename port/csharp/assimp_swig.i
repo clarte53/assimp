@@ -444,13 +444,22 @@ ADD_UNMANAGED_OPTION(aiScene);
 /////// aiTexture 
 %ignore aiTexture::pcData;
 %typemap(cscode) aiTexture %{
+  [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Ansi)]
+  private struct Texture {
+    public uint mWidth;
+    public uint mHeight;
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst=4)] public string achFormatHint;
+    public IntPtr pcData;
+  }
+
   public byte[] GetData() {
     byte[] data = null;
 	
     if(mHeight == 0) {
       data = new byte[mWidth];
 
-      Marshal.Copy(Marshal.ReadIntPtr(swigCPtr.Handle, 2 * sizeof(uint) + 4 * sizeof(char)), data, 0, (int) mWidth);
+	  Texture texture = (Texture) Marshal.PtrToStructure(swigCPtr.Handle, typeof(Texture));
+      Marshal.Copy(texture.pcData, data, 0, (int) texture.mWidth);
     }
 
     return data;
