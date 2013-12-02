@@ -343,7 +343,7 @@ MATERIAL_TEXTURE(1, aiTextureMapMode, MappingModeV,          AI_MATKEY_MAPPINGMO
 MATERIAL_TEXTURE(1, aiTextureOp,      TextureOperation,      AI_MATKEY_TEXOP);
 MATERIAL_TEXTURE(0, aiVector3D,       TextureMappingAxis,    AI_MATKEY_TEXMAP_AXIS);
 MATERIAL_TEXTURE(0, float,            TextureBlend,          AI_MATKEY_TEXBLEND);
-//MATERIAL_TEXTURE(0, aiUVTransform,    UVTransform,           AI_MATKEY_UVTRANSFORM);             // TODO: Check if TYPE is correct !
+MATERIAL_TEXTURE(0, aiUVTransform,    UVTransform,           AI_MATKEY_UVTRANSFORM);             // TODO: Check if TYPE is correct !
 
 /////// aiMatrix3x3 
 // Done
