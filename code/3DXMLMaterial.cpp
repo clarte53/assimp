@@ -168,6 +168,8 @@ namespace Assimp {
 					map.emplace("SpecularCoef", [](Params& params) {
 						float value = params.me->ReadValue<float>(params.value);
 
+						value /= 4.0; //TODO: empiric value set based on comparisons with Dassault 3DXML Player
+
 						params.me->mMaterial->AddProperty(&value, 1, AI_MATKEY_SHININESS_STRENGTH);
 					});
 
@@ -290,22 +292,72 @@ namespace Assimp {
 					});
 
 					map.emplace("ScaleU", [](Params& params) {
-						params.transform.mScaling.x = params.me->ReadValue<float>(params.value) / 100.0;
+						params.transform.mScaling.x = params.me->ReadValue<float>(params.value);
 					});
 
 					map.emplace("ScaleV", [](Params& params) {
-						params.transform.mScaling.y = params.me->ReadValue<float>(params.value) / 100.0;
+						params.transform.mScaling.y = params.me->ReadValue<float>(params.value);
+					});
+
+					map.emplace("WrappingModeU", [](Params& params) {
+						int value = params.me->ReadValue<int>(params.value);
+
+						aiTextureMapMode mode;
+
+						switch(value) {
+							case 0:
+								mode = aiTextureMapMode_Clamp;
+								break;
+							default:
+							case 1:
+								mode = aiTextureMapMode_Wrap;
+								break;
+						}
+
+						params.me->mMaterial->AddProperty((int*) &mode, 1, AI_MATKEY_MAPPINGMODE_U_DIFFUSE(0));
+					});
+
+					map.emplace("WrappingModeV", [](Params& params) {
+						int value = params.me->ReadValue<int>(params.value);
+
+						aiTextureMapMode mode;
+
+						switch(value) {
+							case 0:
+								mode = aiTextureMapMode_Clamp;
+								break;
+							default:
+							case 1:
+								mode = aiTextureMapMode_Wrap;
+								break;
+						}
+
+						params.me->mMaterial->AddProperty((int*) &mode, 1, AI_MATKEY_MAPPINGMODE_V_DIFFUSE(0));
+					});
+
+					map.emplace("AlphaTest", [](Params& params) {
+						bool value;
+
+						std::transform(params.value.begin(), params.value.end(), params.value.begin(), ::tolower);
+
+						if(params.value.compare("true") == 0) {
+							value = true;
+						} else if(params.value.compare("false") == 0) {
+							value = false;
+						} else {
+							value= params.me->ReadValue<bool>(params.value);
+						}
+
+						aiTextureFlags flags = (value ? aiTextureFlags_UseAlpha : aiTextureFlags_IgnoreAlpha);
+
+						params.me->mMaterial->AddProperty((int*) &flags, 1, AI_MATKEY_TEXFLAGS_DIFFUSE(0));
 					});
 
 					//TODO: FlipU
 					//TODO: FlipV
-
 					//TODO: TextureDimension
 					//TODO: TextureFunction
-					//TODO: WrappingModeU
-					//TODO: WrappingModeV
 					//TODO: Filtering
-					//TODO: AlphaTest
 
 					map.emplace("TextureImage", [](Params& params) {
 						std::string value = params.me->ReadValue<std::string>(params.value);
@@ -320,6 +372,12 @@ namespace Assimp {
 
 						aiString file(value);
 						params.me->mMaterial->AddProperty(&file, AI_MATKEY_TEXTURE_DIFFUSE(0));
+
+						float blend = 1.0;
+						params.me->mMaterial->AddProperty(&blend, 1, AI_MATKEY_TEXBLEND_DIFFUSE(0));
+
+						aiTextureOp tex_op = aiTextureOp_SmoothAdd;
+						params.me->mMaterial->AddProperty((int*) &tex_op, 1, AI_MATKEY_TEXOP_DIFFUSE(0));
 					});
 
 					map.emplace("ReflectionImage", [](Params& params) {
@@ -335,6 +393,12 @@ namespace Assimp {
 
 						aiString file(value);
 						params.me->mMaterial->AddProperty(&file, AI_MATKEY_TEXTURE_REFLECTION(0));
+
+						float blend = 1.0;
+						params.me->mMaterial->AddProperty(&blend, 1, AI_MATKEY_TEXBLEND_REFLECTION(0));
+
+						aiTextureOp tex_op = aiTextureOp_SmoothAdd;
+						params.me->mMaterial->AddProperty((int*) &tex_op, 1, AI_MATKEY_TEXOP_REFLECTION(0));
 					});
 
 					return std::move(map);
@@ -398,6 +462,13 @@ namespace Assimp {
 
 		mMaterial->AddProperty((int*) &params.mapping_operator, 1, AI_MATKEY_MAPPING_DIFFUSE(0));
 		mMaterial->AddProperty(&params.transform, 1, AI_MATKEY_UVTRANSFORM_DIFFUSE(0));
+
+		// Default material options that have no equivalent in 3DXML
+		aiBlendMode blend = aiBlendMode_Default;
+		mMaterial->AddProperty((int*) &blend, 1, AI_MATKEY_BLEND_FUNC);
+
+		//TODO: AI_MATKEY_UVWSRC(t, n)
+		//TODO: AI_MATKEY_TEXMAP_AXIS(t, n)
 	}
 
 } // Namespace Assimp
