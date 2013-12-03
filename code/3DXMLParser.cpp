@@ -357,6 +357,8 @@ namespace Assimp {
 
 							unsigned int channel = it_mat_app->first->channel;
 
+							// Set the correct channel for this material
+							// TODO: do it only for relevant properties?
 							for(unsigned int i = 0; i < mat->mNumProperties; ++i) {
 								mat->mProperties[i]->mIndex = channel;
 							}

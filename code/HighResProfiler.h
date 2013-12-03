@@ -52,11 +52,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #		define FUNCTION __FUNCTION__
 #	endif
 
-#	define _TO_STRING(x) #x
-#	define TO_STRING(x) _TO_STRING(x)
 #	define _CONCAT(x,y) x##y
 #	define CONCAT(x,y) _CONCAT(x, y)
-#	define PROFILER Assimp::Profiling::HighResProfilerCall CONCAT(__profiler,__COUNTER__)(TO_STRING(__FILE__), FUNCTION, __LINE__)
+#	define PROFILER Assimp::Profiling::HighResProfilerCall CONCAT(__profiler,__COUNTER__)(__FILE__, FUNCTION, __LINE__)
 #else
 #	define PROFILER
 #endif
