@@ -74,8 +74,6 @@ namespace Assimp {
 
 			void ReadFeature();
 
-			void ReadAttribute();
-
 			template<typename T>
 			inline T ReadValue(const std::string& value_str) const;
 

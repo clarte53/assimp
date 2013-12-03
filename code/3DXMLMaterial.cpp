@@ -99,8 +99,13 @@ namespace Assimp {
 	
 	// ------------------------------------------------------------------------------------------------
 	void _3DXMLMaterial::ReadFeature() { PROFILER;
+		enum MappingType {ENVIRONMENT_MAPPING, IMPLICIT_MAPPING, OPERATOR_MAPPING};
+
 		struct Params {
 			_3DXMLMaterial* me;
+			std::string value;
+			MappingType mapping_type;
+			aiTextureMapping mapping_operator;
 		} params;
 
 		static const XMLParser::XSD::Sequence<Params> mapping(([](){
@@ -109,208 +114,257 @@ namespace Assimp {
 			// Parse Attr element
 			map.emplace_back("Attr", XMLParser::XSD::Element<Params>([](const XMLParser* /*parser*/, Params& params){
 				// We aggregate all the attributes of each Features into the output material
-				params.me->ReadAttribute();
+				/*
+				enum Type {EXTERNAL, SPECOBJECT, COMPONENT, STRING, INT, DOUBLE, OCTET, BOOLEAN};
+
+				static const std::map<std::string, Type> types([]() {
+					std::map<std::string, Type> map;
+
+					map.emplace("external", EXTERNAL);
+					map.emplace("specobject", SPECOBJECT);
+					map.emplace("component", COMPONENT);
+					map.emplace("string", STRING);
+					map.emplace("int", INT);
+					map.emplace("double", DOUBLE);
+					map.emplace("octet", OCTET);
+					map.emplace("boolean", BOOLEAN);
+
+					return std::move(map);
+				}());
+				*/
+
+				static const std::map<std::string, std::function<void(Params&)>> attributes([]() {
+					std::map<std::string, std::function<void(Params&)>> map;
+
+					//TODO: AmbientCoef
+
+					map.emplace("AmbientColor", [](Params& params) {
+						std::vector<float> values = params.me->ReadValues<float>(params.value);
+
+						if(values.size() == 3) {
+							aiColor3D color(values[0], values[1], values[2]);
+
+							params.me->mMaterial->AddProperty(&color, 1, AI_MATKEY_COLOR_AMBIENT);
+						} else {
+							params.me->ThrowException("In attribute AmbientColor: invalid number of color components (" + params.me->mReader.ToString(values.size()) + " instead of 3).");
+						}
+					});
+
+					//TODO: DiffuseCoef
+
+					map.emplace("DiffuseColor", [](Params& params) {
+						std::vector<float> values = params.me->ReadValues<float>(params.value);
+
+						if(values.size() == 3) {
+							aiColor3D color(values[0], values[1], values[2]);
+
+							params.me->mMaterial->AddProperty(&color, 1, AI_MATKEY_COLOR_DIFFUSE);
+						} else {
+							params.me->ThrowException("In attribute DiffuseColor: invalid number of color components (" + params.me->mReader.ToString(values.size()) + " instead of 3).");
+						}
+					});
+
+					map.emplace("SpecularCoef", [](Params& params) {
+						float value = params.me->ReadValue<float>(params.value);
+
+						params.me->mMaterial->AddProperty(&value, 1, AI_MATKEY_SHININESS_STRENGTH);
+					});
+
+					map.emplace("SpecularColor", [](Params& params) {
+						std::vector<float> values = params.me->ReadValues<float>(params.value);
+
+						if(values.size() == 3) {
+							aiColor3D color(values[0], values[1], values[2]);
+
+							params.me->mMaterial->AddProperty(&color, 1, AI_MATKEY_COLOR_SPECULAR);
+						} else {
+							params.me->ThrowException("In attribute SpecularColor: invalid number of color components (" + params.me->mReader.ToString(values.size()) + " instead of 3).");
+						}
+					});
+
+					map.emplace("SpecularExponent", [](Params& params) {
+						long double value = params.me->ReadValue<long double>(params.value);
+
+						if(1.0 - value >= 0.0) {
+							value = 127.0 * std::pow(1.0 - value, 1.0 / 3.0) + 1.0;
+						} else {
+							params.me->ThrowException("In attribute SpecularExponent: can not compute the cubic root of negative value \"" + params.me->mReader.ToString(1.0 - value) + "\".");
+						}
+
+						float result = (float) value; // Cast to the appropriate type, after all computation are done to minimize the rounding errors
+
+						params.me->mMaterial->AddProperty(&result, 1, AI_MATKEY_SHININESS);
+
+						aiShadingMode shading = aiShadingMode_Blinn;
+						params.me->mMaterial->AddProperty((int*) &shading, 1, AI_MATKEY_SHADING_MODEL);
+					});
+
+					//TODO: EmissiveCoeff
+
+					map.emplace("EmissiveColor", [](Params& params) {
+						std::vector<float> values = params.me->ReadValues<float>(params.value);
+
+						if(values.size() == 3) {
+							aiColor3D color(values[0], values[1], values[2]);
+
+							params.me->mMaterial->AddProperty(&color, 1, AI_MATKEY_COLOR_EMISSIVE);
+						} else {
+							params.me->ThrowException("In attribute EmissiveColor: invalid number of color components (" + params.me->mReader.ToString(values.size()) + " instead of 3).");
+						}
+					});
+
+					//TODO: BlendColor
+
+					map.emplace("Transparency", [](Params& params) {
+						float value = params.me->ReadValue<float>(params.value);
+
+						value = 1.0f - value;
+
+						params.me->mMaterial->AddProperty(&value, 1, AI_MATKEY_OPACITY);
+					});
+
+					map.emplace("Reflectivity", [](Params& params) {
+						float value = params.me->ReadValue<float>(params.value);
+
+						params.me->mMaterial->AddProperty(&value, 1, AI_MATKEY_REFLECTIVITY);
+					});
+
+					map.emplace("Refraction", [](Params& params) {
+						float value = params.me->ReadValue<float>(params.value);
+
+						params.me->mMaterial->AddProperty(&value, 1, AI_MATKEY_REFRACTI);
+					});
+
+					//TODO: Switch "PreviewType" and "MappingType"?
+					map.emplace("PreviewType", [](Params& params) {
+						int value = params.me->ReadValue<int>(params.value);
+
+						switch(value) {
+							case 0:
+								params.mapping_operator = aiTextureMapping_PLANE;
+								break;
+							case 1:
+								params.mapping_operator = aiTextureMapping_SPHERE; //TODO: Switch "aiTextureMapping_SPHERE" and "aiTextureMapping_BOX"?
+								break;
+							case 2:
+								params.mapping_operator = aiTextureMapping_CYLINDER;
+								break;
+							default:
+							case 3:
+								params.mapping_operator = aiTextureMapping_BOX;
+								break;
+							case 4:
+								params.mapping_operator = aiTextureMapping_OTHER;
+								break;
+						}
+					});
+
+					map.emplace("MappingType", [](Params& params) {
+						int value = params.me->ReadValue<int>(params.value);
+
+						switch(value) {
+							case 0:
+								params.mapping_type = ENVIRONMENT_MAPPING;
+								break;
+							case 1:
+								params.mapping_type = IMPLICIT_MAPPING;
+								break;
+							default:
+							case 2:
+								params.mapping_type = OPERATOR_MAPPING;
+								break;
+						}
+					});
+
+					//TODO: TranslationU
+					//TODO: TranslationV
+					//TODO: Rotation
+					//TODO: ScaleU
+					//TODO: ScaleV
+					//TODO: FlipU
+					//TODO: FlipV
+					//TODO: TextureDimension
+					//TODO: TextureFunction
+					//TODO: WrappingModeU
+					//TODO: WrappingModeV
+					//TODO: Filtering
+					//TODO: AlphaTest
+
+					map.emplace("TextureImage", [](Params& params) {
+						std::string value = params.me->ReadValue<std::string>(params.value);
+
+						_3DXMLStructure::URI uri;
+
+						_3DXMLParser::ParseURI(&params.me->mReader, value, uri);
+
+						if(uri.id) {
+							params.me->mDependencies.add(uri.filename);
+						}
+
+						aiString file(value);
+						params.me->mMaterial->AddProperty(&file, AI_MATKEY_TEXTURE_DIFFUSE(0));
+					});
+
+					return std::move(map);
+				}());
+
+				std::string name = *(params.me->mReader.GetAttribute<std::string>("Name", true));
+				std::string type_str = *(params.me->mReader.GetAttribute<std::string>("Type", true));
+
+				params.value = *(params.me->mReader.GetAttribute<std::string>("Value", true));
+
+				/*
+				std::map<std::string, Type>::const_iterator it = types.find(type_str);
+				Type type;
+
+				if(it != types.end()) {
+					type = it->second;
+				} else {
+					DefaultLogger::get()->warn("Unsupported attribute type \"" + type_str + "\". Using string type instead.");
+
+					type = STRING;
+				}
+				*/
+
+				auto it = attributes.find(name);
+
+				if(it != attributes.end()) {
+					it->second(params);
+				} else {
+					//DefaultLogger::get()->warn("Unsupported attribute \"" + name + "\".");
+				}
 			}, 0, XMLParser::XSD::unbounded));
 			
 			return std::move(map);
 		})(), 1, 1);
 
 		params.me = this;
-		//unsigned int id = *(mReader.GetAttribute<unsigned int>("Id", true));
+		params.mapping_type = OPERATOR_MAPPING;
+		params.mapping_operator = aiTextureMapping_UV;
+
+		unsigned int id = *(mReader.GetAttribute<unsigned int>("Id", true));
 		std::string start_up = *(mReader.GetAttribute<std::string>("StartUp", true));
 		std::string alias = *(mReader.GetAttribute<std::string>("Alias", true));
 		Optional<unsigned int> aggregating = mReader.GetAttribute<unsigned int>("Aggregating");
 
 		mReader.ParseElement(mapping, params);
-	}
 
-	// ------------------------------------------------------------------------------------------------
-	void _3DXMLMaterial::ReadAttribute() { PROFILER;
-		/*
-		enum Type {EXTERNAL, SPECOBJECT, COMPONENT, STRING, INT, DOUBLE, OCTET, BOOLEAN};
-
-		static const std::map<std::string, Type> types([]() {
-			std::map<std::string, Type> map;
-
-			map.emplace("external", EXTERNAL);
-			map.emplace("specobject", SPECOBJECT);
-			map.emplace("component", COMPONENT);
-			map.emplace("string", STRING);
-			map.emplace("int", INT);
-			map.emplace("double", DOUBLE);
-			map.emplace("octet", OCTET);
-			map.emplace("boolean", BOOLEAN);
-
-			return std::move(map);
-		}());
-		*/
-
-		struct Params {
-			_3DXMLMaterial* me;
-			std::string value;
-		} params;
-
-		static const std::map<std::string, std::function<void(Params&)>> attributes([]() {
-			std::map<std::string, std::function<void(Params&)>> map;
-
-			//TODO: AmbientCoef
-
-			map.emplace("AmbientColor", [](Params& params) {
-				std::vector<float> values = params.me->ReadValues<float>(params.value);
-
-				if(values.size() == 3) {
-					aiColor3D color(values[0], values[1], values[2]);
-
-					params.me->mMaterial->AddProperty(&color, 1, AI_MATKEY_COLOR_AMBIENT);
-				} else {
-					params.me->ThrowException("In attribute AmbientColor: invalid number of color components (" + params.me->mReader.ToString(values.size()) + " instead of 3).");
+		switch(params.mapping_type) {
+			case IMPLICIT_MAPPING:
+				params.mapping_operator = aiTextureMapping_UV;
+				break;
+			case OPERATOR_MAPPING:
+				if(params.mapping_operator == aiTextureMapping_UV) {
+					DefaultLogger::get()->warn("In Feature \"" + mReader.ToString(id) + "\": Operator mapping defined but no operator provided. Using UV coordinates instead.");
 				}
-			});
-
-			//TODO: DiffuseCoef
-
-			map.emplace("DiffuseColor", [](Params& params) {
-				std::vector<float> values = params.me->ReadValues<float>(params.value);
-
-				if(values.size() == 3) {
-					aiColor3D color(values[0], values[1], values[2]);
-
-					params.me->mMaterial->AddProperty(&color, 1, AI_MATKEY_COLOR_DIFFUSE);
-				} else {
-					params.me->ThrowException("In attribute DiffuseColor: invalid number of color components (" + params.me->mReader.ToString(values.size()) + " instead of 3).");
-				}
-			});
-			
-			map.emplace("SpecularCoef", [](Params& params) {
-				float value = params.me->ReadValue<float>(params.value);
-
-				params.me->mMaterial->AddProperty(&value, 1, AI_MATKEY_SHININESS_STRENGTH);
-			});
-			
-			map.emplace("SpecularColor", [](Params& params) {
-				std::vector<float> values = params.me->ReadValues<float>(params.value);
-
-				if(values.size() == 3) {
-					aiColor3D color(values[0], values[1], values[2]);
-
-					params.me->mMaterial->AddProperty(&color, 1, AI_MATKEY_COLOR_SPECULAR);
-				} else {
-					params.me->ThrowException("In attribute SpecularColor: invalid number of color components (" + params.me->mReader.ToString(values.size()) + " instead of 3).");
-				}
-			});
-
-			map.emplace("SpecularExponent", [](Params& params) {
-				long double value = params.me->ReadValue<long double>(params.value);
-
-				if(1.0 - value >= 0.0) {
-					value = 127.0 * std::pow(1.0 - value, 1.0 / 3.0) + 1.0;
-				} else {
-					params.me->ThrowException("In attribute SpecularExponent: can not compute the cubic root of negative value \"" + params.me->mReader.ToString(1.0 - value) + "\".");
-				}
-
-				float result = (float) value; // Cast to the appropriate type, after all computation are done to minimize the rounding errors
-
-				params.me->mMaterial->AddProperty(&result, 1, AI_MATKEY_SHININESS);
-
-				aiShadingMode shading = aiShadingMode_Blinn;
-				params.me->mMaterial->AddProperty((int*) &shading, 1, AI_MATKEY_SHADING_MODEL);
-			});
-
-			//TODO: EmissiveCoeff
-			
-			map.emplace("EmissiveColor", [](Params& params) {
-				std::vector<float> values = params.me->ReadValues<float>(params.value);
-
-				if(values.size() == 3) {
-					aiColor3D color(values[0], values[1], values[2]);
-
-					params.me->mMaterial->AddProperty(&color, 1, AI_MATKEY_COLOR_EMISSIVE);
-				} else {
-					params.me->ThrowException("In attribute EmissiveColor: invalid number of color components (" + params.me->mReader.ToString(values.size()) + " instead of 3).");
-				}
-			});
-
-			//TODO: BlendColor
-
-			map.emplace("Transparency", [](Params& params) {
-				float value = params.me->ReadValue<float>(params.value);
-
-				value = 1.0f - value;
-
-				params.me->mMaterial->AddProperty(&value, 1, AI_MATKEY_OPACITY);
-			});
-
-			map.emplace("Reflectivity", [](Params& params) {
-				float value = params.me->ReadValue<float>(params.value);
-
-				params.me->mMaterial->AddProperty(&value, 1, AI_MATKEY_REFLECTIVITY);
-			});
-
-			map.emplace("Refraction", [](Params& params) {
-				float value = params.me->ReadValue<float>(params.value);
-
-				params.me->mMaterial->AddProperty(&value, 1, AI_MATKEY_REFRACTI);
-			});
-
-			//TODO: MappingType
-			//TODO: PreviewType
-			//TODO: TranslationU
-			//TODO: TranslationV
-			//TODO: Rotation
-			//TODO: ScaleU
-			//TODO: ScaleV
-			//TODO: FlipU
-			//TODO: FlipV
-			//TODO: TextureDimension
-			//TODO: TextureFunction
-			//TODO: WrappingModeU
-			//TODO: WrappingModeV
-			//TODO: Filtering
-			//TODO: AlphaTest
-
-			map.emplace("TextureImage", [](Params& params) {
-				std::string value = params.me->ReadValue<std::string>(params.value);
-
-				_3DXMLStructure::URI uri;
-
-				_3DXMLParser::ParseURI(&params.me->mReader, value, uri);
-
-				if(uri.id) {
-					params.me->mDependencies.add(uri.filename);
-				}
-
-				aiString file(value);
-				params.me->mMaterial->AddProperty(&file, AI_MATKEY_TEXTURE_DIFFUSE(0));
-			});
-
-			return std::move(map);
-		}());
-
-		std::string name = *(mReader.GetAttribute<std::string>("Name", true));
-		std::string type_str = *(mReader.GetAttribute<std::string>("Type", true));
-		params.value = *(mReader.GetAttribute<std::string>("Value", true));
-		params.me = this;
-
-		/*
-		std::map<std::string, Type>::const_iterator it = types.find(type_str);
-		Type type;
-
-		if(it != types.end()) {
-			type = it->second;
-		} else {
-			DefaultLogger::get()->warn("Unsupported attribute type \"" + type_str + "\". Using string type instead.");
-
-			type = STRING;
+				break;
+			case ENVIRONMENT_MAPPING:
+				DefaultLogger::get()->error("In Feature \"" + mReader.ToString(id) + "\": Environment mapping not supported. Using UV coordinates instead.");
+				params.mapping_operator = aiTextureMapping_UV;
+				break;
 		}
-		*/
 
-		auto it = attributes.find(name);
-
-		if(it != attributes.end()) {
-			it->second(params);
-		} else {
-			//DefaultLogger::get()->warn("Unsupported attribute \"" + name + "\".");
-		}
+		mMaterial->AddProperty((int*) &params.mapping_operator, 1, AI_MATKEY_MAPPING_DIFFUSE(0));
 	}
 
 } // Namespace Assimp
