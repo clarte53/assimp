@@ -106,6 +106,7 @@ namespace Assimp {
 			std::string value;
 			MappingType mapping_type;
 			aiTextureMapping mapping_operator;
+			aiUVTransform transform;
 		} params;
 
 		static const XMLParser::XSD::Sequence<Params> mapping(([](){
@@ -276,13 +277,29 @@ namespace Assimp {
 						}
 					});
 
-					//TODO: TranslationU
-					//TODO: TranslationV
-					//TODO: Rotation
-					//TODO: ScaleU
-					//TODO: ScaleV
+					map.emplace("TranslationU", [](Params& params) {
+						params.transform.mTranslation.x = params.me->ReadValue<float>(params.value);
+					});
+
+					map.emplace("TranslationV", [](Params& params) {
+						params.transform.mTranslation.y = params.me->ReadValue<float>(params.value);
+					});
+
+					map.emplace("Rotation", [](Params& params) {
+						params.transform.mRotation = params.me->ReadValue<float>(params.value);
+					});
+
+					map.emplace("ScaleU", [](Params& params) {
+						params.transform.mScaling.x = params.me->ReadValue<float>(params.value) / 100.0;
+					});
+
+					map.emplace("ScaleV", [](Params& params) {
+						params.transform.mScaling.y = params.me->ReadValue<float>(params.value) / 100.0;
+					});
+
 					//TODO: FlipU
 					//TODO: FlipV
+
 					//TODO: TextureDimension
 					//TODO: TextureFunction
 					//TODO: WrappingModeU
@@ -303,6 +320,21 @@ namespace Assimp {
 
 						aiString file(value);
 						params.me->mMaterial->AddProperty(&file, AI_MATKEY_TEXTURE_DIFFUSE(0));
+					});
+
+					map.emplace("ReflectionImage", [](Params& params) {
+						std::string value = params.me->ReadValue<std::string>(params.value);
+
+						_3DXMLStructure::URI uri;
+
+						_3DXMLParser::ParseURI(&params.me->mReader, value, uri);
+
+						if(uri.id) {
+							params.me->mDependencies.add(uri.filename);
+						}
+
+						aiString file(value);
+						params.me->mMaterial->AddProperty(&file, AI_MATKEY_TEXTURE_REFLECTION(0));
 					});
 
 					return std::move(map);
@@ -365,6 +397,7 @@ namespace Assimp {
 		}
 
 		mMaterial->AddProperty((int*) &params.mapping_operator, 1, AI_MATKEY_MAPPING_DIFFUSE(0));
+		mMaterial->AddProperty(&params.transform, 1, AI_MATKEY_UVTRANSFORM_DIFFUSE(0));
 	}
 
 } // Namespace Assimp
