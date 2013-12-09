@@ -443,6 +443,17 @@ ADD_UNMANAGED_OPTION(aiScene);
 
 /////// aiTexture 
 %ignore aiTexture::pcData;
+%extend aiTexture {
+	void AllocData(unsigned int size) {
+		if($self->pcData != NULL) {
+			delete[] $self->pcData;
+		}
+		
+		$self->pcData = (aiTexel*) new char[size];
+		$self->mHeight = 0;
+		$self->mWidth = size;
+	}
+}
 %typemap(cscode) aiTexture %{
   [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Ansi)]
   private struct Texture {
@@ -452,17 +463,25 @@ ADD_UNMANAGED_OPTION(aiScene);
     public IntPtr pcData;
   }
 
-  public byte[] GetData() {
-    byte[] data = null;
-	
-    if(mHeight == 0) {
-      data = new byte[mWidth];
-
-	  Texture texture = (Texture) Marshal.PtrToStructure(swigCPtr.Handle, typeof(Texture));
-      Marshal.Copy(texture.pcData, data, 0, (int) texture.mWidth);
+  public byte[] data {
+    set {
+      AllocData((uint) value.Length);
+      
+      Texture texture = (Texture) Marshal.PtrToStructure(swigCPtr.Handle, typeof(Texture));
+      Marshal.Copy(value, 0, texture.pcData, value.Length);
     }
+    get {
+      byte[] data = null;
+	
+      if(mHeight == 0) {
+        data = new byte[mWidth];
 
-    return data;
+	    Texture texture = (Texture) Marshal.PtrToStructure(swigCPtr.Handle, typeof(Texture));
+        Marshal.Copy(texture.pcData, data, 0, (int) texture.mWidth);
+      }
+
+      return data;
+    }
   }
 %}
 
