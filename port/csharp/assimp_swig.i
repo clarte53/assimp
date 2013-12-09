@@ -442,6 +442,7 @@ ADD_UNMANAGED_OPTION(aiScene);
 // Done
 
 /////// aiTexture 
+ADD_UNMANAGED_OPTION(aiTexture);
 %ignore aiTexture::pcData;
 %extend aiTexture {
 	void AllocData(unsigned int size) {
@@ -482,6 +483,13 @@ ADD_UNMANAGED_OPTION(aiScene);
 
       return data;
     }
+  }
+
+  // We need to define manually this method because swig seems to not accept multiple 'cscode' typemaps for the same class
+  public aiTexture Unmanaged() {
+    this.swigCMemOwn = false;
+		
+    return this;
   }
 %}
 
