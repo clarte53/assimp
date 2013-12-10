@@ -113,20 +113,32 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 		T Unmanaged();
 	}
 
-	public interface MultiArray<T> {
+	public interface DynamicArray<T> {
 		uint Size();
 		T Get(uint index);
 	}
-	
-	public interface FixedArray<T> : MultiArray<T> {
+
+	public interface MutableDynamicArray<T> : DynamicArray<T> {
 		void Set(uint index, T value);
 	}
+
+	public interface MultiArray<T> : DynamicArray<T> {
+
+	}
 	
-	public interface Array<T> : FixedArray<T> {
+	public interface FixedArray<T> : MutableDynamicArray<T> {
+
+	}
+	
+	public interface Array<T> : MutableDynamicArray<T> {
 		void Clear();
 	}
 %}
 }
+
+%define ENUM_FLAGS_DECL(TYPE)
+%typemap(csclassmodifiers) TYPE %{[System.Flags] public enum%}
+%enddef
 
 %define DEF_ENUM(TYPE, NAME)
 %typemap(cstype)   unsigned int NAME "TYPE";
@@ -271,6 +283,12 @@ ADD_UNMANAGED_OPTION(aiColor3D);
 /////// aiColor4D 
 ADD_UNMANAGED_OPTION(aiColor4D);
 
+/////// aiComponent
+ENUM_FLAGS_DECL(aiComponent);
+
+/////// aiDefaultLogStream
+ENUM_FLAGS_DECL(aiDefaultLogStream);
+
 /////// aiExportDataBlob
 %ignore aiExportDataBlob::data;
 
@@ -290,6 +308,9 @@ ADD_UNMANAGED_OPTION(aiFace);
 /////// aiFileIO
 %ignore aiFileIO::CloseProc;
 %ignore aiFileIO::OpenProc;
+
+/////// aiImporterFlags
+ENUM_FLAGS_DECL(aiImporterFlags);
 
 /////// aiLight 
 // Done
@@ -400,9 +421,12 @@ ADD_UNMANAGED_OPTION(aiNode);
 // Done
 
 /////// aiPostProcessSteps
-%typemap(cscode) aiPostProcessSteps %{
-	, aiProcess_ConvertToLeftHanded = aiProcess_MakeLeftHanded|aiProcess_FlipUVs|aiProcess_FlipWindingOrder,
+ENUM_FLAGS_DECL(aiPostProcessSteps);
+%typemap(cscode) aiPostProcessSteps %{, aiProcess_ConvertToLeftHanded = aiProcess_MakeLeftHanded | aiProcess_FlipUVs | aiProcess_FlipWindingOrder,
 %}
+
+/////// aiPrimitiveType
+ENUM_FLAGS_DECL(aiPrimitiveType);
 
 /////// aiQuaternion 
 // Done
@@ -492,6 +516,9 @@ ADD_UNMANAGED_OPTION(aiTexture);
     return this;
   }
 %}
+
+/////// aiTextureFlags
+ENUM_FLAGS_DECL(aiTextureFlags);
 
 /////// aiUVTransform 
 // Done
