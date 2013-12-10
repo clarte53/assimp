@@ -238,8 +238,7 @@ namespace Assimp {
 						params.me->mMaterial->AddProperty(&value, 1, AI_MATKEY_REFRACTI);
 					});
 
-					//TODO: Switch "PreviewType" and "MappingType"?
-					map.emplace("PreviewType", [](Params& params) {
+					map.emplace("MappingType", [](Params& params) {
 						int value = params.me->ReadValue<int>(params.value);
 
 						switch(value) {
@@ -262,7 +261,7 @@ namespace Assimp {
 						}
 					});
 
-					map.emplace("MappingType", [](Params& params) {
+					map.emplace("PreviewType", [](Params& params) {
 						int value = params.me->ReadValue<int>(params.value);
 
 						switch(value) {
