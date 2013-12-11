@@ -90,6 +90,8 @@ namespace Assimp {
 
 			static void ParseID(const std::string& data, unsigned int& id);
 
+			static void LogMessage(Logger::ErrorSeverity type, const std::string& message);
+
 		protected:
 			
 			/** Aborts the file reading with an exception */

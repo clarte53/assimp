@@ -290,6 +290,31 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
+	// Thread safe logging
+	void _3DXMLParser::LogMessage(Logger::ErrorSeverity type, const std::string& message) {
+		static std::mutex mutex;
+
+		std::unique_lock<std::mutex> lock(mutex);
+
+		switch(type) {
+			case Logger::Err:
+				DefaultLogger::get()->error(message);
+				break;
+			case Logger::Warn:
+				DefaultLogger::get()->warn(message);
+				break;
+			case Logger::Info:
+				DefaultLogger::get()->info(message);
+				break;
+			case Logger::Debugging:
+				DefaultLogger::get()->debug(message);
+				break;
+		}
+
+		lock.unlock();
+	}
+
+	// ------------------------------------------------------------------------------------------------
 	// Aborts the file reading with an exception
 	void _3DXMLParser::ThrowException(const XMLParser* parser, const std::string& error) { PROFILER;
 		if(parser != nullptr) {
@@ -388,7 +413,7 @@ namespace Assimp {
 				} else {
 					it_ref->second.merged_material.reset(nullptr);
 
-					DefaultLogger::get()->error("In CATMatReference \"" + parser->ToString(it_ref->second.id) + "\": no materials defined.");
+					LogMessage(Logger::Err, "In CATMatReference \"" + parser->ToString(it_ref->second.id) + "\": no materials defined.");
 				}
 			}
 		}
@@ -770,7 +795,7 @@ namespace Assimp {
 							}
 						} else {
 							// If the representation format is not supported, it is normal to have empty ReferenceRep. Therefore, we should gracefully ignore such nodes.
-							DefaultLogger::get()->warn("No meshes defined in ReferenceRep \"" + parser->ToString(rep.instance_of->id) + "\".");
+							LogMessage(Logger::Warn, "No meshes defined in ReferenceRep \"" + parser->ToString(rep.instance_of->id) + "\".");
 						}
 					} else {
 						ThrowException(parser, "One InstanceRep of Reference3D \"" + parser->ToString(ref.id) + "\" is unresolved.");
@@ -1166,13 +1191,17 @@ namespace Assimp {
 		if(format.compare("TESSELLATED") == 0) {
 			if(uri.extension.compare("3DRep") == 0) { PROFILER;
 				std::unique_lock<std::mutex> lock(mMutex);
-					mTasks.emplace([this, parser, &rep, uri]() {
+					mTasks.emplace([this, rep, uri]() {
 						try {
 							// Parse the geometry representation
 							_3DXMLRepresentation representation(mArchive, uri.filename, rep->meshes, mContent.dependencies);
 						} catch(DeadlyImportError& error) {
-							DefaultLogger::get()->error("In ReferenceRep \"" + parser->ToString(rep->id) + "\": unable to load the representation.");
-							DefaultLogger::get()->error(error.what());
+							std::ostringstream stream;
+							stream << "In ReferenceRep \"" << rep->id << "\": unable to load the representation. " << error.what();
+
+							LogMessage(Logger::Err, stream.str());
+
+							rep->meshes.clear();
 						}
 					});
 
@@ -1183,7 +1212,7 @@ namespace Assimp {
 			}
 		} else {
 			// Unsupported format. We warn the user and ignore it
-			DefaultLogger::get()->warn("In ReferenceRep \"" + parser->ToString(id) + "\": unsupported representation format \"" + format + "\".");
+			LogMessage(Logger::Warn, "In ReferenceRep \"" + parser->ToString(id) + "\": unsupported representation format \"" + format + "\".");
 		}
 	}
 
@@ -1391,14 +1420,16 @@ namespace Assimp {
 			if(format.compare("TECHREP") == 0) {
 				if(uri.extension.compare("3DRep") == 0) { PROFILER;
 					std::unique_lock<std::mutex> lock(mMutex);
-						mTasks.emplace([this, parser, mat, uri]() {
+						mTasks.emplace([this, mat, uri]() {
 							try {
 								_3DXMLMaterial material(mArchive, uri.filename, mat->material.get(), mContent.dependencies);
 							} catch(DeadlyImportError& error) {
-								mat->material.reset(nullptr);
+								std::ostringstream stream;
+								stream << "In MaterialDomain \"" << mat->id << "\": unable to load the material. " << error.what();
 
-								DefaultLogger::get()->error("In MaterialDomain \"" + parser->ToString(mat->id) + "\": unable to load the material.");
-								DefaultLogger::get()->error(error.what());
+								LogMessage(Logger::Err, stream.str());
+
+								mat->material.reset(nullptr);
 							}
 						});
 
@@ -1553,7 +1584,7 @@ namespace Assimp {
 		}
 
 		std::unique_lock<std::mutex> lock(mMutex);
-			mTasks.emplace([this, parser, img, uri]() {
+			mTasks.emplace([this, img, uri]() {
 				try {
 					aiTexture* texture = img->texture.get();
 
@@ -1565,7 +1596,7 @@ namespace Assimp {
 								// because Q3BSPZipArchive (now) correctly close all open files automatically on destruction,
 								// we do not have to worry about closing the stream explicitly on exceptions
 
-								ThrowException(parser, uri.filename + " not found.");
+								throw DeadlyImportError(uri.filename + " not found.");
 							}
 
 							// Assume compressed textures are used, even if it is not the case.
@@ -1591,16 +1622,18 @@ namespace Assimp {
 
 							mArchive->Close(stream);
 						} else {
-							ThrowException(parser, "The texture file \"" + uri.filename + "\" does not exist in the zip archive.");
+							throw DeadlyImportError("The texture file \"" + uri.filename + "\" does not exist in the zip archive.");
 						}
 					} else {
-						ThrowException(parser, "The zip archive can not be opened.");
+						throw DeadlyImportError("The zip archive can not be opened.");
 					}
 				} catch(DeadlyImportError& error) {
-					img->texture.reset(nullptr);
+					std::ostringstream stream;
+					stream << "In CATRepresentationImage \"" << img->id << "\": unable to load the texture \"" << uri.filename << "\". " << error.what();
 
-					DefaultLogger::get()->error("In CATRepresentationImage \"" + parser->ToString(img->id) + "\": unable to load the texture \"" + uri.filename + "\".");
-					DefaultLogger::get()->error(error.what());
+					LogMessage(Logger::Err, stream.str());
+
+					img->texture.reset(nullptr);
 				}
 			});
 

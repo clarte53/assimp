@@ -795,7 +795,7 @@ namespace Assimp {
 			if(it != mapping_sides.end()) {
 				side = it->second;
 			} else {
-				DefaultLogger::get()->warn("Unsupported mapping side \"" + *side_opt + "\". Using FRONT side instead.");
+				_3DXMLParser::LogMessage(Logger::Warn, "Unsupported mapping side \"" + *side_opt + "\". Using FRONT side instead.");
 
 				side = _3DXMLStructure::MaterialApplication::FRONT;
 			}
@@ -825,7 +825,7 @@ namespace Assimp {
 			if(it != blend_functions.end()) {
 				blend_function = it->second;
 			} else {
-				DefaultLogger::get()->warn("Unsupported texture blending function \"" + *blend_opt + "\". Using REPLACE function instead.");
+				_3DXMLParser::LogMessage(Logger::Warn, "Unsupported texture blending function \"" + *blend_opt + "\". Using REPLACE function instead.");
 
 				blend_function = _3DXMLStructure::MaterialApplication::REPLACE;
 			}

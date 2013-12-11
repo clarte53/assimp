@@ -415,7 +415,7 @@ namespace Assimp {
 				if(it != types.end()) {
 					type = it->second;
 				} else {
-					DefaultLogger::get()->warn("Unsupported attribute type \"" + type_str + "\". Using string type instead.");
+					_3DXMLParser::LogMessage(Logger::Warn, "Unsupported attribute type \"" + type_str + "\". Using string type instead.");
 
 					type = STRING;
 				}
@@ -426,7 +426,7 @@ namespace Assimp {
 				if(it != attributes.end()) {
 					it->second(params);
 				} else {
-					//DefaultLogger::get()->warn("Unsupported attribute \"" + name + "\".");
+					//_3DXMLParser::LogMessage(Logger::Warn, "Unsupported attribute \"" + name + "\".");
 				}
 			}, 0, XMLParser::XSD::unbounded));
 			
@@ -450,11 +450,11 @@ namespace Assimp {
 				break;
 			case OPERATOR_MAPPING:
 				if(params.mapping_operator == aiTextureMapping_UV) {
-					DefaultLogger::get()->warn("In Feature \"" + mReader.ToString(id) + "\": Operator mapping defined but no operator provided. Using UV coordinates instead.");
+					_3DXMLParser::LogMessage(Logger::Warn, "In Feature \"" + mReader.ToString(id) + "\": Operator mapping defined but no operator provided. Using UV coordinates instead.");
 				}
 				break;
 			case ENVIRONMENT_MAPPING:
-				DefaultLogger::get()->error("In Feature \"" + mReader.ToString(id) + "\": Environment mapping not supported. Using UV coordinates instead.");
+				_3DXMLParser::LogMessage(Logger::Err, "In Feature \"" + mReader.ToString(id) + "\": Environment mapping not supported. Using UV coordinates instead.");
 				params.mapping_operator = aiTextureMapping_UV;
 				break;
 		}
