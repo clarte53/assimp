@@ -67,6 +67,8 @@ namespace Assimp {
 
 			std::mutex mMutex;
 
+			std::string mError;
+
 			bool mFinished;
 
 			/** The archive containing the 3DXML files */ 

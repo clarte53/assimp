@@ -59,7 +59,7 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Constructor to be privately used by Importer
-	_3DXMLParser::_3DXMLParser(const std::string& file, aiScene* scene) : mWorkers(), mTasks(), mCondition(), mMutex(), mFinished(false), mArchive(new Q3BSP::Q3BSPZipArchive(file)), mContent(scene, &mCondition) { PROFILER;
+	_3DXMLParser::_3DXMLParser(const std::string& file, aiScene* scene) : mWorkers(), mTasks(), mCondition(), mMutex(), mError(""), mFinished(false), mArchive(new Q3BSP::Q3BSPZipArchive(file)), mContent(scene, &mCondition) { PROFILER;
 		// Load the compressed archive
 		if (! mArchive->isOpen()) {
 			ThrowException(nullptr, "Failed to open file " + file + "." );
@@ -71,6 +71,9 @@ namespace Assimp {
 		// Read the name of the main XML file in the manifest
 		std::string main_file;
 		ReadManifest(parser.get(), main_file);
+
+		// Free the parser
+		parser.reset();
 
 		// Add the main file to the list of files to parse
 		mContent.dependencies.add(main_file);
@@ -141,26 +144,43 @@ namespace Assimp {
 					}
 
 					if(! finished) {
-						// Do the actual work
-						task();
+						try {
+							// Do the actual work
+							task();
+						} catch(DeadlyImportError& error) {
+							std::unique_lock<std::mutex> lock(mMutex);
+								// Record the error message
+								mError = error.what();
+							
+								// Stop all the threads
+								mFinished = true;
+
+								// Notify all the sleeping threads
+								mCondition.notify_all();
+							lock.unlock();
+						}
 					} else {
 						// check whether everyone as finished
 						std::unique_lock<std::mutex> lock(mMutex);
 							// Set the state of this worker to 'finished'
 							mWorkers[index].second = true;
 
-							finished = true; // just to be sure
-							for(std::size_t i = 0; i < mWorkers.size(); ++i) {
-								if(! mWorkers[i].second) {
-									finished = false;
-									break;
+							if(! mFinished) {
+								finished = true; // just to be sure
+								for(std::size_t i = 0; i < mWorkers.size(); ++i) {
+									if(! mWorkers[i].second) {
+										finished = false;
+										break;
+									}
 								}
+
+								mFinished = finished;
 							}
 
-							mFinished = finished;
+							finished_global = mFinished;
 						lock.unlock();
 
-						if(finished) {
+						if(finished_global) {
 							// Warn all the sleeping workers that the task is done
 							mCondition.notify_all();
 						} else {
@@ -186,6 +206,11 @@ namespace Assimp {
 		// Wait for all the workers to finish their work
 		for(std::size_t i = 0; i < mWorkers.size(); ++i) {
 			mWorkers[i].first.join();
+		}
+
+		// Check for a potential error to propagate
+		if(mError != "") {
+			throw DeadlyImportError(mError);
 		}
 
 		// Construct the materials & meshes from the parsed data
