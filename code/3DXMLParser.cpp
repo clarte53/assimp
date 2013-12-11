@@ -59,7 +59,7 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Constructor to be privately used by Importer
-	_3DXMLParser::_3DXMLParser(const std::string& file, aiScene* scene) : mArchive(new Q3BSP::Q3BSPZipArchive(file)), mContent(scene) { PROFILER;
+	_3DXMLParser::_3DXMLParser(const std::string& file, aiScene* scene) : mWorkers(), mTasks(), mCondition(), mMutex(), mFinished(false), mArchive(new Q3BSP::Q3BSPZipArchive(file)), mContent(scene, &mCondition) { PROFILER;
 		// Load the compressed archive
 		if (! mArchive->isOpen()) {
 			ThrowException(nullptr, "Failed to open file " + file + "." );
@@ -87,14 +87,105 @@ namespace Assimp {
 			mContent.dependencies.add(img_file);
 		}
 
-		// Parse other referenced 3DXML files until all references are resolved
-		std::string filename;
-		while((filename = mContent.dependencies.next()) != "") { PROFILER;
-			// Create a xml parser for the file
-			parser.reset(new XMLParser(mArchive, filename));
 
-			// Parse the 3DXML file
-			ReadFile(parser.get());
+		std::size_t nb_threads = std::thread::hardware_concurrency();
+
+		if(nb_threads == 0) {
+			nb_threads = 1;
+		}
+
+		mFinished = false;
+
+		mWorkers.resize(nb_threads);
+		for(std::size_t index = 0; index < nb_threads; ++index) {
+			mWorkers[index].second = false;
+		}
+		for(std::size_t index = 0; index < nb_threads; ++index) {
+			mWorkers[index].first = std::thread([this, index]() {
+				bool finished_global = false;
+				bool finished;
+
+				// While there is still work to do
+				while(! finished_global) {
+					// Task to execute
+					std::function<void()> task;
+
+					finished = true;
+
+					// Check if we have some unresolved dependencies
+					std::string filename = mContent.dependencies.next();
+
+					if(filename != "") {
+						task = [this, filename]() {
+							// Create a xml parser
+							std::unique_ptr<XMLParser> parser(new XMLParser(mArchive, filename));
+
+							// Parse the 3DXML file
+							//TODO: make sure the different sections can not be accessed concurrently (should not happen, but who knows...)
+							ReadFile(parser.get());
+						};
+
+						finished = false;
+					}
+
+					// No dependencies? Get the next pending task
+					if(finished) {
+						std::unique_lock<std::mutex> lock(mMutex);
+							if(! mTasks.empty()) {
+								task = mTasks.front();
+								mTasks.pop();
+
+								finished = false;
+							}
+						lock.unlock();
+					}
+
+					if(! finished) {
+						// Do the actual work
+						task();
+					} else {
+						// check whether everyone as finished
+						std::unique_lock<std::mutex> lock(mMutex);
+							// Set the state of this worker to 'finished'
+							mWorkers[index].second = true;
+
+							finished = true; // just to be sure
+							for(std::size_t i = 0; i < mWorkers.size(); ++i) {
+								if(! mWorkers[i].second) {
+									finished = false;
+									break;
+								}
+							}
+
+							mFinished = finished;
+						lock.unlock();
+
+						if(finished) {
+							// Warn all the sleeping workers that the task is done
+							mCondition.notify_all();
+						} else {
+							std::unique_lock<std::mutex> lock(mMutex);
+								// Sleep until some work becomes available
+								mCondition.wait(lock);
+
+								// Reset the state of this worker to signal that we started to work again
+								mWorkers[index].second = false;
+							lock.unlock();
+						}
+					}
+
+					// Just get the global finished flag
+					// We could have used std::atomic<bool> for mFinished instead, but as usual Visual Studio is a shitty compiler when it comes to C++11
+					std::unique_lock<std::mutex> lock(mMutex);
+						finished_global = mFinished;
+					lock.unlock();
+				}
+			});
+		}
+
+		// Wait for all the workers to finish their work
+		for(std::size_t i = 0; i < mWorkers.size(); ++i) {
+			mWorkers[i].first.join();
 		}
 
 		// Construct the materials & meshes from the parsed data
@@ -1025,19 +1116,19 @@ namespace Assimp {
 		parser->ParseElement(mapping, params);
 
 		// Get the container for this representation
-		_3DXMLStructure::ReferenceRep& rep = mContent.representations[_3DXMLStructure::ID(parser->GetFilename(), id)];
-		rep.id = id;
-		rep.meshes.clear();
-		rep.indexes.clear();
+		_3DXMLStructure::ReferenceRep* rep = &(mContent.representations[_3DXMLStructure::ID(parser->GetFilename(), id)]);
+		rep->id = id;
+		rep->meshes.clear();
+		rep->indexes.clear();
 
 		// Test if the name exist, otherwise use the id as name
 		if(params.name_opt) {
-			rep.name = *(params.name_opt);
-			rep.has_name = true;
+			rep->name = *(params.name_opt);
+			rep->has_name = true;
 		} else {
 			// No name: take the id as the name
-			rep.name = parser->ToString(id);
-			rep.has_name = false;
+			rep->name = parser->ToString(id);
+			rep->has_name = false;
 		}
 
 		// Parse the external URI to the file containing the representation
@@ -1049,13 +1140,19 @@ namespace Assimp {
 		// Check the representation format and call the correct parsing function accordingly
 		if(format.compare("TESSELLATED") == 0) {
 			if(uri.extension.compare("3DRep") == 0) { PROFILER;
-				try {
-					// Parse the geometry representation
-					_3DXMLRepresentation representation(mArchive, uri.filename, rep.meshes, mContent.dependencies);
-				} catch(DeadlyImportError& error) {
-					DefaultLogger::get()->error("In ReferenceRep \"" + parser->ToString(id) + "\": unable to load the representation.");
-					DefaultLogger::get()->error(error.what());
-				}
+				std::unique_lock<std::mutex> lock(mMutex);
+					mTasks.emplace([this, parser, &rep, uri]() {
+						try {
+							// Parse the geometry representation
+							_3DXMLRepresentation representation(mArchive, uri.filename, rep->meshes, mContent.dependencies);
+						} catch(DeadlyImportError& error) {
+							DefaultLogger::get()->error("In ReferenceRep \"" + parser->ToString(rep->id) + "\": unable to load the representation.");
+							DefaultLogger::get()->error(error.what());
+						}
+					});
+
+					mCondition.notify_one();
+				lock.unlock();
 			} else {
 				ThrowException(parser, "In ReferenceRep \"" + parser->ToString(id) + "\": unsupported extension \"" + uri.extension + "\" for associated file.");
 			}
@@ -1245,17 +1342,17 @@ namespace Assimp {
 		parser->ParseElement(mapping, params);
 
 		// Get the container for this representation
-		_3DXMLStructure::MaterialDomain& mat = mContent.materials[_3DXMLStructure::ID(parser->GetFilename(), id)];
-		mat.id = id;
+		_3DXMLStructure::MaterialDomain* mat = &(mContent.materials[_3DXMLStructure::ID(parser->GetFilename(), id)]);
+		mat->id = id;
 
 		// Test if the name exist, otherwise use the id as name
 		if(params.name_opt) {
-			mat.name = *(params.name_opt);
-			mat.has_name = true;
+			mat->name = *(params.name_opt);
+			mat->has_name = true;
 		} else {
 			// No name: take the id as the name
-			mat.name = parser->ToString(id);
-			mat.has_name = false;
+			mat->name = parser->ToString(id);
+			mat->has_name = false;
 		}
 
 		// Parse the external URI to the file containing the representation
@@ -1268,14 +1365,20 @@ namespace Assimp {
 		if(params.rendering) {
 			if(format.compare("TECHREP") == 0) {
 				if(uri.extension.compare("3DRep") == 0) { PROFILER;
-					try {
-						_3DXMLMaterial material(mArchive, uri.filename, mat.material.get(), mContent.dependencies);
-					} catch(DeadlyImportError& error) {
-						mat.material.reset(nullptr);
+					std::unique_lock<std::mutex> lock(mMutex);
+						mTasks.emplace([this, parser, mat, uri]() {
+							try {
+								_3DXMLMaterial material(mArchive, uri.filename, mat->material.get(), mContent.dependencies);
+							} catch(DeadlyImportError& error) {
+								mat->material.reset(nullptr);
 
-						DefaultLogger::get()->error("In MaterialDomain \"" + parser->ToString(id) + "\": unable to load the material.");
-						DefaultLogger::get()->error(error.what());
-					}
+								DefaultLogger::get()->error("In MaterialDomain \"" + parser->ToString(mat->id) + "\": unable to load the material.");
+								DefaultLogger::get()->error(error.what());
+							}
+						});
+
+						mCondition.notify_one();
+					lock.unlock();
 				} else {
 					ThrowException(parser, "In MaterialDomain \"" + parser->ToString(id) + "\": unsupported extension \"" + uri.extension + "\" for associated file.");
 				}
@@ -1405,17 +1508,17 @@ namespace Assimp {
 		parser->ParseElement(mapping, params);
 
 		// Get the container for this representation
-		_3DXMLStructure::CATRepresentationImage& img = mContent.textures[_3DXMLStructure::ID(parser->GetFilename(), id)];
-		img.id = id;
+		_3DXMLStructure::CATRepresentationImage* img = &(mContent.textures[_3DXMLStructure::ID(parser->GetFilename(), id)]);
+		img->id = id;
 
 		// Test if the name exist, otherwise use the id as name
 		if(params.name_opt) {
-			img.name = *(params.name_opt);
-			img.has_name = true;
+			img->name = *(params.name_opt);
+			img->has_name = true;
 		} else {
 			// No name: take the id as the name
-			img.name = parser->ToString(id);
-			img.has_name = false;
+			img->name = parser->ToString(id);
+			img->has_name = false;
 		}
 
 		// Parse the external URI to the file containing the representation
@@ -1424,53 +1527,60 @@ namespace Assimp {
 			ThrowException(parser, "In CATRepresentationImage \"" + parser->ToString(id) + "\": invalid associated file \"" + file + "\". The field must reference a texture file in the same archive.");
 		}
 
-		try {
-			aiTexture* texture = img.texture.get();
+		std::unique_lock<std::mutex> lock(mMutex);
+			mTasks.emplace([this, parser, img, uri]() {
+				try {
+					aiTexture* texture = img->texture.get();
 
-			if(mArchive->isOpen()) {
-				if(mArchive->Exists(uri.filename.c_str())) {
-					// Open the manifest files
-					IOStream* stream = mArchive->Open(uri.filename.c_str());
-					if(stream == nullptr) {
-						// because Q3BSPZipArchive (now) correctly close all open files automatically on destruction,
-						// we do not have to worry about closing the stream explicitly on exceptions
+					if(mArchive->isOpen()) {
+						if(mArchive->Exists(uri.filename.c_str())) {
+							// Open the manifest files
+							IOStream* stream = mArchive->Open(uri.filename.c_str());
+							if(stream == nullptr) {
+								// because Q3BSPZipArchive (now) correctly close all open files automatically on destruction,
+								// we do not have to worry about closing the stream explicitly on exceptions
 
-						ThrowException(parser, uri.filename + " not found.");
+								ThrowException(parser, uri.filename + " not found.");
+							}
+
+							// Assume compressed textures are used, even if it is not the case.
+							// Therefore, the user can load the data directly in whichever way he needs.
+							texture->mHeight = 0;
+							texture->mWidth = stream->FileSize();
+
+							std::string extension = uri.extension;
+							std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
+
+							if(extension.compare("jpeg") == 0) {
+								extension = "jpg";
+							}
+
+							extension.copy(texture->achFormatHint, 3);
+							texture->achFormatHint[3] = '\0';
+
+							texture->pcData = (aiTexel*) new unsigned char[texture->mWidth];
+							size_t readSize = stream->Read((void*) texture->pcData, texture->mWidth, 1);
+
+							(void) readSize;
+							ai_assert(readSize == texture->mWidth);
+
+							mArchive->Close(stream);
+						} else {
+							ThrowException(parser, "The texture file \"" + uri.filename + "\" does not exist in the zip archive.");
+						}
+					} else {
+						ThrowException(parser, "The zip archive can not be opened.");
 					}
+				} catch(DeadlyImportError& error) {
+					img->texture.reset(nullptr);
 
-					// Assume compressed textures are used, even if it is not the case.
-					// Therefore, the user can load the data directly in whichever way he needs.
-					texture->mHeight = 0;
-					texture->mWidth = stream->FileSize();
-
-					std::transform(uri.extension.begin(), uri.extension.end(), uri.extension.begin(), ::tolower);
-
-					if(uri.extension.compare("jpeg") == 0) {
-						uri.extension = "jpg";
-					}
-
-					uri.extension.copy(texture->achFormatHint, 3);
-					texture->achFormatHint[3] = '\0';
-
-					texture->pcData = (aiTexel*) new unsigned char[texture->mWidth];
-					size_t readSize = stream->Read((void*) texture->pcData, texture->mWidth, 1);
-
-					(void) readSize;
-					ai_assert(readSize == texture->mWidth);
-
-					mArchive->Close(stream);
-				} else {
-					ThrowException(parser, "The texture file \"" + uri.filename + "\" does not exist in the zip archive.");
+					DefaultLogger::get()->error("In CATRepresentationImage \"" + parser->ToString(img->id) + "\": unable to load the texture \"" + uri.filename + "\".");
+					DefaultLogger::get()->error(error.what());
 				}
-			} else {
-				ThrowException(parser, "The zip archive can not be opened.");
-			}
-		} catch(DeadlyImportError& error) {
-			img.texture.reset(nullptr);
+			});
 
-			DefaultLogger::get()->error("In CATRepresentationImage \"" + parser->ToString(id) + "\": unable to load the texture \"" + uri.filename + "\".");
-			DefaultLogger::get()->error(error.what());
-		}
+			mCondition.notify_one();
+		lock.unlock();
 	}
 
 	// ------------------------------------------------------------------------------------------------

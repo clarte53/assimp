@@ -48,6 +48,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Optional.h"
 
 #include <boost/noncopyable.hpp>
+#include <condition_variable>
+#include <mutex>
 
 #if (defined _MSC_VER)
 #	pragma warning (disable:4503)
@@ -71,7 +73,7 @@ namespace Assimp {
 
 		}; // struct shared_less
 
-		struct URI : public boost::noncopyable {
+		struct URI {
 
 			std::string uri;
 
@@ -84,6 +86,8 @@ namespace Assimp {
 			bool external;
 
 			URI();
+
+			URI(const URI& other);
 
 			URI(URI&& other);
 
@@ -359,11 +363,15 @@ namespace Assimp {
 
 				std::set<std::string> files_parsed;
 
-				std::set<std::string> files_to_parse;
+				std::queue<std::string> files_to_parse;
+
+				std::condition_variable* thread_notifier;
+
+				std::mutex mutex;
 
 			public:
 
-				Dependencies();
+				Dependencies(std::condition_variable* notifier);
 
 				Dependencies(Dependencies&& other);
 
@@ -373,7 +381,7 @@ namespace Assimp {
 
 		}; // class Dependencies
 
-		_3DXMLStructure(aiScene* _scene);
+		_3DXMLStructure(aiScene* _scene, std::condition_variable* notifier);
 
 		_3DXMLStructure(_3DXMLStructure&& other);
 

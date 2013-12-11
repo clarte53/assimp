@@ -48,11 +48,26 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "3DXMLStructure.h"
 #include "XMLParser.h"
 
+#include <condition_variable>
+#include <functional>
+#include <mutex>
+#include <thread>
+
 namespace Assimp {
 
 	class _3DXMLParser {
 
 		protected:
+
+			std::vector<std::pair<std::thread, bool>> mWorkers;
+
+			std::queue<std::function<void()>> mTasks;
+
+			std::condition_variable mCondition;
+
+			std::mutex mMutex;
+
+			bool mFinished;
 
 			/** The archive containing the 3DXML files */ 
 			std::shared_ptr<Q3BSP::Q3BSPZipArchive> mArchive;

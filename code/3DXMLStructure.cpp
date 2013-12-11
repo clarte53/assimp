@@ -57,6 +57,11 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
+	_3DXMLStructure::URI::URI(const URI& other) : uri(other.uri), filename(other.filename), extension(other.extension), id(other.id), external(other.external) {
+	
+	}
+
+	// ------------------------------------------------------------------------------------------------
 	_3DXMLStructure::URI::URI(URI&& other) : uri(std::move(other.uri)), filename(std::move(other.filename)), extension(std::move(other.extension)), id(std::move(other.id)), external(other.external) {
 	
 	}
@@ -286,40 +291,50 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::Dependencies::Dependencies() : files_parsed(), files_to_parse() {
+	_3DXMLStructure::Dependencies::Dependencies(std::condition_variable* notifier) : files_parsed(), files_to_parse(), thread_notifier(notifier), mutex() {
 
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::Dependencies::Dependencies(Dependencies&& other) : files_parsed(std::move(other.files_parsed)), files_to_parse(std::move(other.files_to_parse)) {
-
+	_3DXMLStructure::Dependencies::Dependencies(Dependencies&& other) : files_parsed(std::move(other.files_parsed)), files_to_parse(std::move(other.files_to_parse)), thread_notifier(other.thread_notifier), mutex() {
+		other.thread_notifier = nullptr;
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	void _3DXMLStructure::Dependencies::add(const std::string& file) {
-		auto done = files_parsed.find(file);
+		std::unique_lock<std::mutex> lock(mutex);
+			auto done = files_parsed.find(file);
 
-		if(done == files_parsed.end()) {
-			files_to_parse.insert(file);
-		}
+			if(done == files_parsed.end()) {
+				// Add the file to the list of dependencies
+				files_to_parse.push(file);
+
+				// Warn one of the working threads that a dependencies became available
+				thread_notifier->notify_one();
+			}
+		lock.unlock();
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	std::string _3DXMLStructure::Dependencies::next() {
 		std::string result = "";
 
-		if(! files_to_parse.empty()) {
-			result = *(files_to_parse.begin());
+		std::unique_lock<std::mutex> lock(mutex);
+			if(! files_to_parse.empty()) {
+				// Get the name of the dependency
+				result = files_to_parse.front();
 
-			files_parsed.insert(result);
-			files_to_parse.erase(result);
-		}
+				// Move the dependency to the list of processed dependencies
+				files_parsed.insert(result);
+				files_to_parse.pop();
+			}
+		lock.unlock();
 
 		return result;
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::_3DXMLStructure(aiScene* _scene) : scene(_scene), ref_root_index(), references_node(), representations(), mat_root_index(), references_mat(), materials(), mat_connections(), dependencies() {
+	_3DXMLStructure::_3DXMLStructure(aiScene* _scene, std::condition_variable* notifier) : scene(_scene), ref_root_index(), references_node(), representations(), mat_root_index(), references_mat(), materials(), mat_connections(), dependencies(notifier) {
 	
 	}
 	
