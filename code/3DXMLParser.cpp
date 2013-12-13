@@ -650,7 +650,7 @@ namespace Assimp {
 									node->Meshes.Set(index_node++, *it_index_mesh);
 								}
 							} else {
-								ThrowException(parser, "No mesh corresponds to the given material \"" + parser->ToString(index_mat) + "\".");
+								DefaultLogger::get()->warn("No mesh corresponds to the given material \"" + parser->ToString(index_mat) + "\".");
 							}
 						} else {
 							// If the representation format is not supported, it is normal to have empty ReferenceRep. Therefore, we should gracefully ignore such nodes.
@@ -1533,9 +1533,11 @@ namespace Assimp {
 
 					// Parse C_Semantics element
 					map.emplace_back("C_Semantics", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
+						static const std::string reference = "Reference";
+
 						std::string semantic = *(parser->GetContent<std::string>(true));
 
-						if(semantic.compare("Reference") != 0) {
+						if(semantic.compare(0, reference.size(), reference) != 0) {
 							params.me->ThrowException(parser, "In PLMRelation of CATMatConnection \"" + parser->ToString(params.id) + "\": unknown semantic type \"" + semantic + "\".");
 						}
 					}, 1, 1));
