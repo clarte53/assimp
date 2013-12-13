@@ -447,19 +447,20 @@ namespace Assimp {
 		switch(params.mapping_type) {
 			case IMPLICIT_MAPPING:
 				params.mapping_operator = aiTextureMapping_UV;
+				mMaterial->AddProperty((int*) &params.mapping_operator, 1, AI_MATKEY_MAPPING_DIFFUSE(0));
 				break;
 			case OPERATOR_MAPPING:
-				if(params.mapping_operator == aiTextureMapping_UV) {
-					_3DXMLParser::LogMessage(Logger::Warn, "In Feature \"" + mReader.ToString(id) + "\": Operator mapping defined but no operator provided. Using UV coordinates instead.");
+				if(params.mapping_operator != aiTextureMapping_UV) {
+					mMaterial->AddProperty((int*) &params.mapping_operator, 1, AI_MATKEY_MAPPING_DIFFUSE(0));
+				} else {
+					_3DXMLParser::LogMessage(Logger::Warn, "In Feature \"" + mReader.ToString(id) + "\": Operator mapping defined but no operator provided.");
 				}
 				break;
 			case ENVIRONMENT_MAPPING:
 				_3DXMLParser::LogMessage(Logger::Err, "In Feature \"" + mReader.ToString(id) + "\": Environment mapping not supported. Using UV coordinates instead.");
-				params.mapping_operator = aiTextureMapping_UV;
 				break;
 		}
 
-		mMaterial->AddProperty((int*) &params.mapping_operator, 1, AI_MATKEY_MAPPING_DIFFUSE(0));
 		mMaterial->AddProperty(&params.transform, 1, AI_MATKEY_UVTRANSFORM_DIFFUSE(0));
 
 		// Default material options that have no equivalent in 3DXML
