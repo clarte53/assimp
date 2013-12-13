@@ -1279,13 +1279,15 @@ namespace Assimp {
 		parser->ParseElement(mapping, params);
 
 		// Test if the name exist, otherwise use the id as name
-		if(params.name_opt) {
-			params.mesh->name = *(params.name_opt);
-			params.mesh->has_name = true;
-		} else {
-			// No name: take the id as the name
-			params.mesh->name = parser->ToString(params.id);
-			params.mesh->has_name = false;
+		if(params.mesh != nullptr) {
+			if(params.name_opt) {
+				params.mesh->name = *(params.name_opt);
+				params.mesh->has_name = true;
+			} else {
+				// No name: take the id as the name
+				params.mesh->name = parser->ToString(params.id);
+				params.mesh->has_name = false;
+			}
 		}
 	}
 	
@@ -1506,13 +1508,15 @@ namespace Assimp {
 		parser->ParseElement(mapping, params);
 
 		// Test if the name exist, otherwise use the id as name
-		if(params.name_opt) {
-			params.material->name = *(params.name_opt);
-			params.material->has_name = true;
-		} else {
-			// No name: take the id as the name
-			params.material->name = parser->ToString(params.id);
-			params.material->has_name = false;
+		if(params.material != nullptr) {
+			if(params.name_opt) {
+				params.material->name = *(params.name_opt);
+				params.material->has_name = true;
+			} else {
+				// No name: take the id as the name
+				params.material->name = parser->ToString(params.id);
+				params.material->has_name = false;
+			}
 		}
 	}
 
