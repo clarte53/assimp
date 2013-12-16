@@ -57,6 +57,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace Assimp {
 
+	const unsigned int _3DXMLParser::mixed_material_index = std::numeric_limits<unsigned int>::max();
+
 	// ------------------------------------------------------------------------------------------------
 	// Constructor to be privately used by Importer
 	_3DXMLParser::_3DXMLParser(const std::string& file, aiScene* scene) : mWorkers(), mTasks(), mCondition(), mMutex(), mError(""), mFinished(false), mArchive(new Q3BSP::Q3BSPZipArchive(file)), mContent(scene, &mCondition) { PROFILER;
@@ -655,10 +657,42 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
+	// Count the number of materials instantiated for each geometry
+	void _3DXMLParser::BuildMaterialCount(const XMLParser* parser, _3DXMLStructure::Reference3D& ref, std::map<_3DXMLStructure::ReferenceRep*, std::set<unsigned int>>& materials_per_geometry, Optional<unsigned int> material_index) { PROFILER;
+		for(std::map<_3DXMLStructure::ID, _3DXMLStructure::InstanceRep>::const_iterator it_mesh(ref.meshes.begin()), end_mesh(ref.meshes.end()); it_mesh != end_mesh; ++it_mesh) {
+			const _3DXMLStructure::InstanceRep& rep = it_mesh->second;
+
+			if(rep.instance_of != nullptr) {
+				// Get the index of material to use
+				unsigned int index_mat = mixed_material_index;
+				if(material_index) {
+					index_mat = *material_index;
+				}
+
+				materials_per_geometry[rep.instance_of].insert(index_mat);
+			} else {
+				ThrowException(parser, "One InstanceRep of Reference3D \"" + parser->ToString(ref.id) + "\" is unresolved.");
+			}
+		}
+
+		for(std::map<_3DXMLStructure::ID, _3DXMLStructure::Instance3D>::iterator it_child(ref.instances.begin()), end_child(ref.instances.end()); it_child != end_child; ++it_child) {
+			_3DXMLStructure::Instance3D& child = it_child->second;
+
+			if(child.instance_of != nullptr) {
+				if(! child.material_index) {
+					child.material_index = material_index;
+				}
+
+				BuildMaterialCount(parser, *child.instance_of, materials_per_geometry, child.material_index);
+			} else {
+				ThrowException(parser, "One Instance3D of Reference3D \"" + parser->ToString(ref.id) + "\" is unresolved.");
+			}
+		}
+	}
+
+	// ------------------------------------------------------------------------------------------------
 	// Add the meshes to the scene
 	void _3DXMLParser::BuildMeshes(const XMLParser* parser, _3DXMLStructure::ReferenceRep& rep, unsigned int material_index) { PROFILER;
-		static const unsigned int mixed_material_index = std::numeric_limits<unsigned int>::max();
-
 		// Decrement the counter of instances to this Reference3D (used for memory managment)
 		if(rep.nb_references > 0) {
 			rep.nb_references--;
@@ -740,6 +774,13 @@ namespace Assimp {
 						 0,  0,  0,  1
 					);
 
+					// Set the number of references for each geometry (depending on the instantiated materials)
+					std::map<_3DXMLStructure::ReferenceRep*, std::set<unsigned int>> materials_per_geometry;
+					BuildMaterialCount(parser, root, materials_per_geometry, Optional<unsigned int>());
+					for(std::map<_3DXMLStructure::ReferenceRep*, std::set<unsigned int>>::const_iterator it_rep(materials_per_geometry.begin()), end_rep(materials_per_geometry.end()); it_rep != end_rep; ++it_rep) {
+						it_rep->first->nb_references = it_rep->second.size();
+					}
+
 					// Build the hierarchy recursively
 					BuildStructure(parser, root, mContent.scene->mRootNode, Optional<unsigned int>());
 				} else {
@@ -757,8 +798,6 @@ namespace Assimp {
 	// ------------------------------------------------------------------------------------------------
 	// Add the meshes indices and children nodes into the given node recursively
 	void _3DXMLParser::BuildStructure(const XMLParser* parser, _3DXMLStructure::Reference3D& ref, aiNode* node, Optional<unsigned int> material_index) { PROFILER;
-		static const unsigned int mixed_material_index = std::numeric_limits<unsigned int>::max();
-
 		// Decrement the counter of instances to this Reference3D (used for memory managment)
 		if(ref.nb_references > 0) {
 			ref.nb_references--;
@@ -791,7 +830,7 @@ namespace Assimp {
 									node->Meshes.Set(index_node++, *it_index_mesh);
 								}
 							} else {
-								LogMessage(Logger::Warn, "No mesh corresponds to the given material \"" + parser->ToString(index_mat) + "\".");
+								ThrowException(parser, "No mesh corresponds to the given material \"" + parser->ToString(index_mat) + "\".");
 							}
 						} else {
 							// If the representation format is not supported, it is normal to have empty ReferenceRep. Therefore, we should gracefully ignore such nodes.
@@ -805,7 +844,7 @@ namespace Assimp {
 
 			// Copy the children nodes of this instance into the proper node
 			if(node->mNumChildren == 0) {
-				for(std::map<_3DXMLStructure::ID, _3DXMLStructure::Instance3D>::iterator it_child(ref.instances.begin()), end_child(ref.instances.end()); it_child != end_child; ++ it_child) {
+				for(std::map<_3DXMLStructure::ID, _3DXMLStructure::Instance3D>::iterator it_child(ref.instances.begin()), end_child(ref.instances.end()); it_child != end_child; ++it_child) {
 					_3DXMLStructure::Instance3D& child = it_child->second;
 
 					if(child.node.get() != nullptr && child.instance_of != nullptr) {
@@ -815,7 +854,7 @@ namespace Assimp {
 						}
 
 						// Construct the hierarchy recursively
-						BuildStructure(parser, *child.instance_of, child.node.get(), (child.material_index ? child.material_index : material_index));
+						BuildStructure(parser, *child.instance_of, child.node.get(), child.material_index);
 
 						// If the counter of references is null, this mean this instance is the last instance of this Reference3D
 						if(ref.nb_references == 0) {
@@ -1260,9 +1299,6 @@ namespace Assimp {
 				if(instance_of.id) {
 					// Create the refered ReferenceRep if necessary
 					params.mesh->instance_of = &(params.me->mContent.representations[_3DXMLStructure::ID(instance_of.filename, *(instance_of.id))]);
-
-					// Increment the number of instances to this reference
-					params.mesh->instance_of->nb_references++;
 				} else {
 					params.me->ThrowException(parser, "In InstanceRep \"" + parser->ToString(params.id) + "\": the uri \"" + uri + "\" has no id component.");
 				}
