@@ -552,11 +552,6 @@ namespace Assimp {
 	// ------------------------------------------------------------------------------------------------
 	// Add the meshes to the scene
 	void _3DXMLParser::BuildMeshes(const XMLParser* parser, _3DXMLStructure::ReferenceRep& rep, unsigned int material_index) { PROFILER;
-		// Decrement the counter of instances to this Reference3D (used for memory managment)
-		if(rep.nb_references > 0) {
-			rep.nb_references--;
-		}
-
 		std::map<unsigned int, std::list<unsigned int>>::iterator it_indexes = rep.indexes.find(material_index);
 
 		// Are the meshes added to the scene yet?
@@ -566,6 +561,11 @@ namespace Assimp {
 
 			// Get a reference to the list of indexes to use
 			std::list<unsigned int>& list_indexes = rep.indexes[material_index];
+
+			// Decrement the counter of instances to this Reference3D (used for memory managment)
+			if(rep.nb_references > 0) {
+				rep.nb_references--;
+			}
 
 			for(_3DXMLStructure::ReferenceRep::Meshes::iterator it_meshes(rep.meshes.begin()), end_meshes(rep.meshes.end()); it_meshes != end_meshes; ++it_meshes) {
 				std::list<std::unique_ptr<aiMesh>*> meshes;
