@@ -54,6 +54,8 @@ namespace Assimp {
 
 		protected:
 
+			static const unsigned int mixed_material_index;
+
 			/** The archive containing the 3DXML files */ 
 			std::shared_ptr<Q3BSP::Q3BSPZipArchive> mArchive;
 
@@ -81,6 +83,8 @@ namespace Assimp {
 			static void BuildColorMaterial(std::unique_ptr<aiMaterial>& material, const std::string& name, const aiColor4D& color);
 
 			void BuildMaterials(const XMLParser* parser);
+
+			void BuildMaterialCount(const XMLParser* parser, _3DXMLStructure::Reference3D& ref, std::map<_3DXMLStructure::ReferenceRep*, std::set<unsigned int>>& materials_per_geometry, Optional<unsigned int> material_index);
 
 			void BuildMeshes(const XMLParser* parser, _3DXMLStructure::ReferenceRep& rep, unsigned int material_index);
 
