@@ -453,7 +453,8 @@ namespace Assimp {
 				if(params.mapping_operator != aiTextureMapping_UV) {
 					mMaterial->AddProperty((int*) &params.mapping_operator, 1, AI_MATKEY_MAPPING_DIFFUSE(0));
 				} else {
-					_3DXMLParser::LogMessage(Logger::Warn, "In Feature \"" + mReader.ToString(id) + "\": Operator mapping defined but no operator provided.");
+					// No explicit id for this warning message as most 3DXML exporter generates invalid materials and repeated output garbage the logs
+					_3DXMLParser::LogMessage(Logger::Warn, "In Feature: Operator mapping defined but no operator provided.");
 				}
 				break;
 			case ENVIRONMENT_MAPPING:

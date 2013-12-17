@@ -671,10 +671,14 @@ namespace Assimp {
 								mesh->Bitangents.Set(vertice_index, params.mesh->mBitangents[index]);
 							}
 							for(unsigned int k = 0; k < params.mesh->GetNumUVChannels(); k++) {
-								mesh->TextureCoords.Get(k).Set(vertice_index, params.mesh->mTextureCoords[k][index]);
+								if(params.mesh->HasTextureCoords(k)) {
+									mesh->TextureCoords.Get(k).Set(vertice_index, params.mesh->mTextureCoords[k][index]);
+								}
 							}
 							for(unsigned int k = 0; k < params.mesh->GetNumColorChannels(); k++) {
-								mesh->Colors.Get(k).Set(vertice_index, params.mesh->mColors[k][index]);
+								if(params.mesh->HasVertexColors(k)) {
+									mesh->Colors.Get(k).Set(vertice_index, params.mesh->mColors[k][index]);
+								}
 							}
 
 							vertice_index++;
