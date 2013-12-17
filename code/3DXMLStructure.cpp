@@ -192,7 +192,7 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::CATRepresentationImage::CATRepresentationImage(CATRepresentationImage&& other) : id(other.id), has_name(other.has_name), index(other.index), name(std::move(other.name)), texture(std::move(other.texture)) {
+	_3DXMLStructure::CATRepresentationImage::CATRepresentationImage(CATRepresentationImage&& other) : id(other.id), has_name(other.has_name), name(std::move(other.name)), index(other.index), texture(std::move(other.texture)) {
 
 	}
 
