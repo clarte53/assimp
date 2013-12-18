@@ -686,6 +686,28 @@ namespace Assimp {
 					}
 
 					it->second->GetProcessed() = mesh->mNumFaces;
+
+					// Make sure the arrays are allocated to the correct size, even if no data is present
+					if(mesh->HasPositions()) {
+						mesh->Vertices.Reserve(mesh->mNumVertices);
+					}
+					if(mesh->HasNormals()) {
+						mesh->Normals.Reserve(mesh->mNumVertices);
+					}
+					if(mesh->HasTangentsAndBitangents()) {
+						mesh->Tangents.Reserve(mesh->mNumVertices);
+						mesh->Bitangents.Reserve(mesh->mNumVertices);
+					}
+					for(unsigned int k = 0; k < mesh->GetNumUVChannels(); k++) {
+						if(mesh->HasTextureCoords(k)) {
+							mesh->TextureCoords.Get(k).Reserve(mesh->mNumVertices);
+						}
+					}
+					for(unsigned int k = 0; k < mesh->GetNumColorChannels(); k++) {
+						if(mesh->HasVertexColors(k)) {
+							mesh->Colors.Get(k).Reserve(mesh->mNumVertices);
+						}
+					}
 				}
 			}
 		}
