@@ -405,7 +405,7 @@ namespace Assimp {
 						throw;
 					}
 				} else { // It must be a simple color material
-					BuildColorMaterial(material, "Material test " + parser->ToString(color_mat_counter++), (*it_mat)->color);
+					BuildColorMaterial(material, "Material " + parser->ToString(color_mat_counter++), (*it_mat)->color);
 				}
 			} else {
 				// Default material
