@@ -400,12 +400,13 @@ namespace Assimp {
 				if(triangles || strips || fans) {
 					aiMesh* mesh = params.me->GetGeometry(params.me->mCurrentSurface).GetMesh().get();
 
-					unsigned int index = mesh->Faces.Size();
-
 					if(triangles) {
 						data.clear();
 
 						params.me->ParseTriangles(*triangles, data);
+
+						// Compute the number of faces we will add to the mesh and allocate the necessary memory in one pass
+						mesh->Faces.Reserve(mesh->mNumFaces + data.size());
 
 						for(std::list<std::vector<unsigned int>>::iterator it(data.begin()), end(data.end()); it != end; ++it) {
 							for(unsigned int i = 0; i < it->size(); i += 3) {
@@ -418,7 +419,7 @@ namespace Assimp {
 									face.mIndices[j] = (*it)[i + j];
 								}
 
-								mesh->Faces.Set(index++, face);
+								mesh->Faces.Set(mesh->mNumFaces, face);
 							}
 						}
 					}
@@ -428,8 +429,16 @@ namespace Assimp {
 
 						params.me->ParseTriangles(*strips, data);
 
+						// Compute the number of faces we will add to the mesh and allocate the necessary memory in one pass
+						unsigned int size = 0;
+						for(std::list<std::vector<unsigned int>>::iterator it(data.begin()), end(data.end()); it != end; ++it) {
+							size += it->size() - 2;
+						}
+						mesh->Faces.Reserve(mesh->mNumFaces + size);
+
 						for(std::list<std::vector<unsigned int>>::iterator it(data.begin()), end(data.end()); it != end; ++it) {
 							bool inversed = false;
+
 							for(unsigned int i = 0; i < it->size() - (nb_vertices - 1); i++) {
 								aiFace face;
 
@@ -446,7 +455,7 @@ namespace Assimp {
 
 								inversed = ! inversed;
 
-								mesh->Faces.Set(index++, face);
+								mesh->Faces.Set(mesh->mNumFaces, face);
 							}
 						}
 					}
@@ -456,7 +465,14 @@ namespace Assimp {
 
 						params.me->ParseTriangles(*fans, data);
 
+						// Compute the number of faces we will add to the mesh and allocate the necessary memory in one pass
+						unsigned int size = 0;
 						for(std::list<std::vector<unsigned int>>::iterator it(data.begin()), end(data.end()); it != end; ++it) {
+							size += it->size() - 2;
+						}
+						mesh->Faces.Reserve(mesh->mNumFaces + size);
+
+						for(std::list<std::vector<unsigned int>>::iterator it(data.begin()), end(data.end()); it != end; ++it) {		
 							for(unsigned int i = 0; i < it->size() - (nb_vertices - 1); i++) {
 								aiFace face;
 
@@ -468,7 +484,7 @@ namespace Assimp {
 									face.mIndices[j] = (*it)[i + j];
 								}
 							
-								mesh->Faces.Set(index++, face);
+								mesh->Faces.Set(mesh->mNumFaces, face);
 							}
 						}
 					}
@@ -528,7 +544,12 @@ namespace Assimp {
 				if(! lines.empty()) {
 					aiMesh* mesh = params.me->GetGeometry(params.me->mCurrentLine).GetLines().get();
 
+					const unsigned int nb_faces = lines.size() - 1;
 					unsigned int index = mesh->mNumVertices;
+
+					// Compute the number of faces and vertices we will add to the mesh and allocate the necessary memory in one pass
+					mesh->Faces.Reserve(mesh->mNumFaces + nb_faces);
+					mesh->Vertices.Reserve(mesh->mNumVertices + nb_faces * 2);
 
 					for(unsigned int i = 0; i < lines.size() - 1; i++, index += 2) {
 						mesh->Vertices.Set(index, lines[i]);
