@@ -66,6 +66,8 @@ namespace Assimp {
 			/** The material of the lines currently parsed */
 			_3DXMLStructure::MaterialAttributes::ID mCurrentLine;
 
+			std::multimap<_3DXMLStructure::MaterialAttributes::ID, std::unique_ptr<Geometry>, shared_less<_3DXMLStructure::MaterialAttributes>> mCurrentMeshes;
+
 			_3DXMLStructure::Dependencies& mDependencies;
 
 		public: 

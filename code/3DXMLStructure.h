@@ -265,41 +265,21 @@ namespace Assimp {
 
 		struct ReferenceRep : public boost::noncopyable {
 
-			class Geometry : public boost::noncopyable {
+			struct Geometry : public boost::noncopyable {
 
-				protected:
+				enum Type {LINES, MESH, OTHER};
 
-					std::unique_ptr<aiMesh> mMesh;
+				std::unique_ptr<aiMesh> mesh;
 
-					std::unique_ptr<aiMesh> mLines;
+				Type type;
 
-					unsigned int mProcessed;
+				Geometry();
 
-				public:
-
-					Geometry();
-
-					Geometry(Geometry&& other);
-
-					std::unique_ptr<aiMesh>& GetMesh();
-
-					std::unique_ptr<aiMesh>& GetLines();
-
-					inline unsigned int& GetProcessed() {
-						return mProcessed;
-					}
-
-					inline bool HasMesh() const {
-						return mMesh && (mMesh->mNumVertices != 0 || mMesh->mNumFaces != 0);
-					}
-					
-					inline bool HasLines() const {
-						return mLines && (mLines->mNumVertices != 0 || mLines->mNumFaces != 0);
-					}
+				Geometry(Geometry&& other);
 
 			}; // class Geometry
 
-			typedef std::map<MaterialAttributes::ID, std::unique_ptr<Geometry>, shared_less<MaterialAttributes>> Meshes;
+			typedef std::multimap<MaterialAttributes::ID, std::unique_ptr<Geometry>, shared_less<MaterialAttributes>> Meshes;
 					
 			unsigned int id;
 					

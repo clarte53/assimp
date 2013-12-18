@@ -227,31 +227,13 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::ReferenceRep::Geometry::Geometry() : mMesh(), mLines(), mProcessed(0) {
+	_3DXMLStructure::ReferenceRep::Geometry::Geometry() : mesh(), type(OTHER) {
 
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::ReferenceRep::Geometry::Geometry(Geometry&& other) : mMesh(std::move(other.mMesh)), mLines(std::move(other.mLines)), mProcessed(other.mProcessed) {
+	_3DXMLStructure::ReferenceRep::Geometry::Geometry(Geometry&& other) : mesh(std::move(other.mesh)), type(other.type) {
 
-	}
-
-	// ------------------------------------------------------------------------------------------------
-	std::unique_ptr<aiMesh>& _3DXMLStructure::ReferenceRep::Geometry::GetMesh() {
-		if(! mMesh) {
-			mMesh.reset(new aiMesh());
-		}
-
-		return mMesh;
-	}
-
-	// ------------------------------------------------------------------------------------------------
-	std::unique_ptr<aiMesh>& _3DXMLStructure::ReferenceRep::Geometry::GetLines() {
-		if(! mLines) {
-			mLines.reset(new aiMesh());
-		}
-
-		return mLines;
 	}
 
 	// ------------------------------------------------------------------------------------------------
