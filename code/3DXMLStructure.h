@@ -267,13 +267,15 @@ namespace Assimp {
 
 			struct Geometry : public boost::noncopyable {
 
-				enum Type {LINES, MESH, OTHER};
+				enum Type {LINES, MESH};
 
 				std::unique_ptr<aiMesh> mesh;
 
 				Type type;
 
-				Geometry();
+				Geometry(Type type);
+
+				Geometry(Type type, aiMesh* mesh);
 
 				Geometry(Geometry&& other);
 

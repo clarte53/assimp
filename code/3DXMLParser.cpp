@@ -284,12 +284,7 @@ namespace Assimp {
 		for(std::map<_3DXMLStructure::ID, _3DXMLStructure::ReferenceRep>::iterator it_rep(mContent.representations.begin()), end_rep(mContent.representations.end()); it_rep != end_rep; ++it_rep) {
 			for(_3DXMLStructure::ReferenceRep::Meshes::iterator it_mesh(it_rep->second.meshes.begin()), end_mesh(it_rep->second.meshes.end()); it_mesh != end_mesh; ++it_mesh) {
 				// Set the names of the parsed meshes with this ReferenceRep name
-				if(it_mesh->second->HasMesh()) {
-					it_mesh->second->GetMesh()->mName = it_rep->second.name;
-				}
-				if(it_mesh->second->HasLines()) {
-					it_mesh->second->GetLines()->mName = it_rep->second.name;
-				}
+				it_mesh->second->mesh->mName = it_rep->second.name;
 
 				// Check if the surface attributes already exist
 				std::set<_3DXMLStructure::MaterialAttributes::ID>::iterator it = mat_attributes.find(it_mesh->first);
@@ -307,13 +302,7 @@ namespace Assimp {
 
 					it_mesh = it_rep->second.meshes.erase(it_mesh);
 
-					std::pair<_3DXMLStructure::ReferenceRep::Meshes::iterator, bool> result = it_rep->second.meshes.emplace(std::make_pair(*it, std::move(geometry)));
-
-					if(result.second) {
-						it_mesh = result.first;
-					} else {
-						ThrowException(parser, "In ReferenceRep \"" + parser->ToString(it_rep->second.id) + "\": impossible to replace the material attributes with shared attributes.");
-					}
+					it_mesh = it_rep->second.meshes.emplace(*it, std::move(geometry));
 				}
 			}
 		}
@@ -568,45 +557,36 @@ namespace Assimp {
 			}
 
 			for(_3DXMLStructure::ReferenceRep::Meshes::iterator it_meshes(rep.meshes.begin()), end_meshes(rep.meshes.end()); it_meshes != end_meshes; ++it_meshes) {
-				std::list<std::unique_ptr<aiMesh>*> meshes;
+				std::unique_ptr<aiMesh>* mesh = &(it_meshes->second->mesh);
 
-				if(it_meshes->second->HasMesh()) {
-					meshes.emplace_back(&(it_meshes->second->GetMesh()));
-				}
-				if(it_meshes->second->HasLines()) {
-					meshes.emplace_back(&(it_meshes->second->GetLines()));
-				}
-				
-				for(std::list<std::unique_ptr<aiMesh>*>::iterator it_mesh(meshes.begin()), end_mesh(meshes.end()); it_mesh != end_mesh; ++it_mesh) {
-					if(**it_mesh) {
-						// Duplicate the mesh for the new material
-						aiMesh* mesh_ptr = NULL;
+				if(*mesh) {
+					// Duplicate the mesh for the new material
+					aiMesh* mesh_ptr = NULL;
 
-						if(rep.nb_references == 0) {
-							mesh_ptr = (*it_mesh)->release();
-						} else {
-							SceneCombiner::Copy(&mesh_ptr, (*it_mesh)->get());
-						}
-
-						// Save the new mesh in the scene
-						mContent.scene->Meshes.Set(index_mesh, mesh_ptr);
-
-						// Get the index of the material
-						unsigned int index_mat = material_index;
-						if(material_index == mixed_material_index) {
-							// Get the index of the material defined for this specific mesh
-							index_mat = (it_meshes->first ? it_meshes->first->index : 0);
-						}
-
-						// Save the index of the material to use
-						mesh_ptr->mMaterialIndex = index_mat;
-
-						// Save the index of the mesh depending for the special material index corresponding to mixed materials defined at the mesh level
-						list_indexes.push_back(index_mesh);
-
-						// Increment the index for the next mesh
-						index_mesh++;
+					if(rep.nb_references == 0) {
+						mesh_ptr = mesh->release();
+					} else {
+						SceneCombiner::Copy(&mesh_ptr, mesh->get());
 					}
+
+					// Save the new mesh in the scene
+					mContent.scene->Meshes.Set(index_mesh, mesh_ptr);
+
+					// Get the index of the material
+					unsigned int index_mat = material_index;
+					if(material_index == mixed_material_index) {
+						// Get the index of the material defined for this specific mesh
+						index_mat = (it_meshes->first ? it_meshes->first->index : 0);
+					}
+
+					// Save the index of the material to use
+					mesh_ptr->mMaterialIndex = index_mat;
+
+					// Save the index of the mesh depending for the special material index corresponding to mixed materials defined at the mesh level
+					list_indexes.push_back(index_mesh);
+
+					// Increment the index for the next mesh
+					index_mesh++;
 				}
 			}
 		}

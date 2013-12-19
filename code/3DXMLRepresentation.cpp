@@ -59,7 +59,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLRepresentation::_3DXMLRepresentation(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, _3DXMLStructure::ReferenceRep::Meshes& meshes, _3DXMLStructure::Dependencies& dependencies) : mReader(archive, filename), mMeshes(meshes), mCurrentSurface(nullptr), mCurrentLine(nullptr), mDependencies(dependencies) { PROFILER;
+	_3DXMLRepresentation::_3DXMLRepresentation(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, _3DXMLStructure::ReferenceRep::Meshes& meshes, _3DXMLStructure::Dependencies& dependencies) : mReader(archive, filename), mMeshes(meshes), mCurrentMeshes(), mCurrentSurface(nullptr), mCurrentLine(nullptr), mDependencies(dependencies) { PROFILER;
 		struct Params {
 			_3DXMLRepresentation* me;
 		} params;
@@ -96,23 +96,6 @@ namespace Assimp {
 	// Aborts the file reading with an exception
 	void _3DXMLRepresentation::ThrowException(const std::string& error) const { PROFILER;
 		throw DeadlyImportError(boost::str(boost::format("3DXML: %s - %s") % mReader.GetFilename() % error));
-	}
-	
-	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::ReferenceRep::Geometry& _3DXMLRepresentation::GetGeometry(const _3DXMLStructure::MaterialAttributes::ID& material) const { PROFILER;
-		auto position = mMeshes.find(material);
-
-		if(position == mMeshes.end()) {
-			auto insert = mMeshes.emplace(material, std::unique_ptr<_3DXMLStructure::ReferenceRep::Geometry>(new _3DXMLStructure::ReferenceRep::Geometry()));
-
-			if(! insert.second) {
-				ThrowException("Impossible to create a new mesh for the new material.");
-			}
-
-			position = insert.first;
-		}
-
-		return *(position->second.get());
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -352,9 +335,16 @@ namespace Assimp {
 		_3DXMLStructure::MaterialAttributes::ID old_surface = mCurrentSurface;
 		_3DXMLStructure::MaterialAttributes::ID old_line = mCurrentLine;
 
+		mCurrentMeshes.clear();
+
 		params.me = this;
 
 		mReader.ParseElement(mapping, params);
+
+		for(auto it(mCurrentMeshes.begin()), end(mCurrentMeshes.end()); it!= end; ++it) {
+			mMeshes.emplace(it->first, std::unique_ptr<_3DXMLStructure::ReferenceRep::Geometry>(it->second.release()));
+		}
+		mCurrentMeshes.clear();
 
 		mCurrentSurface = old_surface;
 		mCurrentLine = old_line;
@@ -398,7 +388,11 @@ namespace Assimp {
 				std::list<std::vector<unsigned int>> data;
 
 				if(triangles || strips || fans) {
-					aiMesh* mesh = params.me->GetGeometry(params.me->mCurrentSurface).GetMesh().get();
+					auto it = params.me->mCurrentMeshes.emplace(params.me->mCurrentSurface, std::unique_ptr<_3DXMLStructure::ReferenceRep::Geometry>(
+							new _3DXMLStructure::ReferenceRep::Geometry(_3DXMLStructure::ReferenceRep::Geometry::MESH)
+					));
+
+					aiMesh* mesh = it->second->mesh.get();
 
 					if(triangles) {
 						data.clear();
@@ -546,7 +540,11 @@ namespace Assimp {
 				}
 
 				if(! lines.empty()) {
-					aiMesh* mesh = params.me->GetGeometry(params.me->mCurrentLine).GetLines().get();
+					auto it = params.me->mCurrentMeshes.emplace(params.me->mCurrentLine, std::unique_ptr<_3DXMLStructure::ReferenceRep::Geometry>(
+							new _3DXMLStructure::ReferenceRep::Geometry(_3DXMLStructure::ReferenceRep::Geometry::LINES)
+					));
+
+					aiMesh* mesh = it->second->mesh.get();
 
 					const unsigned int nb_faces = lines.size() - 1;
 					unsigned int index = mesh->mNumVertices;
@@ -671,13 +669,13 @@ namespace Assimp {
 
 		if(params.mesh->mNumVertices != 0) {
 			// Duplicate the vertices to avoid different faces sharing the same (and to pass the ValidateDataStructure test...)
-			for(_3DXMLStructure::ReferenceRep::Meshes::iterator it(mMeshes.begin()), end(mMeshes.end()); it != end; ++it) {
-				if(it->second->HasMesh()) {
-					aiMesh* mesh = it->second->GetMesh().get();
+			for(_3DXMLStructure::ReferenceRep::Meshes::iterator it(mCurrentMeshes.begin()), end(mCurrentMeshes.end()); it != end; ++it) {
+				if(it->second->type == _3DXMLStructure::ReferenceRep::Geometry::MESH) {
+					aiMesh* mesh = it->second->mesh.get();
 
 					// Compute the final number of vertices for this mesh
 					unsigned int final_vertices_size = mesh->mNumVertices;
-					for(unsigned int i = it->second->GetProcessed(); i < mesh->mNumFaces; i++) {
+					for(unsigned int i = 0; i < mesh->mNumFaces; i++) {
 						final_vertices_size += mesh->mFaces[i].mNumIndices;
 					}
 
@@ -706,7 +704,7 @@ namespace Assimp {
 					unsigned int vertice_index = mesh->mNumVertices;
 
 					// Duplicate the vertices to avoid joined vertices (or validation of the structure will fail)
-					for(unsigned int i = it->second->GetProcessed(); i < mesh->mNumFaces; i++) {
+					for(unsigned int i = 0; i < mesh->mNumFaces; i++) {
 						aiFace& face = mesh->mFaces[i];
 
 						for(unsigned int j = 0; j < face.mNumIndices; j++) {
@@ -738,8 +736,6 @@ namespace Assimp {
 							vertice_index++;
 						}
 					}
-
-					it->second->GetProcessed() = mesh->mNumFaces;
 				}
 			}
 		}

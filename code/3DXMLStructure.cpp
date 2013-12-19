@@ -227,7 +227,12 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::ReferenceRep::Geometry::Geometry() : mesh(), type(OTHER) {
+	_3DXMLStructure::ReferenceRep::Geometry::Geometry(Type type) : mesh(new aiMesh()), type(type) {
+
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	_3DXMLStructure::ReferenceRep::Geometry::Geometry(Type type, aiMesh* mesh) : mesh(mesh), type(type) {
 
 	}
 
