@@ -406,7 +406,11 @@ namespace Assimp {
 						params.me->ParseTriangles(*triangles, data);
 
 						// Compute the number of faces we will add to the mesh and allocate the necessary memory in one pass
-						mesh->Faces.Reserve(mesh->mNumFaces + data.size());
+						unsigned int size = 0;
+						for(std::list<std::vector<unsigned int>>::iterator it(data.begin()), end(data.end()); it != end; ++it) {
+							size += (it->size() / 3);
+						}
+						mesh->Faces.Reserve(mesh->mNumFaces + size);
 
 						for(std::list<std::vector<unsigned int>>::iterator it(data.begin()), end(data.end()); it != end; ++it) {
 							for(unsigned int i = 0; i < it->size(); i += 3) {
@@ -665,14 +669,43 @@ namespace Assimp {
 
 		mReader.ParseElement(mapping, params);
 
-		if(params.mesh->Vertices.Size() != 0) {
+		if(params.mesh->mNumVertices != 0) {
 			// Duplicate the vertices to avoid different faces sharing the same (and to pass the ValidateDataStructure test...)
 			for(_3DXMLStructure::ReferenceRep::Meshes::iterator it(mMeshes.begin()), end(mMeshes.end()); it != end; ++it) {
 				if(it->second->HasMesh()) {
 					aiMesh* mesh = it->second->GetMesh().get();
 
-					unsigned int vertice_index = mesh->Vertices.Size();
+					// Compute the final number of vertices for this mesh
+					unsigned int final_vertices_size = mesh->mNumVertices;
+					for(unsigned int i = it->second->GetProcessed(); i < mesh->mNumFaces; i++) {
+						final_vertices_size += mesh->mFaces[i].mNumIndices;
+					}
 
+					// Make sure the arrays are allocated to the correct size, even if no data is present
+					if(mesh->HasPositions() || params.mesh->HasPositions()) {
+						mesh->Vertices.Reserve(final_vertices_size);
+					}
+					if(mesh->HasNormals() || params.mesh->HasNormals()) {
+						mesh->Normals.Reserve(final_vertices_size);
+					}
+					if(mesh->HasTangentsAndBitangents() || params.mesh->HasTangentsAndBitangents()) {
+						mesh->Tangents.Reserve(final_vertices_size);
+						mesh->Bitangents.Reserve(final_vertices_size);
+					}
+					for(unsigned int k = 0; k < mesh->GetNumUVChannels(); k++) {
+						if(mesh->HasTextureCoords(k) || params.mesh->HasTextureCoords(k)) {
+							mesh->TextureCoords.Get(k).Reserve(final_vertices_size);
+						}
+					}
+					for(unsigned int k = 0; k < mesh->GetNumColorChannels(); k++) {
+						if(mesh->HasVertexColors(k) || params.mesh->HasVertexColors(k)) {
+							mesh->Colors.Get(k).Reserve(final_vertices_size);
+						}
+					}
+
+					unsigned int vertice_index = mesh->mNumVertices;
+
+					// Duplicate the vertices to avoid joined vertices (or validation of the structure will fail)
 					for(unsigned int i = it->second->GetProcessed(); i < mesh->mNumFaces; i++) {
 						aiFace& face = mesh->mFaces[i];
 
@@ -707,28 +740,6 @@ namespace Assimp {
 					}
 
 					it->second->GetProcessed() = mesh->mNumFaces;
-
-					// Make sure the arrays are allocated to the correct size, even if no data is present
-					if(mesh->HasPositions()) {
-						mesh->Vertices.Reserve(mesh->mNumVertices);
-					}
-					if(mesh->HasNormals()) {
-						mesh->Normals.Reserve(mesh->mNumVertices);
-					}
-					if(mesh->HasTangentsAndBitangents()) {
-						mesh->Tangents.Reserve(mesh->mNumVertices);
-						mesh->Bitangents.Reserve(mesh->mNumVertices);
-					}
-					for(unsigned int k = 0; k < mesh->GetNumUVChannels(); k++) {
-						if(mesh->HasTextureCoords(k)) {
-							mesh->TextureCoords.Get(k).Reserve(mesh->mNumVertices);
-						}
-					}
-					for(unsigned int k = 0; k < mesh->GetNumColorChannels(); k++) {
-						if(mesh->HasVertexColors(k)) {
-							mesh->Colors.Get(k).Reserve(mesh->mNumVertices);
-						}
-					}
 				}
 			}
 		}
