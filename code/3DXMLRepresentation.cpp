@@ -378,7 +378,7 @@ namespace Assimp {
 		mReader.ParseElement(mapping, params);
 
 		for(auto it(mCurrentMeshes.begin()), end(mCurrentMeshes.end()); it!= end; ++it) {
-			mMeshes.emplace(it->first, std::unique_ptr<_3DXMLStructure::ReferenceRep::Geometry>(it->second.release()));
+			mMeshes.emplace(it->first, std::move(it->second));
 		}
 		mCurrentMeshes.clear();
 
@@ -424,11 +424,11 @@ namespace Assimp {
 				std::list<std::vector<unsigned int>> data;
 
 				if(triangles || strips || fans) {
-					auto it = params.me->mCurrentMeshes.emplace(params.me->mCurrentSurface, std::unique_ptr<_3DXMLStructure::ReferenceRep::Geometry>(
-							new _3DXMLStructure::ReferenceRep::Geometry(_3DXMLStructure::ReferenceRep::Geometry::MESH)
-					));
+					auto it = params.me->mCurrentMeshes.emplace(params.me->mCurrentSurface,
+							_3DXMLStructure::ReferenceRep::Geometry(_3DXMLStructure::ReferenceRep::Geometry::MESH)
+					);
 
-					aiMesh* mesh = it->second->mesh.get();
+					aiMesh* mesh = it->second.mesh.get();
 
 					if(triangles) {
 						data.clear();
@@ -576,11 +576,11 @@ namespace Assimp {
 				}
 
 				if(! lines.empty()) {
-					auto it = params.me->mCurrentMeshes.emplace(params.me->mCurrentLine, std::unique_ptr<_3DXMLStructure::ReferenceRep::Geometry>(
-							new _3DXMLStructure::ReferenceRep::Geometry(_3DXMLStructure::ReferenceRep::Geometry::LINES)
-					));
+					auto it = params.me->mCurrentMeshes.emplace(params.me->mCurrentLine,
+							_3DXMLStructure::ReferenceRep::Geometry(_3DXMLStructure::ReferenceRep::Geometry::LINES)
+					);
 
-					aiMesh* mesh = it->second->mesh.get();
+					aiMesh* mesh = it->second.mesh.get();
 
 					const unsigned int nb_faces = lines.size() - 1;
 					unsigned int index = mesh->mNumVertices;
@@ -706,8 +706,8 @@ namespace Assimp {
 		if(params.mesh->mNumVertices != 0) {
 			// Duplicate the vertices to avoid different faces sharing the same (and to pass the ValidateDataStructure test...)
 			for(_3DXMLStructure::ReferenceRep::Meshes::iterator it(mCurrentMeshes.begin()), end(mCurrentMeshes.end()); it != end; ++it) {
-				if(it->second->type == _3DXMLStructure::ReferenceRep::Geometry::MESH) {
-					aiMesh* mesh = it->second->mesh.get();
+				if(it->second.type == _3DXMLStructure::ReferenceRep::Geometry::MESH) {
+					aiMesh* mesh = it->second.mesh.get();
 
 					// Compute the final number of vertices for this mesh
 					unsigned int final_vertices_size = mesh->mNumVertices;

@@ -281,7 +281,7 @@ namespace Assimp {
 
 			}; // class Geometry
 
-			typedef std::multimap<MaterialAttributes::ID, std::unique_ptr<Geometry>, shared_less<MaterialAttributes>> Meshes;
+			typedef std::multimap<MaterialAttributes::ID, Geometry, shared_less<MaterialAttributes>> Meshes;
 					
 			unsigned int id;
 					

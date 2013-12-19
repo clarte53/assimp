@@ -284,7 +284,7 @@ namespace Assimp {
 		for(std::map<_3DXMLStructure::ID, _3DXMLStructure::ReferenceRep>::iterator it_rep(mContent.representations.begin()), end_rep(mContent.representations.end()); it_rep != end_rep; ++it_rep) {
 			for(_3DXMLStructure::ReferenceRep::Meshes::iterator it_mesh(it_rep->second.meshes.begin()), end_mesh(it_rep->second.meshes.end()); it_mesh != end_mesh; ++it_mesh) {
 				// Set the names of the parsed meshes with this ReferenceRep name
-				it_mesh->second->mesh->mName = it_rep->second.name;
+				it_mesh->second.mesh->mName = it_rep->second.name;
 
 				// Check if the surface attributes already exist
 				std::set<_3DXMLStructure::MaterialAttributes::ID>::iterator it = mat_attributes.find(it_mesh->first);
@@ -298,7 +298,7 @@ namespace Assimp {
 					}
 				} else {
 					// Set the current material attributes to be a reference of the shared MaterialAttributes
-					std::unique_ptr<_3DXMLStructure::ReferenceRep::Geometry> geometry(it_mesh->second.release());
+					_3DXMLStructure::ReferenceRep::Geometry geometry(std::move(it_mesh->second));
 
 					it_mesh = it_rep->second.meshes.erase(it_mesh);
 
@@ -557,7 +557,7 @@ namespace Assimp {
 			}
 
 			for(_3DXMLStructure::ReferenceRep::Meshes::iterator it_meshes(rep.meshes.begin()), end_meshes(rep.meshes.end()); it_meshes != end_meshes; ++it_meshes) {
-				std::unique_ptr<aiMesh>* mesh = &(it_meshes->second->mesh);
+				std::unique_ptr<aiMesh>* mesh = &(it_meshes->second.mesh);
 
 				if(*mesh) {
 					// Duplicate the mesh for the new material
