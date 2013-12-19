@@ -71,37 +71,6 @@ class Array {
 			}
 		}
 		
-		void Reserve(unsigned int size) {
-			unsigned int previous_size = ((*mSize) <= mReservedMemory ? (*mSize) : mReservedMemory);
-		
-			if(size > previous_size) {
-				if(size > mReservedMemory) {
-					while(size > mReservedMemory) {
-						if(mReservedMemory == 0) {
-							mReservedMemory = mDefaultMemory;
-						} else {
-							mReservedMemory *= 2;
-						}
-					}
-				
-					T* data = new T[mReservedMemory];
-				
-					for(unsigned int i = 0; i < previous_size; i++) {
-						data[i] = (*mData)[i];
-					}
-					for(unsigned int i = previous_size; i < mReservedMemory; i++) {
-						data[i] = T();
-					}
-				
-					delete[] (*mData);
-					(*mData) = data;
-					mLastReference = data;
-				}
-				
-				(*mSize) = ((*mSize) >= size ? (*mSize) : size);
-			}
-		}
-		
 	public:
 		
 		Array(T** data, unsigned int* size) {
@@ -139,6 +108,37 @@ class Array {
 			mData = NULL;
 			(*mSize) = size;
 			mSize = NULL;
+		}
+
+		void Reserve(unsigned int size) {
+			unsigned int previous_size = ((*mSize) <= mReservedMemory ? (*mSize) : mReservedMemory);
+
+			if(size > previous_size) {
+				if(size > mReservedMemory) {
+					while(size > mReservedMemory) {
+						if(mReservedMemory == 0) {
+							mReservedMemory = mDefaultMemory;
+						} else {
+							mReservedMemory *= 2;
+						}
+					}
+
+					T* data = new T[mReservedMemory];
+
+					for(unsigned int i = 0; i < previous_size; i++) {
+						data[i] = (*mData)[i];
+					}
+					for(unsigned int i = previous_size; i < mReservedMemory; i++) {
+						data[i] = T();
+					}
+
+					delete[] (*mData);
+					(*mData) = data;
+					mLastReference = data;
+				}
+
+				(*mSize) = ((*mSize) >= size ? (*mSize) : size);
+			}
 		}
 
 		inline unsigned int Size() const {
@@ -196,37 +196,6 @@ class Array<T*> {
 			}
 		}
 
-		void Reserve(unsigned int size) {
-			unsigned int previous_size = ((*mSize) <= mReservedMemory ? (*mSize) : mReservedMemory);
-			
-			if(size > previous_size) {
-				if(size > mReservedMemory) {
-					while(size > mReservedMemory) {
-						if(mReservedMemory == 0) {
-							mReservedMemory = mDefaultMemory;
-						} else {
-							mReservedMemory *= 2;
-						}
-					}
-				
-					T** data = new T*[mReservedMemory];
-				
-					for(unsigned int i = 0; i < previous_size; i++) {
-						data[i] = (*mData)[i];
-					}
-					for(unsigned int i = previous_size; i < mReservedMemory; i++) {
-						data[i] = NULL;
-					}
-				
-					delete[] (*mData);
-					(*mData) = data;
-					mLastReference = data;
-				}
-				
-				(*mSize) = ((*mSize) >= size ? (*mSize) : size);
-			}
-		}
-		
 	public:
 	
 		Array(T*** data, unsigned int* size) {
@@ -269,6 +238,37 @@ class Array<T*> {
 			mData = NULL;
 			(*mSize) = size;
 			mSize = NULL;
+		}
+
+		void Reserve(unsigned int size) {
+			unsigned int previous_size = ((*mSize) <= mReservedMemory ? (*mSize) : mReservedMemory);
+
+			if(size > previous_size) {
+				if(size > mReservedMemory) {
+					while(size > mReservedMemory) {
+						if(mReservedMemory == 0) {
+							mReservedMemory = mDefaultMemory;
+						} else {
+							mReservedMemory *= 2;
+						}
+					}
+
+					T** data = new T*[mReservedMemory];
+
+					for(unsigned int i = 0; i < previous_size; i++) {
+						data[i] = (*mData)[i];
+					}
+					for(unsigned int i = previous_size; i < mReservedMemory; i++) {
+						data[i] = NULL;
+					}
+
+					delete[] (*mData);
+					(*mData) = data;
+					mLastReference = data;
+				}
+
+				(*mSize) = ((*mSize) >= size ? (*mSize) : size);
+			}
 		}
 
 		inline unsigned int Size() const {
