@@ -182,7 +182,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %typemap(csinterfaces) Array<CTYPE> "IDisposable, Interface.Array<$typemap(cstype, CTYPE)>"
 %ignore Array<CTYPE>::Array;
 %ignore Array<CTYPE>::Create;
-%ignore Array<CTYPE>::Reserve;
 %template(NAME##Array) Array<CTYPE>;
 %enddef
 
