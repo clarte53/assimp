@@ -205,6 +205,18 @@ namespace Assimp {
 	// ------------------------------------------------------------------------------------------------
 	// Construct the materials from the parsed data
 	void _3DXMLParser::BuildMaterials(const XMLParser* parser) { PROFILER;
+		// Just because Microsoft Visual 2012 does not support (yet another) feature of C++11 (ie initialization lists),
+		// reader beware, you will see this hack a lot in 3DXML related classes.
+		//TODO: switch to a more readable syntax the day Microsoft will do their work correctly (so you should probably just forget about this TODO)
+		static const std::vector<aiTextureType> supported_textures = [](){
+			std::vector<aiTextureType> texture_types;
+
+			texture_types.push_back(aiTextureType_DIFFUSE);
+			texture_types.push_back(aiTextureType_REFLECTION);
+
+			return std::move(texture_types);
+		}();
+	
 		// Add the textures to the scene
 		unsigned int index_tex = 0;
 		for(std::map<_3DXMLStructure::ID, _3DXMLStructure::CATRepresentationImage>::iterator it_tex(mContent.textures.begin()), end_tex(mContent.textures.end()); it_tex != end_tex; ++it_tex, ++index_tex) { PROFILER;
@@ -238,28 +250,30 @@ namespace Assimp {
 					it_ref->second.merged_material.reset(material_ptr);
 
 					// Set the texture to use the correct index in the scene
-					aiString texture_name;
-					if(material_ptr->Get(AI_MATKEY_TEXTURE_DIFFUSE(0), texture_name) == AI_SUCCESS) {
-						material_ptr->RemoveProperty(AI_MATKEY_TEXTURE_DIFFUSE(0));
+					for(unsigned int i = 0; i < supported_textures.size(); ++i) {
+						aiString texture_name;
+						if(material_ptr->Get(_AI_MATKEY_TEXTURE_BASE, supported_textures[i], 0, texture_name) == AI_SUCCESS) {
+							material_ptr->RemoveProperty(_AI_MATKEY_TEXTURE_BASE, supported_textures[i], 0);
 
-						_3DXMLStructure::URI uri;
+							_3DXMLStructure::URI uri;
 
-						ParseURI(parser, texture_name.C_Str(), uri);
+							ParseURI(parser, texture_name.C_Str(), uri);
 
-						if(uri.id) {
-							std::map<_3DXMLStructure::ID, _3DXMLStructure::CATRepresentationImage>::iterator it_img = mContent.textures.find(_3DXMLStructure::ID(uri.filename, *uri.id));
+							if(uri.id) {
+								std::map<_3DXMLStructure::ID, _3DXMLStructure::CATRepresentationImage>::iterator it_img = mContent.textures.find(_3DXMLStructure::ID(uri.filename, *uri.id));
 
-							if(it_img != mContent.textures.end()) {
-								aiString texture_index;
-								texture_index.data[0] = '*'; // Special prefix for embeded textures
-								texture_index.length = 1 + ASSIMP_itoa10(texture_index.data + 1, MAXLEN - 1, it_img->second.index);
+								if(it_img != mContent.textures.end()) {
+									aiString texture_index;
+									texture_index.data[0] = '*'; // Special prefix for embeded textures
+									texture_index.length = 1 + ASSIMP_itoa10(texture_index.data + 1, MAXLEN - 1, it_img->second.index);
 
-								material_ptr->AddProperty(&texture_index, AI_MATKEY_TEXTURE_DIFFUSE(0));
+									material_ptr->AddProperty(&texture_index, _AI_MATKEY_TEXTURE_BASE, supported_textures[i], 0);
+								} else {
+									ThrowException(parser, "In CATMatReference \"" + parser->ToString(it_ref->second.id) + "\": texture \"" + uri.uri + "\" not found.");
+								}
 							} else {
-								ThrowException(parser, "In CATMatReference \"" + parser->ToString(it_ref->second.id) + "\": texture \"" + uri.uri + "\" not found.");
+								ThrowException(parser, "In CATMatReference \"" + parser->ToString(it_ref->second.id) + "\": invalid reference to texture \"" + uri.uri + "\" without id.");
 							}
-						} else {
-							ThrowException(parser, "In CATMatReference \"" + parser->ToString(it_ref->second.id) + "\": invalid reference to texture \"" + uri.uri + "\" without id.");
 						}
 					}
 
