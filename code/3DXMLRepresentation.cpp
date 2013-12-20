@@ -53,13 +53,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "fast_atof.h"
 #include "HighResProfiler.h"
 #include "ParsingUtils.h"
+#include "ProcessHelper.h"
+#include "SceneCombiner.h"
 
 #include <cctype>
 
 namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLRepresentation::_3DXMLRepresentation(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, _3DXMLStructure::ReferenceRep::Meshes& meshes, _3DXMLStructure::Dependencies& dependencies) : mReader(archive, filename), mMeshes(meshes), mCurrentSurface(nullptr), mCurrentLine(nullptr), mDependencies(dependencies) { PROFILER;
+	_3DXMLRepresentation::_3DXMLRepresentation(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, _3DXMLStructure::ReferenceRep::Meshes& meshes, _3DXMLStructure::Dependencies& dependencies) : mReader(archive, filename), mMeshes(meshes), mCurrentMeshes(), mCurrentSurface(nullptr), mCurrentLine(nullptr), mDependencies(dependencies) { PROFILER;
 		struct Params {
 			_3DXMLRepresentation* me;
 		} params;
@@ -85,6 +87,47 @@ namespace Assimp {
 		}
 
 		mReader.Close();
+
+		// Merge the meshes that can be merged together and move the result to the final output list
+		if(! mMeshes.empty()) {
+			_3DXMLStructure::ReferenceRep::Meshes output;
+
+			auto range = std::make_pair(mMeshes.begin(), mMeshes.begin());
+
+			do {
+				// Get all the meshes for a given material ID
+				range = mMeshes.equal_range(range.second->first);
+
+				if(range.first != range.second) {
+					std::map<unsigned int, std::vector<aiMesh*>> data[_3DXMLStructure::ReferenceRep::Geometry::NB_TYPES];
+
+					// Sort the meshes by type of included components (normals, texture coords, etc.)
+					for(auto it(range.first); it != range.second; ++it) {
+						unsigned int index = GetMeshVFormatUnique(it->second.mesh.get());
+						data[it->second.type][index].push_back(it->second.mesh.release());
+					}
+
+					// Merge the different meshes compatible together
+					for(unsigned int i = 0; i < _3DXMLStructure::ReferenceRep::Geometry::NB_TYPES; ++i) {
+						for(auto it(data[i].begin()), end(data[i].end()); it != end; ++it) {
+							if(! it->second.empty()) {
+								aiMesh* mesh = NULL;
+
+								if(it->second.size() > 1) {
+									SceneCombiner::MergeMeshes(&mesh, 0, it->second.begin(), it->second.end());
+								} else {
+									mesh = *(it->second.begin());
+								}
+
+								output.emplace(range.first->first, _3DXMLStructure::ReferenceRep::Geometry((_3DXMLStructure::ReferenceRep::Geometry::Type) i, mesh));
+							}
+						}
+					}
+				}
+			} while(range.second != mMeshes.end());
+
+			std::swap(mMeshes, output);
+		}
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -96,23 +139,6 @@ namespace Assimp {
 	// Aborts the file reading with an exception
 	void _3DXMLRepresentation::ThrowException(const std::string& error) const { PROFILER;
 		throw DeadlyImportError(boost::str(boost::format("3DXML: %s - %s") % mReader.GetFilename() % error));
-	}
-	
-	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::ReferenceRep::Geometry& _3DXMLRepresentation::GetGeometry(const _3DXMLStructure::MaterialAttributes::ID& material) const { PROFILER;
-		auto position = mMeshes.find(material);
-
-		if(position == mMeshes.end()) {
-			auto insert = mMeshes.emplace(material, std::unique_ptr<_3DXMLStructure::ReferenceRep::Geometry>(new _3DXMLStructure::ReferenceRep::Geometry()));
-
-			if(! insert.second) {
-				ThrowException("Impossible to create a new mesh for the new material.");
-			}
-
-			position = insert.first;
-		}
-
-		return *(position->second.get());
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -352,9 +378,17 @@ namespace Assimp {
 		_3DXMLStructure::MaterialAttributes::ID old_surface = mCurrentSurface;
 		_3DXMLStructure::MaterialAttributes::ID old_line = mCurrentLine;
 
+		mCurrentMeshes.clear();
+
 		params.me = this;
 
 		mReader.ParseElement(mapping, params);
+
+		for(auto it(mCurrentMeshes.begin()), end(mCurrentMeshes.end()); it != end; ++it) {
+			mMeshes.emplace(it->first, std::move(it->second));
+		}
+
+		mCurrentMeshes.clear();
 
 		mCurrentSurface = old_surface;
 		mCurrentLine = old_line;
@@ -398,14 +432,23 @@ namespace Assimp {
 				std::list<std::vector<unsigned int>> data;
 
 				if(triangles || strips || fans) {
-					aiMesh* mesh = params.me->GetGeometry(params.me->mCurrentSurface).GetMesh().get();
+					auto it = params.me->mCurrentMeshes.emplace(params.me->mCurrentSurface,
+							_3DXMLStructure::ReferenceRep::Geometry(_3DXMLStructure::ReferenceRep::Geometry::MESH)
+					);
 
-					unsigned int index = mesh->Faces.Size();
+					aiMesh* mesh = it->second.mesh.get();
 
 					if(triangles) {
 						data.clear();
 
 						params.me->ParseTriangles(*triangles, data);
+
+						// Compute the number of faces we will add to the mesh and allocate the necessary memory in one pass
+						unsigned int size = 0;
+						for(std::list<std::vector<unsigned int>>::iterator it(data.begin()), end(data.end()); it != end; ++it) {
+							size += (it->size() / 3);
+						}
+						mesh->Faces.Reserve(mesh->mNumFaces + size);
 
 						for(std::list<std::vector<unsigned int>>::iterator it(data.begin()), end(data.end()); it != end; ++it) {
 							for(unsigned int i = 0; i < it->size(); i += 3) {
@@ -418,7 +461,7 @@ namespace Assimp {
 									face.mIndices[j] = (*it)[i + j];
 								}
 
-								mesh->Faces.Set(index++, face);
+								mesh->Faces.Set(mesh->mNumFaces, face);
 							}
 						}
 					}
@@ -428,8 +471,16 @@ namespace Assimp {
 
 						params.me->ParseTriangles(*strips, data);
 
+						// Compute the number of faces we will add to the mesh and allocate the necessary memory in one pass
+						unsigned int size = 0;
+						for(std::list<std::vector<unsigned int>>::iterator it(data.begin()), end(data.end()); it != end; ++it) {
+							size += it->size() - 2;
+						}
+						mesh->Faces.Reserve(mesh->mNumFaces + size);
+
 						for(std::list<std::vector<unsigned int>>::iterator it(data.begin()), end(data.end()); it != end; ++it) {
 							bool inversed = false;
+
 							for(unsigned int i = 0; i < it->size() - (nb_vertices - 1); i++) {
 								aiFace face;
 
@@ -446,7 +497,7 @@ namespace Assimp {
 
 								inversed = ! inversed;
 
-								mesh->Faces.Set(index++, face);
+								mesh->Faces.Set(mesh->mNumFaces, face);
 							}
 						}
 					}
@@ -456,7 +507,14 @@ namespace Assimp {
 
 						params.me->ParseTriangles(*fans, data);
 
+						// Compute the number of faces we will add to the mesh and allocate the necessary memory in one pass
+						unsigned int size = 0;
 						for(std::list<std::vector<unsigned int>>::iterator it(data.begin()), end(data.end()); it != end; ++it) {
+							size += it->size() - 2;
+						}
+						mesh->Faces.Reserve(mesh->mNumFaces + size);
+
+						for(std::list<std::vector<unsigned int>>::iterator it(data.begin()), end(data.end()); it != end; ++it) {		
 							for(unsigned int i = 0; i < it->size() - (nb_vertices - 1); i++) {
 								aiFace face;
 
@@ -468,7 +526,7 @@ namespace Assimp {
 									face.mIndices[j] = (*it)[i + j];
 								}
 							
-								mesh->Faces.Set(index++, face);
+								mesh->Faces.Set(mesh->mNumFaces, face);
 							}
 						}
 					}
@@ -526,9 +584,18 @@ namespace Assimp {
 				}
 
 				if(! lines.empty()) {
-					aiMesh* mesh = params.me->GetGeometry(params.me->mCurrentLine).GetLines().get();
+					auto it = params.me->mCurrentMeshes.emplace(params.me->mCurrentLine,
+							_3DXMLStructure::ReferenceRep::Geometry(_3DXMLStructure::ReferenceRep::Geometry::LINES)
+					);
 
+					aiMesh* mesh = it->second.mesh.get();
+
+					const unsigned int nb_faces = lines.size() - 1;
 					unsigned int index = mesh->mNumVertices;
+
+					// Compute the number of faces and vertices we will add to the mesh and allocate the necessary memory in one pass
+					mesh->Faces.Reserve(mesh->mNumFaces + nb_faces);
+					mesh->Vertices.Reserve(mesh->mNumVertices + nb_faces * 2);
 
 					for(unsigned int i = 0; i < lines.size() - 1; i++, index += 2) {
 						mesh->Vertices.Set(index, lines[i]);
@@ -644,15 +711,44 @@ namespace Assimp {
 
 		mReader.ParseElement(mapping, params);
 
-		if(params.mesh->Vertices.Size() != 0) {
+		if(params.mesh->mNumVertices != 0) {
 			// Duplicate the vertices to avoid different faces sharing the same (and to pass the ValidateDataStructure test...)
-			for(_3DXMLStructure::ReferenceRep::Meshes::iterator it(mMeshes.begin()), end(mMeshes.end()); it != end; ++it) {
-				if(it->second->HasMesh()) {
-					aiMesh* mesh = it->second->GetMesh().get();
+			for(_3DXMLStructure::ReferenceRep::Meshes::iterator it(mCurrentMeshes.begin()), end(mCurrentMeshes.end()); it != end; ++it) {
+				if(it->second.type == _3DXMLStructure::ReferenceRep::Geometry::MESH) {
+					aiMesh* mesh = it->second.mesh.get();
 
-					unsigned int vertice_index = mesh->Vertices.Size();
+					// Compute the final number of vertices for this mesh
+					unsigned int final_vertices_size = mesh->mNumVertices;
+					for(unsigned int i = 0; i < mesh->mNumFaces; i++) {
+						final_vertices_size += mesh->mFaces[i].mNumIndices;
+					}
 
-					for(unsigned int i = it->second->GetProcessed(); i < mesh->mNumFaces; i++) {
+					// Make sure the arrays are allocated to the correct size, even if no data is present
+					if(mesh->HasPositions() || params.mesh->HasPositions()) {
+						mesh->Vertices.Reserve(final_vertices_size);
+					}
+					if(mesh->HasNormals() || params.mesh->HasNormals()) {
+						mesh->Normals.Reserve(final_vertices_size);
+					}
+					if(mesh->HasTangentsAndBitangents() || params.mesh->HasTangentsAndBitangents()) {
+						mesh->Tangents.Reserve(final_vertices_size);
+						mesh->Bitangents.Reserve(final_vertices_size);
+					}
+					for(unsigned int k = 0; k < mesh->GetNumUVChannels(); k++) {
+						if(mesh->HasTextureCoords(k) || params.mesh->HasTextureCoords(k)) {
+							mesh->TextureCoords.Get(k).Reserve(final_vertices_size);
+						}
+					}
+					for(unsigned int k = 0; k < mesh->GetNumColorChannels(); k++) {
+						if(mesh->HasVertexColors(k) || params.mesh->HasVertexColors(k)) {
+							mesh->Colors.Get(k).Reserve(final_vertices_size);
+						}
+					}
+
+					unsigned int vertice_index = mesh->mNumVertices;
+
+					// Duplicate the vertices to avoid joined vertices (or validation of the structure will fail)
+					for(unsigned int i = 0; i < mesh->mNumFaces; i++) {
 						aiFace& face = mesh->mFaces[i];
 
 						for(unsigned int j = 0; j < face.mNumIndices; j++) {
@@ -682,30 +778,6 @@ namespace Assimp {
 							}
 
 							vertice_index++;
-						}
-					}
-
-					it->second->GetProcessed() = mesh->mNumFaces;
-
-					// Make sure the arrays are allocated to the correct size, even if no data is present
-					if(mesh->HasPositions()) {
-						mesh->Vertices.Reserve(mesh->mNumVertices);
-					}
-					if(mesh->HasNormals()) {
-						mesh->Normals.Reserve(mesh->mNumVertices);
-					}
-					if(mesh->HasTangentsAndBitangents()) {
-						mesh->Tangents.Reserve(mesh->mNumVertices);
-						mesh->Bitangents.Reserve(mesh->mNumVertices);
-					}
-					for(unsigned int k = 0; k < mesh->GetNumUVChannels(); k++) {
-						if(mesh->HasTextureCoords(k)) {
-							mesh->TextureCoords.Get(k).Reserve(mesh->mNumVertices);
-						}
-					}
-					for(unsigned int k = 0; k < mesh->GetNumColorChannels(); k++) {
-						if(mesh->HasVertexColors(k)) {
-							mesh->Colors.Get(k).Reserve(mesh->mNumVertices);
 						}
 					}
 				}

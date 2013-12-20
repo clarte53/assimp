@@ -60,14 +60,14 @@ class Array {
 
 	protected:
 		
-		void Update(unsigned int size) {
+		void Update() {
 			if(mData != NULL) {
 				if((*mData) != mLastReference) {
 					mReservedMemory = (*mSize);
 					mLastReference = (*mData);
 				}
 
-				Reserve(size);
+				Reserve(Size(), false);
 			}
 		}
 		
@@ -110,16 +110,20 @@ class Array {
 			mSize = NULL;
 		}
 
-		void Reserve(unsigned int size) {
+		void Reserve(unsigned int size, bool exact = true) {
 			unsigned int previous_size = ((*mSize) <= mReservedMemory ? (*mSize) : mReservedMemory);
 
 			if(size > previous_size) {
 				if(size > mReservedMemory) {
-					while(size > mReservedMemory) {
-						if(mReservedMemory == 0) {
-							mReservedMemory = mDefaultMemory;
-						} else {
-							mReservedMemory *= 2;
+					if(exact) {
+						mReservedMemory = size;
+					} else {
+						while(size > mReservedMemory) {
+							if(mReservedMemory == 0) {
+								mReservedMemory = mDefaultMemory;
+							} else {
+								mReservedMemory *= 2;
+							}
 						}
 					}
 
@@ -136,8 +140,6 @@ class Array {
 					(*mData) = data;
 					mLastReference = data;
 				}
-
-				(*mSize) = ((*mSize) >= size ? (*mSize) : size);
 			}
 		}
 
@@ -152,7 +154,7 @@ class Array {
 				}
 			#endif
 			
-			Update(Size());
+			Update();
 			
 			return (*mData)[index];
 		}
@@ -160,7 +162,11 @@ class Array {
 		// Warning: copy the value into the data array
 		inline void Set(unsigned int index, const T& value) {
 			if(mData != NULL) {
-				Update(index + 1);
+				if(index + 1 > Size()) {
+					(*mSize) = index + 1;
+				}
+
+				Update();
 
 				(*mData)[index] = value;
 			}
@@ -185,14 +191,14 @@ class Array<T*> {
 
 	protected:
 	
-		void Update(unsigned int size) {
+		void Update() {
 			if(mData != NULL) {
 				if((*mData) != mLastReference) {
 					mReservedMemory = (*mSize);
 					mLastReference = (*mData);
 				}
 
-				Reserve(size);
+				Reserve(Size(), false);
 			}
 		}
 
@@ -240,34 +246,32 @@ class Array<T*> {
 			mSize = NULL;
 		}
 
-		void Reserve(unsigned int size) {
+		void Reserve(unsigned int size, bool exact = true) {
 			unsigned int previous_size = ((*mSize) <= mReservedMemory ? (*mSize) : mReservedMemory);
 
 			if(size > previous_size) {
 				if(size > mReservedMemory) {
-					while(size > mReservedMemory) {
-						if(mReservedMemory == 0) {
-							mReservedMemory = mDefaultMemory;
-						} else {
-							mReservedMemory *= 2;
+					if(exact) {
+						mReservedMemory = size;
+					} else {
+						while(size > mReservedMemory) {
+							if(mReservedMemory == 0) {
+								mReservedMemory = mDefaultMemory;
+							} else {
+								mReservedMemory *= 2;
+							}
 						}
 					}
 
 					T** data = new T*[mReservedMemory];
 
-					for(unsigned int i = 0; i < previous_size; i++) {
-						data[i] = (*mData)[i];
-					}
-					for(unsigned int i = previous_size; i < mReservedMemory; i++) {
-						data[i] = NULL;
-					}
+					memcpy(&data[0], *mData, previous_size * sizeof(T*));
+					memset(&data[previous_size], 0, (mReservedMemory - previous_size) * sizeof(T*));
 
 					delete[] (*mData);
 					(*mData) = data;
 					mLastReference = data;
 				}
-
-				(*mSize) = ((*mSize) >= size ? (*mSize) : size);
 			}
 		}
 
@@ -282,7 +286,7 @@ class Array<T*> {
 				}
 			#endif
 			
-			Update(Size());
+			Update();
 			
 			return *((*mData)[index]);
 		}
@@ -290,7 +294,11 @@ class Array<T*> {
 		// Warning: copy the pointer into the data array but does not take ownership of it (you still have to free the associated memory)
 		inline void Set(unsigned int index, T* value) {
 			if(mData != NULL) {
-				Update(index + 1);
+				if(index + 1 > Size()) {
+					(*mSize) = index + 1;
+				}
+
+				Update();
 
 				(*mData)[index] = value;
 			}
