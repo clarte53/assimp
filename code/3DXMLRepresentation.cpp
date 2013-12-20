@@ -88,41 +88,46 @@ namespace Assimp {
 
 		mReader.Close();
 
-		/*
 		// Merge the meshes that can be merged together and move the result to the final output list
-		if(! mCurrentMeshes.empty()) {
-			auto range = std::make_pair(mCurrentMeshes.begin(), mCurrentMeshes.begin());
+		if(! mMeshes.empty()) {
+			_3DXMLStructure::ReferenceRep::Meshes output;
+
+			auto range = std::make_pair(mMeshes.begin(), mMeshes.begin());
 
 			do {
 				// Get all the meshes for a given material ID
-				range = mCurrentMeshes.equal_range(range.second->first);
+				range = mMeshes.equal_range(range.second->first);
 
-				std::map<unsigned int, std::vector<aiMesh*>> data;
+				if(range.first != range.second) {
+					std::map<unsigned int, std::vector<aiMesh*>> data[_3DXMLStructure::ReferenceRep::Geometry::NB_TYPES];
 
-				// Sort the meshes by type of included components (normals, texture coords, etc.)
-				for(auto it(range.first); it != range.second; ++it) {
-					if(it->second.type == _3DXMLStructure::ReferenceRep::Geometry::LINES) {
-						// Meshes corresponding to lines are moved directly to the final list of meshes
-						mMeshes.emplace(range.first->first, std::move(it->second));
-					} else {
-						data[GetMeshVFormatUnique(it->second.mesh.get())].push_back(it->second.mesh.release());
+					// Sort the meshes by type of included components (normals, texture coords, etc.)
+					for(auto it(range.first); it != range.second; ++it) {
+						unsigned int index = GetMeshVFormatUnique(it->second.mesh.get());
+						data[it->second.type][index].push_back(it->second.mesh.release());
+					}
+
+					// Merge the different meshes compatible together
+					for(unsigned int i = 0; i < _3DXMLStructure::ReferenceRep::Geometry::NB_TYPES; ++i) {
+						for(auto it(data[i].begin()), end(data[i].end()); it != end; ++it) {
+							if(! it->second.empty()) {
+								aiMesh* mesh = NULL;
+
+								if(it->second.size() > 1) {
+									SceneCombiner::MergeMeshes(&mesh, 0, it->second.begin(), it->second.end());
+								} else {
+									mesh = *(it->second.begin());
+								}
+
+								output.emplace(range.first->first, _3DXMLStructure::ReferenceRep::Geometry((_3DXMLStructure::ReferenceRep::Geometry::Type) i, mesh));
+							}
+						}
 					}
 				}
+			} while(range.second != mMeshes.end());
 
-				// Merge the different meshes compatible together
-				for(auto it(data.begin()), end(data.end()); it != end; ++it) {
-					if(! it->second.empty()) {
-						aiMesh* mesh = NULL;
-						SceneCombiner::MergeMeshes(&mesh, 0, it->second.begin(), it->second.end());
-
-						mMeshes.emplace(range.first->first, _3DXMLStructure::ReferenceRep::Geometry(_3DXMLStructure::ReferenceRep::Geometry::MESH, mesh));
-					}
-				}
-			} while(range.second != mCurrentMeshes.end());
+			std::swap(mMeshes, output);
 		}
-
-		mCurrentMeshes.clear();
-		*/
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -379,9 +384,10 @@ namespace Assimp {
 
 		mReader.ParseElement(mapping, params);
 
-		for(auto it(mCurrentMeshes.begin()), end(mCurrentMeshes.end()); it!= end; ++it) {
+		for(auto it(mCurrentMeshes.begin()), end(mCurrentMeshes.end()); it != end; ++it) {
 			mMeshes.emplace(it->first, std::move(it->second));
 		}
+
 		mCurrentMeshes.clear();
 
 		mCurrentSurface = old_surface;
