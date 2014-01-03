@@ -659,6 +659,10 @@ namespace Assimp {
 					channel = *channel_opt;
 				}
 
+				if(channel >= AI_MAX_NUMBER_OF_TEXTURECOORDS) {
+					params.me->ThrowException("Invalid out-of-bound channel \"" + parser->ToString(channel) + "\" (max " + parser->ToString(AI_MAX_NUMBER_OF_TEXTURECOORDS) + ").");
+				}
+
 				if(format.size() != 2 || format[1] != 'D' || ! std::isdigit(format[0])) {
 					params.me->ThrowException("Invalid texture coordinate format \"" + format + "\".");
 				}
@@ -671,6 +675,8 @@ namespace Assimp {
 				if(dimension == 0 || dimension > 3) {
 					params.me->ThrowException("Invalid dimension for texture coordinate format \"" + format + "\".");
 				}
+
+				params.mesh->mNumUVComponents[channel] = dimension;
 
 				params.me->ParseMultiArray(coordinates, params.mesh->TextureCoords, channel, 0, dimension);
 			}, 0, XMLParser::XSD::unbounded));
@@ -736,6 +742,7 @@ namespace Assimp {
 					}
 					for(unsigned int k = 0; k < mesh->GetNumUVChannels(); k++) {
 						if(mesh->HasTextureCoords(k) || params.mesh->HasTextureCoords(k)) {
+							mesh->mNumUVComponents[k] = std::max(mesh->mNumUVComponents[k], params.mesh->mNumUVComponents[k]);
 							mesh->TextureCoords.Get(k).Reserve(final_vertices_size);
 						}
 					}
