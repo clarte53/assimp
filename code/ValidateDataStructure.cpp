@@ -270,6 +270,50 @@ void ValidateDSProcess::Execute( aiScene* pScene)
 		ReportError("aiScene::mMaterials is non-null although there are no materials");
 	}
 
+	// check that the dynamic arrays are correctly synchronized
+	// Meshes
+	if(pScene->Meshes.mSize == NULL || *(pScene->Meshes.mSize) != pScene->mNumMeshes) {
+		ReportError("aiScene::Meshes::mSize does not reference aiScene::mNumMeshes.");
+	}
+	if(pScene->Meshes.mData == NULL || *(pScene->Meshes.mData) != pScene->mMeshes) {
+		ReportError("aiScene::Meshes::mData does not reference aiScene::mMeshes.");
+	}
+	// Materials
+	if(pScene->Materials.mSize == NULL || *(pScene->Materials.mSize) != pScene->mNumMaterials) {
+		ReportError("aiScene::Materials::mSize does not reference aiScene::mNumMaterials.");
+	}
+	if(pScene->Materials.mData == NULL || *(pScene->Materials.mData) != pScene->mMaterials) {
+		ReportError("aiScene::Materials::mData does not reference aiScene::mMaterials.");
+	}
+	// Animations
+	if(pScene->Animations.mSize == NULL || *(pScene->Animations.mSize) != pScene->mNumAnimations) {
+		ReportError("aiScene::Animations::mSize does not reference aiScene::mNumAnimations.");
+	}
+	if(pScene->Animations.mData == NULL || *(pScene->Animations.mData) != pScene->mAnimations) {
+		ReportError("aiScene::Animations::mData does not reference aiScene::mAnimations.");
+	}
+	// Textures
+	if(pScene->Textures.mSize == NULL || *(pScene->Textures.mSize) != pScene->mNumTextures) {
+		ReportError("aiScene::Textures::mSize does not reference aiScene::mNumTextures.");
+	}
+	if(pScene->Textures.mData == NULL || *(pScene->Textures.mData) != pScene->mTextures) {
+		ReportError("aiScene::Textures::mData does not reference aiScene::mTextures.");
+	}
+	// Lights
+	if(pScene->Lights.mSize == NULL || *(pScene->Lights.mSize) != pScene->mNumLights) {
+		ReportError("aiScene::Lights::mSize does not reference aiScene::mNumLights.");
+	}
+	if(pScene->Lights.mData == NULL || *(pScene->Lights.mData) != pScene->mLights) {
+		ReportError("aiScene::Lights::mData does not reference aiScene::mLights.");
+	}
+	// Cameras
+	if(pScene->Cameras.mSize == NULL || *(pScene->Cameras.mSize) != pScene->mNumCameras) {
+		ReportError("aiScene::Cameras::mSize does not reference aiScene::mNumCameras.");
+	}
+	if(pScene->Cameras.mData == NULL || *(pScene->Cameras.mData) != pScene->mCameras) {
+		ReportError("aiScene::Cameras::mData does not reference aiScene::mCameras.");
+	}
+
 //	if (!has)ReportError("The aiScene data structure is empty");
 	DefaultLogger::get()->debug("ValidateDataStructureProcess end");
 }
@@ -363,6 +407,14 @@ void ValidateDSProcess::Validate( const aiMesh* pMesh)
 
 		if (!face.mIndices)
 			ReportError("aiMesh::mFaces[%i].mIndices is NULL",i);
+
+		// check that the dynamic arrays are correctly synchronized
+		if(face.Indices.mSize == NULL || *(face.Indices.mSize) != face.mNumIndices) {
+			ReportError("aiFace::Indices::mSize does not reference aiFace::mNumIndices.");
+		}
+		if(face.Indices.mData == NULL || *(face.Indices.mData) != face.mIndices) {
+			ReportError("aiFace::Indices::mData does not reference aiFace::mIndices.");
+		}
 	}
 
 	// positions must always be there ...
@@ -452,6 +504,101 @@ void ValidateDSProcess::Validate( const aiMesh* pMesh)
 			}
 	}
 
+	// check that the dynamic arrays are correctly synchronized
+	// Vertices
+	if(pMesh->Vertices.mSize == NULL || *(pMesh->Vertices.mSize) != pMesh->mNumVertices) {
+		ReportError("aiMesh::Vertices::mSize does not reference aiMesh::mNumVertices.");
+	}
+	if(pMesh->Vertices.mData == NULL || *(pMesh->Vertices.mData) != pMesh->mVertices) {
+		ReportError("aiMesh::Vertices::mData does not reference aiMesh::mVertices.");
+	}
+	// Normals
+	if(pMesh->Normals.mSize == NULL || *(pMesh->Normals.mSize) != pMesh->mNumVertices) {
+		ReportError("aiMesh::Normals::mSize does not reference aiMesh::mNumVertices.");
+	}
+	if(pMesh->Normals.mData == NULL || *(pMesh->Normals.mData) != pMesh->mNormals) {
+		ReportError("aiMesh::Normals::mData does not reference aiMesh::mNormals.");
+	}
+	// Tangents
+	if(pMesh->Tangents.mSize == NULL || *(pMesh->Tangents.mSize) != pMesh->mNumVertices) {
+		ReportError("aiMesh::Tangents::mSize does not reference aiMesh::mNumVertices.");
+	}
+	if(pMesh->Tangents.mData == NULL || *(pMesh->Tangents.mData) != pMesh->mTangents) {
+		ReportError("aiMesh::Tangents::mData does not reference aiMesh::mTangents.");
+	}
+	// Bitangents
+	if(pMesh->Bitangents.mSize == NULL || *(pMesh->Bitangents.mSize) != pMesh->mNumVertices) {
+		ReportError("aiMesh::Bitangents::mSize does not reference aiMesh::mNumVertices.");
+	}
+	if(pMesh->Bitangents.mData == NULL || *(pMesh->Bitangents.mData) != pMesh->mBitangents) {
+		ReportError("aiMesh::Bitangents::mData does not reference aiMesh::mBitangents.");
+	}
+	// Faces
+	if(pMesh->Faces.mSize == NULL || *(pMesh->Faces.mSize) != pMesh->mNumFaces) {
+		ReportError("aiMesh::Faces::mSize does not reference aiMesh::mNumFaces.");
+	}
+	if(pMesh->Faces.mData == NULL || *(pMesh->Faces.mData) != pMesh->mFaces) {
+		ReportError("aiMesh::Faces::mData does not reference aiMesh::mFaces.");
+	}
+	// Bones
+	if(pMesh->Bones.mSize == NULL || *(pMesh->Bones.mSize) != pMesh->mNumBones) {
+		ReportError("aiMesh::Bones::mSize does not reference aiMesh::mNumBones.");
+	}
+	if(pMesh->Bones.mData == NULL || *(pMesh->Bones.mData) != pMesh->mBones) {
+		ReportError("aiMesh::Bones::mData does not reference aiMesh::mBones.");
+	}
+	// AnimMeshes
+	if(pMesh->AnimMeshes.mSize == NULL || *(pMesh->AnimMeshes.mSize) != pMesh->mNumAnimMeshes) {
+		ReportError("aiMesh::AnimMeshes::mSize does not reference aiMesh::mNumAnimMeshes.");
+	}
+	if(pMesh->AnimMeshes.mData == NULL || *(pMesh->AnimMeshes.mData) != pMesh->mAnimMeshes) {
+		ReportError("aiMesh::AnimMeshes::mData does not reference aiMesh::mAnimMeshes.");
+	}
+	// NumUVComponents
+	if(pMesh->NumUVComponents.mSize != AI_MAX_NUMBER_OF_TEXTURECOORDS) {
+		ReportError("aiMesh::NumUVComponents::mSize is not %i.", AI_MAX_NUMBER_OF_TEXTURECOORDS);
+	}
+	if(pMesh->NumUVComponents.mData != pMesh->mNumUVComponents) {
+		ReportError("aiMesh::NumUVComponents::mData does not reference aiMesh::mNumUVComponents.");
+	}
+	// TextureCoords
+	if(pMesh->TextureCoords.mSize != AI_MAX_NUMBER_OF_TEXTURECOORDS) {
+		ReportError("aiMesh::TextureCoords::mSize is not %i.", AI_MAX_NUMBER_OF_TEXTURECOORDS);
+	}
+	if(pMesh->TextureCoords.mData == NULL) {
+		ReportError("aiMesh::TextureCoords::mData is null.");
+	}
+	for(unsigned int i = 0; i < AI_MAX_NUMBER_OF_TEXTURECOORDS; i++) {
+		if(pMesh->TextureCoords.mData[i] == NULL) {
+			ReportError("aiMesh::TextureCoords::mData[%i] is null.", i);
+		} else {
+			if(pMesh->TextureCoords.mData[i]->mSize == NULL || *(pMesh->TextureCoords.mData[i]->mSize) != pMesh->mNumVertices) {
+				ReportError("aiMesh::TextureCoords::mData[%i]::mSize does not reference aiMesh::mNumVertices.", i);
+			}
+			if(pMesh->TextureCoords.mData[i]->mData == NULL || *(pMesh->TextureCoords.mData[i]->mData) != pMesh->mTextureCoords[i]) {
+				ReportError("aiMesh::TextureCoords::mData[%i]::mData does not reference aiMesh::mTextureCoords[%i].", i, i);
+			}
+		}
+	}
+	// Colors
+	if(pMesh->Colors.mSize != AI_MAX_NUMBER_OF_COLOR_SETS) {
+		ReportError("aiMesh::Colors::mSize is not %i.", AI_MAX_NUMBER_OF_COLOR_SETS);
+	}
+	if(pMesh->Colors.mData == NULL) {
+		ReportError("aiMesh::Colors::mData is null.");
+	}
+	for(unsigned int i = 0; i < AI_MAX_NUMBER_OF_COLOR_SETS; i++) {
+		if(pMesh->Colors.mData[i] == NULL) {
+			ReportError("aiMesh::Colors::mData[%i] is null.", i);
+		} else {
+			if(pMesh->Colors.mData[i]->mSize == NULL || *(pMesh->Colors.mData[i]->mSize) != pMesh->mNumVertices) {
+				ReportError("aiMesh::Colors::mData[%i]::mSize does not reference aiMesh::mNumVertices.", i);
+			}
+			if(pMesh->Colors.mData[i]->mData == NULL || *(pMesh->Colors.mData[i]->mData) != pMesh->mColors[i]) {
+				ReportError("aiMesh::Colors::mData[%i]::mData does not reference aiMesh::mColors[%i].", i, i);
+			}
+		}
+	}
 
 	// now validate all bones
 	if (pMesh->mNumBones)
@@ -491,6 +638,14 @@ void ValidateDSProcess::Validate( const aiMesh* pMesh)
 					ReportError("aiMesh::mBones[%i] has the same name as "
 						"aiMesh::mBones[%i]",i,a);
 				}
+			}
+
+			// check that the dynamic arrays are correctly synchronized
+			if(bone->Weights.mSize == NULL || *(bone->Weights.mSize) != bone->mNumWeights) {
+				ReportError("aiBone::Weights::mSize does not reference aiBone::mNumWeights.");
+			}
+			if(bone->Weights.mData == NULL || *(bone->Weights.mData) != bone->mWeights) {
+				ReportError("aiBone::Weights::mData does not reference aiBone::mWeights.");
 			}
 		}
 		// check whether all bone weights for a vertex sum to 1.0 ...
@@ -896,6 +1051,43 @@ void ValidateDSProcess::Validate( const aiAnimation* pAnimation,
 	{
 		ReportError("A node animation channel must have at least one subtrack");
 	}
+
+	// check that the dynamic arrays are correctly synchronized
+	// Channels
+	if(pAnimation->Channels.mSize == NULL || *(pAnimation->Channels.mSize) != pAnimation->mNumChannels) {
+		ReportError("aiAnimation::Channels::mSize does not reference aiAnimation::mNumChannels.");
+	}
+	if(pAnimation->Channels.mData == NULL || *(pAnimation->Channels.mData) != pAnimation->mChannels) {
+		ReportError("aiAnimation::Channels::mData does not reference aiAnimation::mChannels.");
+	}
+	// MeshChannels
+	if(pAnimation->MeshChannels.mSize == NULL || *(pAnimation->MeshChannels.mSize) != pAnimation->mNumMeshChannels) {
+		ReportError("aiAnimation::MeshChannels::mSize does not reference aiAnimation::mNumMeshChannels.");
+	}
+	if(pAnimation->MeshChannels.mData == NULL || *(pAnimation->MeshChannels.mData) != pAnimation->mMeshChannels) {
+		ReportError("aiAnimation::MeshChannels::mData does not reference aiAnimation::mMeshChannels.");
+	}
+	// PositionKeys
+	if(pNodeAnim->PositionKeys.mSize == NULL || *(pNodeAnim->PositionKeys.mSize) != pNodeAnim->mNumPositionKeys) {
+		ReportError("aiNodeAnim::PositionKeys::mSize does not reference aiNodeAnim::mNumPositionKeys.");
+	}
+	if(pNodeAnim->PositionKeys.mData == NULL || *(pNodeAnim->PositionKeys.mData) != pNodeAnim->mPositionKeys) {
+		ReportError("aiNodeAnim::PositionKeys::mData does not reference aiNodeAnim::mPositionKeys.");
+	}
+	// RotationKeys
+	if(pNodeAnim->RotationKeys.mSize == NULL || *(pNodeAnim->RotationKeys.mSize) != pNodeAnim->mNumRotationKeys) {
+		ReportError("aiNodeAnim::RotationKeys::mSize does not reference aiNodeAnim::mNumRotationKeys.");
+	}
+	if(pNodeAnim->RotationKeys.mData == NULL || *(pNodeAnim->RotationKeys.mData) != pNodeAnim->mRotationKeys) {
+		ReportError("aiNodeAnim::RotationKeys::mData does not reference aiNodeAnim::mRotationKeys.");
+	}
+	// ScalingKeys
+	if(pNodeAnim->ScalingKeys.mSize == NULL || *(pNodeAnim->ScalingKeys.mSize) != pNodeAnim->mNumScalingKeys) {
+		ReportError("aiNodeAnim::ScalingKeys::mSize does not reference aiNodeAnim::mNumScalingKeys.");
+	}
+	if(pNodeAnim->ScalingKeys.mData == NULL || *(pNodeAnim->ScalingKeys.mData) != pNodeAnim->mScalingKeys) {
+		ReportError("aiNodeAnim::ScalingKeys::mData does not reference aiNodeAnim::mScalingKeys.");
+	}
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -941,6 +1133,22 @@ void ValidateDSProcess::Validate( const aiNode* pNode)
 		for (unsigned int i = 0; i < pNode->mNumChildren;++i)	{
 			Validate(pNode->mChildren[i]);
 		}
+	}
+
+	// check that the dynamic arrays are correctly synchronized
+	// Children
+	if(pNode->Children.mSize == NULL || *(pNode->Children.mSize) != pNode->mNumChildren) {
+		ReportError("aiNode::Children::mSize does not reference aiNode::mNumChildren.");
+	}
+	if(pNode->Children.mData == NULL || *(pNode->Children.mData) != pNode->mChildren) {
+		ReportError("aiNode::Children::mData does not reference aiNode::mChildren.");
+	}
+	// Meshes
+	if(pNode->Meshes.mSize == NULL || *(pNode->Children.mSize) != pNode->mNumMeshes) {
+		ReportError("aiNode::Meshes::mSize does not reference aiNode::mNumMeshes.");
+	}
+	if(pNode->Meshes.mData == NULL || *(pNode->Meshes.mData) != pNode->mMeshes) {
+		ReportError("aiNode::Meshes::mData does not reference aiNode::mMeshes.");
 	}
 }
 

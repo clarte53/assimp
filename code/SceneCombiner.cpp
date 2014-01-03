@@ -1064,13 +1064,13 @@ void SceneCombiner::Copy     (aiMesh** _dest, const aiMesh* src)
 
 	unsigned int n = 0;
 	while (dest->HasTextureCoords(n)) {
-		dest->TextureCoords.Set(n, new Array<aiVector3D>(&dest->mTextureCoords[n], &dest->mNumVertices), false);
+		dest->TextureCoords.Set(n, new Array<aiVector3D>(&dest->mTextureCoords[n], &dest->mNumVertices));
 		GetArrayCopy( dest->mTextureCoords[n++],   dest->mNumVertices );
 	}
 
 	n = 0;
 	while (dest->HasVertexColors(n)) {
-		dest->Colors.Set(n, new Array<aiColor4D>(&dest->mColors[n], &dest->mNumVertices), false);
+		dest->Colors.Set(n, new Array<aiColor4D>(&dest->mColors[n], &dest->mNumVertices));
 		GetArrayCopy( dest->mColors[n++],   dest->mNumVertices );
 	}
 

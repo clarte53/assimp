@@ -55,8 +55,16 @@ class Interface {
 
 };
 
+namespace Assimp {
+
+	class ValidateDSProcess;
+
+}
+
 template<typename T>
 class Array {
+
+	friend class Assimp::ValidateDSProcess;
 
 	protected:
 		
@@ -189,8 +197,10 @@ class Array {
 template<typename T>
 class Array<T*> {
 
+	friend class Assimp::ValidateDSProcess;
+
 	protected:
-	
+
 		void Update() {
 			if(mData != NULL) {
 				if((*mData) != mLastReference) {
@@ -321,6 +331,8 @@ class Array<T*> {
 template<typename T>
 class MultiArray {
 
+	friend class Assimp::ValidateDSProcess;
+
 	public:
 	
 		MultiArray(unsigned int size) : mData(NULL) {
@@ -398,6 +410,8 @@ class MultiArray {
 
 template<typename T>
 class FixedArray {
+
+	friend class Assimp::ValidateDSProcess;
 
 	public:
 	
