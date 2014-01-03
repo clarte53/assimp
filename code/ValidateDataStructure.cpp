@@ -1144,7 +1144,7 @@ void ValidateDSProcess::Validate( const aiNode* pNode)
 		ReportError("aiNode::Children::mData does not reference aiNode::mChildren.");
 	}
 	// Meshes
-	if(pNode->Meshes.mSize == NULL || *(pNode->Children.mSize) != pNode->mNumMeshes) {
+	if(pNode->Meshes.mSize == NULL || *(pNode->Meshes.mSize) != pNode->mNumMeshes) {
 		ReportError("aiNode::Meshes::mSize does not reference aiNode::mNumMeshes.");
 	}
 	if(pNode->Meshes.mData == NULL || *(pNode->Meshes.mData) != pNode->mMeshes) {
