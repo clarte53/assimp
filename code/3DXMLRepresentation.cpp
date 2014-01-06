@@ -796,6 +796,7 @@ namespace Assimp {
 	void _3DXMLRepresentation::ReadSurfaceAttributes() { PROFILER;
 		struct Params {
 			_3DXMLRepresentation* me;
+			_3DXMLStructure::MaterialAttributes::ID previous_surface;
 		} params;
 
 		//TODO: SurfaceAttribute is a choice and MaterialApplication is a sequence in {1, unbounded}, therefore we are not strictly compliant with 3DXML schemas v4.x
@@ -819,6 +820,16 @@ namespace Assimp {
 				} else {
 					color.a = 1.0;
 				}
+
+				// Record that we defined a color
+				params.me->mCurrentSurface->is_color = true;
+
+				// Add the MaterialApplication of the previous material in the stack
+				if(params.previous_surface) {
+					for(auto it(params.previous_surface->materials.begin()), end(params.previous_surface->materials.end()); it != end; ++it) {
+						params.me->mCurrentSurface->materials.emplace_back(*it);
+					}
+				}
 			}, 0, 1));
 
 			// Parse MaterialApplication elements
@@ -830,6 +841,9 @@ namespace Assimp {
 		})(), 1, 1);
 
 		if(mReader.HasElements()) {
+			// Record the parameters of the previous material in the stack (in case we have a color)
+			params.previous_surface = mCurrentSurface;
+
 			// Create the new surface attributes
 			mCurrentSurface = _3DXMLStructure::MaterialAttributes::ID(new _3DXMLStructure::MaterialAttributes());
 
@@ -954,6 +968,7 @@ namespace Assimp {
 	void _3DXMLRepresentation::ReadLineAttributes() { PROFILER;
 		struct Params {
 			_3DXMLRepresentation* me;
+			_3DXMLStructure::MaterialAttributes::ID previous_line;
 		} params;
 
 		static const XMLParser::XSD::Sequence<Params> mapping(([](){
@@ -976,12 +991,25 @@ namespace Assimp {
 				} else {
 					color.a = 1.0;
 				}
+
+				// Record that we defined a color
+				params.me->mCurrentLine->is_color = true;
+
+				// Add the MaterialApplication of the previous material in the stack
+				if(params.previous_line) {
+					for(auto it(params.previous_line->materials.begin()), end(params.previous_line->materials.end()); it != end; ++it) {
+						params.me->mCurrentLine->materials.emplace_back(*it);
+					}
+				}
 			}, 0, 1));
 			
 			return std::move(map);
 		})(), 1, 1);
 
 		if(mReader.HasElements()) {
+			// Record the parameters of the previous material in the stack (in case we have a color)
+			params.previous_line = mCurrentLine;
+
 			// Create the new line attributes
 			mCurrentLine = _3DXMLStructure::MaterialAttributes::ID(new _3DXMLStructure::MaterialAttributes());
 

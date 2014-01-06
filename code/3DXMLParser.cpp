@@ -413,8 +413,18 @@ namespace Assimp {
 						// Rethrow the exception
 						throw;
 					}
-				} else { // It must be a simple color material
-					BuildColorMaterial(material, "Material " + parser->ToString(color_mat_counter++), (*it_mat)->color);
+				}
+				
+				// If a color is defined
+				if((*it_mat)->is_color) {
+					if(material) {
+						// We use the color as the ambient component of the defined material
+						material->RemoveProperty(AI_MATKEY_COLOR_AMBIENT);
+						material->AddProperty(&((*it_mat)->color), 1, AI_MATKEY_COLOR_AMBIENT);
+					} else {
+						// We generate a new material based on the color
+						BuildColorMaterial(material, "Material " + parser->ToString(color_mat_counter++), (*it_mat)->color);
+					}
 				}
 			} else {
 				// Default material

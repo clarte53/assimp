@@ -121,10 +121,39 @@ namespace Assimp {
 	_3DXMLStructure::MaterialApplication::MaterialApplication(const std::string& filename, unsigned int id) : channel(0), side(FRONT), blend_function(REPLACE), id(filename, id) {
 
 	}
-	
+
+	// ------------------------------------------------------------------------------------------------
+	_3DXMLStructure::MaterialApplication::MaterialApplication(const MaterialApplication& other) : channel(other.channel), side(other.side), blend_function(other.blend_function), id(other.id) {
+
+	}
+
 	// ------------------------------------------------------------------------------------------------
 	_3DXMLStructure::MaterialApplication::MaterialApplication(MaterialApplication&& other) : channel(other.channel), side(other.side), blend_function(other.blend_function), id(std::move(other.id)) {
 
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	_3DXMLStructure::MaterialApplication& _3DXMLStructure::MaterialApplication::operator=(const MaterialApplication& other) {
+		if(this != &other) {
+			channel = other.channel;
+			side = other.side;
+			blend_function = other.blend_function;
+			id = other.id;
+		}
+
+		return *this;
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	_3DXMLStructure::MaterialApplication& _3DXMLStructure::MaterialApplication::operator=(MaterialApplication&& other) {
+		if(this != &other) {
+			channel = other.channel;
+			side = other.side;
+			blend_function = other.blend_function;
+			id = other.id;
+		}
+
+		return *this;
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -150,12 +179,12 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::MaterialAttributes::MaterialAttributes() : color(), materials(), index(0) {
+	_3DXMLStructure::MaterialAttributes::MaterialAttributes() : color(), materials(), index(0), is_color(false) {
 	
 	}
 	
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::MaterialAttributes::MaterialAttributes(MaterialAttributes&& other) : color(other.color), materials(std::move(other.materials)), index(other.index) {
+	_3DXMLStructure::MaterialAttributes::MaterialAttributes(MaterialAttributes&& other) : color(other.color), materials(std::move(other.materials)), index(other.index), is_color(other.is_color) {
 	
 	}
 	
