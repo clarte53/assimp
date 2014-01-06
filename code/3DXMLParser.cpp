@@ -437,7 +437,7 @@ namespace Assimp {
 		// Update the ReferenceRep to share the same MaterialAttributes
 		std::set<_3DXMLStructure::MaterialAttributes::ID, _3DXMLStructure::shared_less<_3DXMLStructure::MaterialAttributes>> mat_attributes;
 		for(std::map<_3DXMLStructure::ID, _3DXMLStructure::ReferenceRep>::iterator it_rep(mContent.representations.begin()), end_rep(mContent.representations.end()); it_rep != end_rep; ++it_rep) {
-			for(_3DXMLStructure::ReferenceRep::Meshes::iterator it_mesh(it_rep->second.meshes.begin()), end_mesh(it_rep->second.meshes.end()); it_mesh != end_mesh; ++it_mesh) {
+			for(_3DXMLStructure::ReferenceRep::Meshes::iterator it_mesh(it_rep->second.meshes.begin()), end_mesh(it_rep->second.meshes.end()); it_mesh != end_mesh; /* increment depends on content */) {
 				// Set the names of the parsed meshes with this ReferenceRep name
 				it_mesh->second.mesh->mName = it_rep->second.name;
 
@@ -451,13 +451,19 @@ namespace Assimp {
 					if(! result.second) {
 						ThrowException(parser, "In ReferenceRep \"" + parser->ToString(it_rep->second.id) + "\": impossible to add the new material attributes.");
 					}
+
+					++it_mesh;
+				} else if(it_mesh->first == *it) {
+					// Already done? Just need to move to the next element
+					++it_mesh;
 				} else {
 					// Set the current material attributes to be a reference of the shared MaterialAttributes
 					_3DXMLStructure::ReferenceRep::Geometry geometry(std::move(it_mesh->second));
 
+					// Erase already return the next element, so no need to increment
 					it_mesh = it_rep->second.meshes.erase(it_mesh);
 
-					it_mesh = it_rep->second.meshes.emplace(*it, std::move(geometry));
+					it_rep->second.meshes.emplace(*it, std::move(geometry));
 				}
 			}
 		}

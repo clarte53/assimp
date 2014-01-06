@@ -1062,16 +1062,20 @@ void SceneCombiner::Copy     (aiMesh** _dest, const aiMesh* src)
 	GetArrayCopy( dest->mTangents,   dest->mNumVertices );
 	GetArrayCopy( dest->mBitangents, dest->mNumVertices );
 
-	unsigned int n = 0;
-	while (dest->HasTextureCoords(n)) {
+	for(unsigned int n = 0; n < AI_MAX_NUMBER_OF_TEXTURECOORDS; ++n) {
 		dest->TextureCoords.Set(n, new Array<aiVector3D>(&dest->mTextureCoords[n], &dest->mNumVertices));
-		GetArrayCopy( dest->mTextureCoords[n++],   dest->mNumVertices );
+
+		if (dest->HasTextureCoords(n)) {
+			GetArrayCopy( dest->mTextureCoords[n],   dest->mNumVertices );
+		}
 	}
 
-	n = 0;
-	while (dest->HasVertexColors(n)) {
+	for(unsigned int n = 0; n < AI_MAX_NUMBER_OF_COLOR_SETS; ++n) {
 		dest->Colors.Set(n, new Array<aiColor4D>(&dest->mColors[n], &dest->mNumVertices));
-		GetArrayCopy( dest->mColors[n++],   dest->mNumVertices );
+
+		if (dest->HasVertexColors(n)) {
+			GetArrayCopy( dest->mColors[n],   dest->mNumVertices );
+		}
 	}
 
 	// make a deep copy of all bones
@@ -1294,16 +1298,20 @@ void SceneCombiner::Copy     (aiAnimMesh** _dest, const aiAnimMesh* src)
 	GetArrayCopy( dest->mTangents,   dest->mNumVertices );
 	GetArrayCopy( dest->mBitangents, dest->mNumVertices );
 
-	unsigned int n = 0;
-	while (dest->HasTextureCoords(n)) {
+	for(unsigned int n = 0; n < AI_MAX_NUMBER_OF_TEXTURECOORDS; ++n) {
 		dest->TextureCoords.Set(n, new Array<aiVector3D>(&dest->mTextureCoords[n], &dest->mNumVertices));
-		GetArrayCopy( dest->mTextureCoords[n++],   dest->mNumVertices );
+
+		if (dest->HasTextureCoords(n)) {
+			GetArrayCopy( dest->mTextureCoords[n],   dest->mNumVertices );
+		}
 	}
 
-	n = 0;
-	while (dest->HasVertexColors(n)) {
+	for(unsigned int n = 0; n < AI_MAX_NUMBER_OF_COLOR_SETS; ++n) {
 		dest->Colors.Set(n, new Array<aiColor4D>(&dest->mColors[n], &dest->mNumVertices));
-		GetArrayCopy( dest->mColors[n++],   dest->mNumVertices );
+
+		if (dest->HasVertexColors(n)) {
+			GetArrayCopy( dest->mColors[n],   dest->mNumVertices );
+		}
 	}
 }
 
