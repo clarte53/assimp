@@ -347,8 +347,10 @@ public:
 	static void Copy  (aiAnimation** dest, const aiAnimation* src);
 	static void Copy  (aiCamera** dest, const aiCamera* src);
 	static void Copy  (aiBone** dest, const aiBone* src);
+	static void Copy  (aiAnimMesh** _dest, const aiAnimMesh* src);
 	static void Copy  (aiLight** dest, const aiLight* src);
 	static void Copy  (aiNodeAnim** dest, const aiNodeAnim* src);
+	static void Copy  (aiMeshAnim** _dest, const aiMeshAnim* src);
 
 	// recursive, of course
 	static void Copy     (aiNode** dest, const aiNode* src);

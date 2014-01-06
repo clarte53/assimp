@@ -1077,11 +1077,17 @@ void SceneCombiner::Copy     (aiMesh** _dest, const aiMesh* src)
 	// make a deep copy of all bones
 	CopyPtrArray(dest->mBones,dest->mBones,dest->mNumBones);
 
+	// make a deep copy of all anim meshes
+	CopyPtrArray(dest->mAnimMeshes,dest->mAnimMeshes,dest->mNumAnimMeshes);
+
 	// make a deep copy of all faces
 	GetArrayCopy(dest->mFaces,dest->mNumFaces);
 	for (unsigned int i = 0; i < dest->mNumFaces;++i)
 	{
 		aiFace& f = dest->mFaces[i];
+
+		f.Indices.Create(&f.mIndices, &f.mNumIndices);
+
 		GetArrayCopy(f.mIndices,f.mNumIndices);
 	}
 }
@@ -1165,6 +1171,7 @@ void SceneCombiner::Copy     (aiAnimation** _dest, const aiAnimation* src)
 
 	// and reallocate all arrays
 	CopyPtrArray( dest->mChannels, src->mChannels, dest->mNumChannels );
+	CopyPtrArray( dest->mMeshChannels, src->mMeshChannels, dest->mNumMeshChannels );
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -1191,6 +1198,26 @@ void SceneCombiner::Copy     (aiNodeAnim** _dest, const aiNodeAnim* src)
 	GetArrayCopy( dest->mPositionKeys, dest->mNumPositionKeys );
 	GetArrayCopy( dest->mScalingKeys,  dest->mNumScalingKeys );
 	GetArrayCopy( dest->mRotationKeys, dest->mNumRotationKeys );
+}
+
+// ------------------------------------------------------------------------------------------------
+void SceneCombiner::Copy     (aiMeshAnim** _dest, const aiMeshAnim* src)
+{
+	ai_assert(NULL != _dest && NULL != src);
+
+	aiMeshAnim* dest = *_dest = new aiMeshAnim();
+
+	// release allocated memory
+	dest->Keys.Clear();
+
+	// get a flat copy
+	::memcpy(dest,src,sizeof(aiMeshAnim));
+
+	// restore array references
+	dest->Keys.Create(&dest->mKeys, &dest->mNumKeys);
+
+	// and reallocate all arrays
+	GetArrayCopy( dest->mKeys, dest->mNumKeys );
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -1233,6 +1260,51 @@ void SceneCombiner::Copy     (aiBone** _dest, const aiBone* src)
 
 	// and reallocate all arrays
 	GetArrayCopy( dest->mWeights, dest->mNumWeights );
+}
+
+// ------------------------------------------------------------------------------------------------
+void SceneCombiner::Copy     (aiAnimMesh** _dest, const aiAnimMesh* src)
+{
+	ai_assert(NULL != _dest && NULL != src);
+
+	aiAnimMesh* dest = *_dest = new aiAnimMesh();
+
+	// release allocated memory
+	dest->Vertices.Clear();
+	dest->Normals.Clear();
+	dest->Tangents.Clear();
+	dest->Bitangents.Clear();
+	dest->Colors.Clear();
+	dest->TextureCoords.Clear();
+
+	// get a flat copy
+	::memcpy(dest,src,sizeof(aiAnimMesh));
+
+	// restore the array references
+	dest->Vertices.Create(&dest->mVertices, &dest->mNumVertices);
+	dest->Normals.Create(&dest->mNormals, &dest->mNumVertices);
+	dest->Tangents.Create(&dest->mTangents, &dest->mNumVertices);
+	dest->Bitangents.Create(&dest->mBitangents, &dest->mNumVertices);
+	dest->Colors.Create(AI_MAX_NUMBER_OF_COLOR_SETS, false);
+	dest->TextureCoords.Create(AI_MAX_NUMBER_OF_TEXTURECOORDS, false);
+
+	// and reallocate all arrays
+	GetArrayCopy( dest->mVertices,   dest->mNumVertices );
+	GetArrayCopy( dest->mNormals ,   dest->mNumVertices );
+	GetArrayCopy( dest->mTangents,   dest->mNumVertices );
+	GetArrayCopy( dest->mBitangents, dest->mNumVertices );
+
+	unsigned int n = 0;
+	while (dest->HasTextureCoords(n)) {
+		dest->TextureCoords.Set(n, new Array<aiVector3D>(&dest->mTextureCoords[n], &dest->mNumVertices));
+		GetArrayCopy( dest->mTextureCoords[n++],   dest->mNumVertices );
+	}
+
+	n = 0;
+	while (dest->HasVertexColors(n)) {
+		dest->Colors.Set(n, new Array<aiColor4D>(&dest->mColors[n], &dest->mNumVertices));
+		GetArrayCopy( dest->mColors[n++],   dest->mNumVertices );
+	}
 }
 
 // ------------------------------------------------------------------------------------------------
