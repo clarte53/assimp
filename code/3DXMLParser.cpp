@@ -423,7 +423,7 @@ namespace Assimp {
 						material->AddProperty(&((*it_mat)->color), 1, AI_MATKEY_COLOR_AMBIENT);
 					} else {
 						// We generate a new material based on the color
-						BuildColorMaterial(material, "Material " + parser->ToString(color_mat_counter++), (*it_mat)->color);
+						BuildColorMaterial(material, "Color Material " + parser->ToString(color_mat_counter++), (*it_mat)->color);
 					}
 				}
 			} else {
