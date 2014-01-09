@@ -119,7 +119,7 @@ namespace Assimp {
 
 		}; // struct ID
 		
-		struct MaterialApplication : public boost::noncopyable {
+		struct MaterialApplication {
 
 			enum MappingSide {FRONT, BACK, FRONT_AND_BACK};
 
@@ -135,7 +135,13 @@ namespace Assimp {
 
 			MaterialApplication(const std::string& filename, unsigned int id);
 
+			MaterialApplication(const MaterialApplication& other);
+
 			MaterialApplication(MaterialApplication&& other);
+
+			MaterialApplication& operator=(const MaterialApplication& other);
+
+			MaterialApplication& operator=(MaterialApplication&& other);
 
 			bool operator==(const MaterialApplication& other) const;
 
@@ -152,6 +158,8 @@ namespace Assimp {
 			std::list<MaterialApplication> materials;
 
 			unsigned int index;
+
+			bool is_color;
 
 			MaterialAttributes();
 

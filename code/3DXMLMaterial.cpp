@@ -168,8 +168,6 @@ namespace Assimp {
 					map.emplace("SpecularCoef", [](Params& params) {
 						float value = params.me->ReadValue<float>(params.value);
 
-						value /= 4.0; //TODO: empiric value set based on comparisons with Dassault 3DXML Player
-
 						params.me->mMaterial->AddProperty(&value, 1, AI_MATKEY_SHININESS_STRENGTH);
 					});
 

@@ -729,7 +729,29 @@ namespace Assimp {
 						final_vertices_size += mesh->mFaces[i].mNumIndices;
 					}
 
-					// Make sure the arrays are allocated to the correct size, even if no data is present
+					// Make sure all the source arrays are exactly the same size
+					if(params.mesh->HasPositions()) {
+						params.mesh->Vertices.Reserve(params.mesh->mNumVertices);
+					}
+					if(params.mesh->HasNormals()) {
+						params.mesh->Normals.Reserve(params.mesh->mNumVertices);
+					}
+					if(params.mesh->HasTangentsAndBitangents()) {
+						params.mesh->Tangents.Reserve(params.mesh->mNumVertices);
+						params.mesh->Bitangents.Reserve(params.mesh->mNumVertices);
+					}
+					for(unsigned int k = 0; k < AI_MAX_NUMBER_OF_TEXTURECOORDS; k++) {
+						if(params.mesh->HasTextureCoords(k)) {
+							params.mesh->TextureCoords.Get(k).Reserve(params.mesh->mNumVertices);
+						}
+					}
+					for(unsigned int k = 0; k < AI_MAX_NUMBER_OF_COLOR_SETS; k++) {
+						if(params.mesh->HasVertexColors(k)) {
+							params.mesh->Colors.Get(k).Reserve(params.mesh->mNumVertices);
+						}
+					}
+
+					// Make sure the destination arrays are allocated to the correct size, even if no data is present
 					if(mesh->HasPositions() || params.mesh->HasPositions()) {
 						mesh->Vertices.Reserve(final_vertices_size);
 					}
@@ -740,13 +762,13 @@ namespace Assimp {
 						mesh->Tangents.Reserve(final_vertices_size);
 						mesh->Bitangents.Reserve(final_vertices_size);
 					}
-					for(unsigned int k = 0; k < mesh->GetNumUVChannels(); k++) {
+					for(unsigned int k = 0; k < AI_MAX_NUMBER_OF_TEXTURECOORDS; k++) {
 						if(mesh->HasTextureCoords(k) || params.mesh->HasTextureCoords(k)) {
 							mesh->mNumUVComponents[k] = std::max(mesh->mNumUVComponents[k], params.mesh->mNumUVComponents[k]);
 							mesh->TextureCoords.Get(k).Reserve(final_vertices_size);
 						}
 					}
-					for(unsigned int k = 0; k < mesh->GetNumColorChannels(); k++) {
+					for(unsigned int k = 0; k < AI_MAX_NUMBER_OF_COLOR_SETS; k++) {
 						if(mesh->HasVertexColors(k) || params.mesh->HasVertexColors(k)) {
 							mesh->Colors.Get(k).Reserve(final_vertices_size);
 						}
@@ -761,32 +783,34 @@ namespace Assimp {
 						for(unsigned int j = 0; j < face.mNumIndices; j++) {
 							unsigned int index = face.mIndices[j];
 
-							face.Indices.Set(j, vertice_index);
+							face.mIndices[j] = vertice_index;
 
 							if(params.mesh->HasPositions()) {
-								mesh->Vertices.Set(vertice_index, params.mesh->mVertices[index]);
+								mesh->mVertices[vertice_index] = params.mesh->mVertices[index];
 							}
 							if(params.mesh->HasNormals()) {
-								mesh->Normals.Set(vertice_index, params.mesh->mNormals[index]);
+								mesh->mNormals[vertice_index] = params.mesh->mNormals[index];
 							}
 							if(params.mesh->HasTangentsAndBitangents()) {
-								mesh->Tangents.Set(vertice_index, params.mesh->mTangents[index]);
-								mesh->Bitangents.Set(vertice_index, params.mesh->mBitangents[index]);
+								mesh->mTangents[vertice_index] = params.mesh->mTangents[index];
+								mesh->mBitangents[vertice_index] = params.mesh->mBitangents[index];
 							}
-							for(unsigned int k = 0; k < params.mesh->GetNumUVChannels(); k++) {
+							for(unsigned int k = 0; k < AI_MAX_NUMBER_OF_TEXTURECOORDS; k++) {
 								if(params.mesh->HasTextureCoords(k)) {
-									mesh->TextureCoords.Get(k).Set(vertice_index, params.mesh->mTextureCoords[k][index]);
+									mesh->mTextureCoords[k][vertice_index] = params.mesh->mTextureCoords[k][index];
 								}
 							}
-							for(unsigned int k = 0; k < params.mesh->GetNumColorChannels(); k++) {
+							for(unsigned int k = 0; k < AI_MAX_NUMBER_OF_COLOR_SETS; k++) {
 								if(params.mesh->HasVertexColors(k)) {
-									mesh->Colors.Get(k).Set(vertice_index, params.mesh->mColors[k][index]);
+									mesh->mColors[k][vertice_index] = params.mesh->mColors[k][index];
 								}
 							}
 
 							vertice_index++;
 						}
 					}
+
+					mesh->mNumVertices = vertice_index;
 				}
 			}
 		}
@@ -796,6 +820,7 @@ namespace Assimp {
 	void _3DXMLRepresentation::ReadSurfaceAttributes() { PROFILER;
 		struct Params {
 			_3DXMLRepresentation* me;
+			_3DXMLStructure::MaterialAttributes::ID previous_surface;
 		} params;
 
 		//TODO: SurfaceAttribute is a choice and MaterialApplication is a sequence in {1, unbounded}, therefore we are not strictly compliant with 3DXML schemas v4.x
@@ -819,6 +844,16 @@ namespace Assimp {
 				} else {
 					color.a = 1.0;
 				}
+
+				// Record that we defined a color
+				params.me->mCurrentSurface->is_color = true;
+
+				// Add the MaterialApplication of the previous material in the stack
+				if(params.previous_surface) {
+					for(auto it(params.previous_surface->materials.begin()), end(params.previous_surface->materials.end()); it != end; ++it) {
+						params.me->mCurrentSurface->materials.emplace_back(*it);
+					}
+				}
 			}, 0, 1));
 
 			// Parse MaterialApplication elements
@@ -830,6 +865,9 @@ namespace Assimp {
 		})(), 1, 1);
 
 		if(mReader.HasElements()) {
+			// Record the parameters of the previous material in the stack (in case we have a color)
+			params.previous_surface = mCurrentSurface;
+
 			// Create the new surface attributes
 			mCurrentSurface = _3DXMLStructure::MaterialAttributes::ID(new _3DXMLStructure::MaterialAttributes());
 
@@ -954,6 +992,7 @@ namespace Assimp {
 	void _3DXMLRepresentation::ReadLineAttributes() { PROFILER;
 		struct Params {
 			_3DXMLRepresentation* me;
+			_3DXMLStructure::MaterialAttributes::ID previous_line;
 		} params;
 
 		static const XMLParser::XSD::Sequence<Params> mapping(([](){
@@ -976,12 +1015,25 @@ namespace Assimp {
 				} else {
 					color.a = 1.0;
 				}
+
+				// Record that we defined a color
+				params.me->mCurrentLine->is_color = true;
+
+				// Add the MaterialApplication of the previous material in the stack
+				if(params.previous_line) {
+					for(auto it(params.previous_line->materials.begin()), end(params.previous_line->materials.end()); it != end; ++it) {
+						params.me->mCurrentLine->materials.emplace_back(*it);
+					}
+				}
 			}, 0, 1));
 			
 			return std::move(map);
 		})(), 1, 1);
 
 		if(mReader.HasElements()) {
+			// Record the parameters of the previous material in the stack (in case we have a color)
+			params.previous_line = mCurrentLine;
+
 			// Create the new line attributes
 			mCurrentLine = _3DXMLStructure::MaterialAttributes::ID(new _3DXMLStructure::MaterialAttributes());
 
