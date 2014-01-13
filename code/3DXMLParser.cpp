@@ -646,6 +646,11 @@ namespace Assimp {
 
 					// Build the hierarchy recursively
 					BuildStructure(parser, root, mContent.scene->mRootNode, Optional<unsigned int>());
+
+					// Test if we have some meshes. If not, validation step will fail and it probably means that the file use the binary representation for meshes (UVR format).
+					if(mContent.scene->mNumMeshes == 0) {
+						ThrowException(parser, "The scene does not contain any mesh. The meshes are probably defined in the unsupported binary format.");
+					}
 				} else {
 					ThrowException(parser, "The root Reference3D should not be instantiated.");
 				}
