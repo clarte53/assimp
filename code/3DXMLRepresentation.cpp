@@ -61,7 +61,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLRepresentation::_3DXMLRepresentation(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, _3DXMLStructure::ReferenceRep::Meshes& meshes, _3DXMLStructure::Dependencies& dependencies) : mReader(archive, filename), mMeshes(meshes), mCurrentMeshes(), mCurrentSurface(nullptr), mCurrentLine(nullptr), mDependencies(dependencies) { PROFILER;
+	_3DXMLRepresentation::_3DXMLRepresentation(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, _3DXMLStructure::ReferenceRep::Meshes& meshes, _3DXMLStructure::Dependencies& dependencies) : mReader(archive, filename), mCurrentRep(nullptr), mMeshes(meshes), mDependencies(dependencies) { PROFILER;
 		struct Params {
 			_3DXMLRepresentation* me;
 		} params;
@@ -133,6 +133,21 @@ namespace Assimp {
 	// ------------------------------------------------------------------------------------------------
 	_3DXMLRepresentation::~_3DXMLRepresentation() { PROFILER;
 
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	void _3DXMLRepresentation::PropagateAttributes(_3DXMLStructure::MaterialAttributes::ID& parent, _3DXMLStructure::MaterialAttributes::ID& child) {
+		// Propagate the surface attributes if none are defined at the sub-level
+		if(parent) {
+			if(! child) {
+				child = parent;
+			} else if(parent != child && child->is_color && child->materials.empty()) {
+				// Copy the complex material of the parent to allow both complex and simple material representations
+				for(auto it_attr(parent->materials.begin()), end_attr(parent->materials.end()); it_attr != end_attr; ++it_attr) {
+					child->materials.emplace_back(*it_attr);
+				}
+			}
+		}
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -313,6 +328,288 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
+	void _3DXMLRepresentation::ParseFaces(const Face& face) {
+		static const unsigned int nb_vertices = 3;
+
+		std::list<std::vector<unsigned int>> data;
+
+		if(face.triangles || face.strips || face.fans) {
+			auto it = mCurrentRep->meshes.emplace(face.surface_attribute,
+				_3DXMLStructure::ReferenceRep::Geometry(_3DXMLStructure::ReferenceRep::Geometry::MESH)
+			);
+
+			aiMesh* mesh = it->second.mesh.get();
+
+			if(face.triangles) {
+				data.clear();
+
+				ParseTriangles(*(face.triangles), data);
+
+				// Compute the number of faces we will add to the mesh and allocate the necessary memory in one pass
+				unsigned int size = 0;
+				for(std::list<std::vector<unsigned int>>::iterator it(data.begin()), end(data.end()); it != end; ++it) {
+					size += (it->size() / 3);
+				}
+				mesh->Faces.Reserve(mesh->mNumFaces + size);
+
+				for(std::list<std::vector<unsigned int>>::iterator it(data.begin()), end(data.end()); it != end; ++it) {
+					for(unsigned int i = 0; i < it->size(); i += 3) {
+						aiFace face;
+
+						face.mNumIndices = nb_vertices;
+						face.mIndices = new unsigned int[nb_vertices];
+
+						for(unsigned int j = 0; j < nb_vertices; j++) {
+							face.mIndices[j] = (*it)[i + j];
+						}
+
+						mesh->Faces.Set(mesh->mNumFaces, face);
+					}
+				}
+			}
+
+			if(face.strips) {
+				data.clear();
+
+				ParseTriangles(*(face.strips), data);
+
+				// Compute the number of faces we will add to the mesh and allocate the necessary memory in one pass
+				unsigned int size = 0;
+				for(std::list<std::vector<unsigned int>>::iterator it(data.begin()), end(data.end()); it != end; ++it) {
+					size += it->size() - 2;
+				}
+				mesh->Faces.Reserve(mesh->mNumFaces + size);
+
+				for(std::list<std::vector<unsigned int>>::iterator it(data.begin()), end(data.end()); it != end; ++it) {
+					bool inversed = false;
+
+					for(unsigned int i = 0; i < it->size() - (nb_vertices - 1); i++) {
+						aiFace face;
+
+						face.mNumIndices = nb_vertices;
+						face.mIndices = new unsigned int[nb_vertices];
+
+						for(unsigned int j = 0; j < nb_vertices; j++) {
+							if(! inversed) {
+								face.mIndices[j] = (*it)[i + j];
+							} else {
+								face.mIndices[j] = (*it)[i + nb_vertices - (j + 1)];
+							}
+						}
+
+						inversed = ! inversed;
+
+						mesh->Faces.Set(mesh->mNumFaces, face);
+					}
+				}
+			}
+
+			if(face.fans) {
+				data.clear();
+
+				ParseTriangles(*(face.fans), data);
+
+				// Compute the number of faces we will add to the mesh and allocate the necessary memory in one pass
+				unsigned int size = 0;
+				for(std::list<std::vector<unsigned int>>::iterator it(data.begin()), end(data.end()); it != end; ++it) {
+					size += it->size() - 2;
+				}
+				mesh->Faces.Reserve(mesh->mNumFaces + size);
+
+				for(std::list<std::vector<unsigned int>>::iterator it(data.begin()), end(data.end()); it != end; ++it) {		
+					for(unsigned int i = 0; i < it->size() - (nb_vertices - 1); i++) {
+						aiFace face;
+
+						face.mNumIndices = nb_vertices;
+						face.mIndices = new unsigned int[nb_vertices];
+
+						face.mIndices[0] = (*it)[0];
+						for(unsigned int j = 1; j < nb_vertices; j++) {
+							face.mIndices[j] = (*it)[i + j];
+						}
+
+						mesh->Faces.Set(mesh->mNumFaces, face);
+					}
+				}
+			}
+		}
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	void _3DXMLRepresentation::ParseEdges(const Polyline& edge) {
+		std::vector<aiVector3D> lines;
+		
+		if(edge.vertices) {
+			ParseArray(*(edge.vertices), lines);
+		}
+
+		if(! lines.empty()) {
+			auto it = mCurrentRep->meshes.emplace(edge.line_attribute,
+				_3DXMLStructure::ReferenceRep::Geometry(_3DXMLStructure::ReferenceRep::Geometry::LINES)
+			);
+
+			aiMesh* mesh = it->second.mesh.get();
+
+			const unsigned int nb_faces = lines.size() - 1;
+			unsigned int index = mesh->mNumVertices;
+
+			// Compute the number of faces and vertices we will add to the mesh and allocate the necessary memory in one pass
+			mesh->Faces.Reserve(mesh->mNumFaces + nb_faces);
+			mesh->Vertices.Reserve(mesh->mNumVertices + nb_faces * 2);
+
+			for(unsigned int i = 0; i < lines.size() - 1; i++, index += 2) {
+				mesh->Vertices.Set(index, lines[i]);
+				mesh->Vertices.Set(index + 1, lines[i + 1]);
+
+				aiFace face;
+				face.Indices.Set(face.mNumIndices, index);
+				face.Indices.Set(face.mNumIndices, index + 1);
+
+				mesh->Faces.Set(mesh->mNumFaces, face);
+			}
+		}
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	void _3DXMLRepresentation::ParseVertexBuffer() {
+		if(mCurrentRep && mCurrentRep->vertex_buffer.mNumVertices != 0) {
+			// Duplicate the vertices to avoid different faces sharing the same (and to pass the ValidateDataStructure test...)
+			for(_3DXMLStructure::ReferenceRep::Meshes::iterator it(mCurrentRep->meshes.begin()), end(mCurrentRep->meshes.end()); it != end; ++it) {
+				if(it->second.type == _3DXMLStructure::ReferenceRep::Geometry::MESH) {
+					aiMesh* mesh = it->second.mesh.get();
+
+					// Compute the final number of vertices for this mesh
+					unsigned int final_vertices_size = mesh->mNumVertices;
+					for(unsigned int i = 0; i < mesh->mNumFaces; i++) {
+						final_vertices_size += mesh->mFaces[i].mNumIndices;
+					}
+
+					// Make sure all the source arrays are exactly the same size
+					if(mCurrentRep->vertex_buffer.HasPositions()) {
+						mCurrentRep->vertex_buffer.Vertices.Reserve(mCurrentRep->vertex_buffer.mNumVertices);
+					}
+					if(mCurrentRep->vertex_buffer.HasNormals()) {
+						mCurrentRep->vertex_buffer.Normals.Reserve(mCurrentRep->vertex_buffer.mNumVertices);
+					}
+					if(mCurrentRep->vertex_buffer.HasTangentsAndBitangents()) {
+						mCurrentRep->vertex_buffer.Tangents.Reserve(mCurrentRep->vertex_buffer.mNumVertices);
+						mCurrentRep->vertex_buffer.Bitangents.Reserve(mCurrentRep->vertex_buffer.mNumVertices);
+					}
+					for(unsigned int k = 0; k < AI_MAX_NUMBER_OF_TEXTURECOORDS; k++) {
+						if(mCurrentRep->vertex_buffer.HasTextureCoords(k)) {
+							mCurrentRep->vertex_buffer.TextureCoords.Get(k).Reserve(mCurrentRep->vertex_buffer.mNumVertices);
+						}
+					}
+					for(unsigned int k = 0; k < AI_MAX_NUMBER_OF_COLOR_SETS; k++) {
+						if(mCurrentRep->vertex_buffer.HasVertexColors(k)) {
+							mCurrentRep->vertex_buffer.Colors.Get(k).Reserve(mCurrentRep->vertex_buffer.mNumVertices);
+						}
+					}
+
+					// Make sure the destination arrays are allocated to the correct size, even if no data is present
+					if(mesh->HasPositions() || mCurrentRep->vertex_buffer.HasPositions()) {
+						mesh->Vertices.Reserve(final_vertices_size);
+					}
+					if(mesh->HasNormals() || mCurrentRep->vertex_buffer.HasNormals()) {
+						mesh->Normals.Reserve(final_vertices_size);
+					}
+					if(mesh->HasTangentsAndBitangents() || mCurrentRep->vertex_buffer.HasTangentsAndBitangents()) {
+						mesh->Tangents.Reserve(final_vertices_size);
+						mesh->Bitangents.Reserve(final_vertices_size);
+					}
+					for(unsigned int k = 0; k < AI_MAX_NUMBER_OF_TEXTURECOORDS; k++) {
+						if(mesh->HasTextureCoords(k) || mCurrentRep->vertex_buffer.HasTextureCoords(k)) {
+							mesh->mNumUVComponents[k] = std::max(mesh->mNumUVComponents[k], mCurrentRep->vertex_buffer.mNumUVComponents[k]);
+							mesh->TextureCoords.Get(k).Reserve(final_vertices_size);
+						}
+					}
+					for(unsigned int k = 0; k < AI_MAX_NUMBER_OF_COLOR_SETS; k++) {
+						if(mesh->HasVertexColors(k) || mCurrentRep->vertex_buffer.HasVertexColors(k)) {
+							mesh->Colors.Get(k).Reserve(final_vertices_size);
+						}
+					}
+
+					unsigned int vertice_index = mesh->mNumVertices;
+
+					// Duplicate the vertices to avoid joined vertices (or validation of the structure will fail)
+					for(unsigned int i = 0; i < mesh->mNumFaces; i++) {
+						aiFace& face = mesh->mFaces[i];
+
+						for(unsigned int j = 0; j < face.mNumIndices; j++) {
+							unsigned int index = face.mIndices[j];
+
+							face.mIndices[j] = vertice_index;
+
+							if(mCurrentRep->vertex_buffer.HasPositions()) {
+								mesh->mVertices[vertice_index] = mCurrentRep->vertex_buffer.mVertices[index];
+							}
+							if(mCurrentRep->vertex_buffer.HasNormals()) {
+								mesh->mNormals[vertice_index] = mCurrentRep->vertex_buffer.mNormals[index];
+							}
+							if(mCurrentRep->vertex_buffer.HasTangentsAndBitangents()) {
+								mesh->mTangents[vertice_index] = mCurrentRep->vertex_buffer.mTangents[index];
+								mesh->mBitangents[vertice_index] = mCurrentRep->vertex_buffer.mBitangents[index];
+							}
+							for(unsigned int k = 0; k < AI_MAX_NUMBER_OF_TEXTURECOORDS; k++) {
+								if(mCurrentRep->vertex_buffer.HasTextureCoords(k)) {
+									mesh->mTextureCoords[k][vertice_index] = mCurrentRep->vertex_buffer.mTextureCoords[k][index];
+								}
+							}
+							for(unsigned int k = 0; k < AI_MAX_NUMBER_OF_COLOR_SETS; k++) {
+								if(mCurrentRep->vertex_buffer.HasVertexColors(k)) {
+									mesh->mColors[k][vertice_index] = mCurrentRep->vertex_buffer.mColors[k][index];
+								}
+							}
+
+							vertice_index++;
+						}
+					}
+
+					mesh->mNumVertices = vertice_index;
+				}
+			}
+		}
+	}
+
+	void _3DXMLRepresentation::ParsePolygonalRep() {
+		if(mCurrentRep) {
+			// Iterate over the groups of faces
+			for(auto it_surfaces(mCurrentRep->surfaces.begin()), end_surfaces(mCurrentRep->surfaces.end()); it_surfaces != end_surfaces; ++it_surfaces) {
+				PropagateAttributes(mCurrentRep->surface_attribute, it_surfaces->surface_attribute);
+
+				// Iterate over the faces in each group of faces
+				for(auto it_faces(it_surfaces->faces.begin()), end_faces(it_surfaces->faces.end()); it_faces != end_faces; ++it_faces) {
+					PropagateAttributes(it_surfaces->surface_attribute, it_faces->surface_attribute);
+
+					// Parse the current face
+					ParseFaces(*it_faces);
+				}
+			}
+
+			// Iterate over the groups of lines
+			for(auto it_lines(mCurrentRep->lines.begin()), end_lines(mCurrentRep->lines.end()); it_lines != end_lines; ++it_lines) {
+				PropagateAttributes(mCurrentRep->line_attribute, it_lines->line_attribute);
+
+				// Iterate over the lines in each group of lines
+				for(auto it_edges(it_lines->edges.begin()), end_edges(it_lines->edges.end()); it_edges != end_edges; ++it_edges) {
+					PropagateAttributes(it_lines->line_attribute, it_edges->line_attribute);
+
+					// Parse the current line
+					ParseEdges(*it_edges);
+				}
+			}
+
+			// Parse the vertex buffer data
+			ParseVertexBuffer();
+
+			// Copy the generated meshes into the global map of meshes
+			for(auto it(mCurrentRep->meshes.begin()), end(mCurrentRep->meshes.end()); it != end; ++it) {
+				mMeshes.emplace(it->first, std::move(it->second));
+			}
+		}
+	}
+
+	// ------------------------------------------------------------------------------------------------
 	void _3DXMLRepresentation::ReadVisualizationRep() { PROFILER;
 		std::string type = *(mReader.GetAttribute<std::string>("xsi:type", true));
 
@@ -355,56 +652,61 @@ namespace Assimp {
 			XMLParser::XSD::Sequence<Params>::type map;
 
 			// Parse SurfaceAttributes element
-			map.emplace_back("SurfaceAttributes", XMLParser::XSD::Element<Params>([](const XMLParser* /*parser*/, Params& params){params.me->ReadSurfaceAttributes();}, 0, 1));
+			map.emplace_back("SurfaceAttributes", XMLParser::XSD::Element<Params>([](const XMLParser* /*parser*/, Params& params){
+				params.me->ReadSurfaceAttributes(params.me->mCurrentRep->surface_attribute);
+			}, 0, 1));
 			
 			// Parse LineAttributes element
-			map.emplace_back("LineAttributes", XMLParser::XSD::Element<Params>([](const XMLParser* /*parser*/, Params& params){params.me->ReadLineAttributes();}, 0, 1));
+			map.emplace_back("LineAttributes", XMLParser::XSD::Element<Params>([](const XMLParser* /*parser*/, Params& params){
+				params.me->ReadLineAttributes(params.me->mCurrentRep->line_attribute);
+			}, 0, 1));
 			
 			// Parse PolygonalLOD element
-			//map.emplace_back("PolygonalLOD", XMLParser::XSD::Element<Params>([](const XMLParser* /*parser*/, Params& params){ }, 0, XMLParser::XSD::unbounded));
+			//map.emplace_back("PolygonalLOD", XMLParser::XSD::Element<Params>([](const XMLParser* /*parser*/, Params& params){
+			//
+			//}, 0, XMLParser::XSD::unbounded));
 			
 			// Parse Faces element
-			map.emplace_back("Faces", XMLParser::XSD::Element<Params>([](const XMLParser* /*parser*/, Params& params){params.me->ReadFaces();}, 0, XMLParser::XSD::unbounded));
+			map.emplace_back("Faces", XMLParser::XSD::Element<Params>([](const XMLParser* /*parser*/, Params& params){
+				params.me->ReadFaces();
+			}, 0, XMLParser::XSD::unbounded));
 			
 			// Parse Edges element
-			map.emplace_back("Edges", XMLParser::XSD::Element<Params>([](const XMLParser* /*parser*/, Params& params){params.me->ReadEdges();}, 0, XMLParser::XSD::unbounded));
+			map.emplace_back("Edges", XMLParser::XSD::Element<Params>([](const XMLParser* /*parser*/, Params& params){
+				params.me->ReadEdges();
+			}, 0, XMLParser::XSD::unbounded));
 			
 			// Parse VertexBuffer element
-			map.emplace_back("VertexBuffer", XMLParser::XSD::Element<Params>([](const XMLParser* /*parser*/, Params& params){params.me->ReadVertexBuffer();}, 0, 1));
+			map.emplace_back("VertexBuffer", XMLParser::XSD::Element<Params>([](const XMLParser* /*parser*/, Params& params){
+				params.me->ReadVertexBuffer();
+			}, 0, 1));
 			
 			return std::move(map);
 		})(), 0, XMLParser::XSD::unbounded);
 
-		_3DXMLStructure::MaterialAttributes::ID old_surface = mCurrentSurface;
-		_3DXMLStructure::MaterialAttributes::ID old_line = mCurrentLine;
-
-		mCurrentMeshes.clear();
+		mCurrentRep.reset(new PolygonalRep());
 
 		params.me = this;
 
 		mReader.ParseElement(mapping, params);
 
-		for(auto it(mCurrentMeshes.begin()), end(mCurrentMeshes.end()); it != end; ++it) {
-			mMeshes.emplace(it->first, std::move(it->second));
-		}
-
-		mCurrentMeshes.clear();
-
-		mCurrentSurface = old_surface;
-		mCurrentLine = old_line;
+		ParsePolygonalRep();
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	void _3DXMLRepresentation::ReadFaces() { PROFILER;
 		struct Params {
 			_3DXMLRepresentation* me;
+			Faces* surface;
 		} params;
 
 		static const XMLParser::XSD::Sequence<Params> mapping(([](){
 			XMLParser::XSD::Sequence<Params>::type map;
 
 			// Parse SurfaceAttributes element
-			map.emplace_back("SurfaceAttributes", XMLParser::XSD::Element<Params>([](const XMLParser* /*parser*/, Params& params){params.me->ReadSurfaceAttributes();}, 0, 1));
+			map.emplace_back("SurfaceAttributes", XMLParser::XSD::Element<Params>([](const XMLParser* /*parser*/, Params& params){
+				params.me->ReadSurfaceAttributes(params.surface->surface_attribute);
+			}, 0, 1));
 			
 			// Parse Face element
 			map.emplace_back("Face", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
@@ -413,151 +715,52 @@ namespace Assimp {
 
 					// Parse SurfaceAttributes element
 					map.emplace_back("SurfaceAttributes", XMLParser::XSD::Element<Params>([](const XMLParser* /*parser*/, Params& params){
-						params.me->ReadSurfaceAttributes();
+						params.me->ReadSurfaceAttributes(params.surface->faces.back().surface_attribute);
 					}, 0, 1));
 
 					return std::move(map);
 				})(), 1, 1);
 
-				static const unsigned int nb_vertices = 3;
+				// Create a new face in this group of faces
+				params.surface->faces.emplace_back();
 
-				Optional<std::string> triangles = parser->GetAttribute<std::string>("triangles");
-				Optional<std::string> strips = parser->GetAttribute<std::string>("strips");
-				Optional<std::string> fans = parser->GetAttribute<std::string>("fans");
-				
-				_3DXMLStructure::MaterialAttributes::ID old_surface = params.me->mCurrentSurface;
+				Face& face = params.surface->faces.back();
+
+				face.triangles = parser->GetAttribute<std::string>("triangles");
+				face.strips = parser->GetAttribute<std::string>("strips");
+				face.fans = parser->GetAttribute<std::string>("fans");
 
 				parser->ParseElement(mapping, params);
-
-				std::list<std::vector<unsigned int>> data;
-
-				if(triangles || strips || fans) {
-					auto it = params.me->mCurrentMeshes.emplace(params.me->mCurrentSurface,
-							_3DXMLStructure::ReferenceRep::Geometry(_3DXMLStructure::ReferenceRep::Geometry::MESH)
-					);
-
-					aiMesh* mesh = it->second.mesh.get();
-
-					if(triangles) {
-						data.clear();
-
-						params.me->ParseTriangles(*triangles, data);
-
-						// Compute the number of faces we will add to the mesh and allocate the necessary memory in one pass
-						unsigned int size = 0;
-						for(std::list<std::vector<unsigned int>>::iterator it(data.begin()), end(data.end()); it != end; ++it) {
-							size += (it->size() / 3);
-						}
-						mesh->Faces.Reserve(mesh->mNumFaces + size);
-
-						for(std::list<std::vector<unsigned int>>::iterator it(data.begin()), end(data.end()); it != end; ++it) {
-							for(unsigned int i = 0; i < it->size(); i += 3) {
-								aiFace face;
-
-								face.mNumIndices = nb_vertices;
-								face.mIndices = new unsigned int[nb_vertices];
-
-								for(unsigned int j = 0; j < nb_vertices; j++) {
-									face.mIndices[j] = (*it)[i + j];
-								}
-
-								mesh->Faces.Set(mesh->mNumFaces, face);
-							}
-						}
-					}
-				
-					if(strips) {
-						data.clear();
-
-						params.me->ParseTriangles(*strips, data);
-
-						// Compute the number of faces we will add to the mesh and allocate the necessary memory in one pass
-						unsigned int size = 0;
-						for(std::list<std::vector<unsigned int>>::iterator it(data.begin()), end(data.end()); it != end; ++it) {
-							size += it->size() - 2;
-						}
-						mesh->Faces.Reserve(mesh->mNumFaces + size);
-
-						for(std::list<std::vector<unsigned int>>::iterator it(data.begin()), end(data.end()); it != end; ++it) {
-							bool inversed = false;
-
-							for(unsigned int i = 0; i < it->size() - (nb_vertices - 1); i++) {
-								aiFace face;
-
-								face.mNumIndices = nb_vertices;
-								face.mIndices = new unsigned int[nb_vertices];
-
-								for(unsigned int j = 0; j < nb_vertices; j++) {
-									if(! inversed) {
-										face.mIndices[j] = (*it)[i + j];
-									} else {
-										face.mIndices[j] = (*it)[i + nb_vertices - (j + 1)];
-									}
-								}
-
-								inversed = ! inversed;
-
-								mesh->Faces.Set(mesh->mNumFaces, face);
-							}
-						}
-					}
-				
-					if(fans) {
-						data.clear();
-
-						params.me->ParseTriangles(*fans, data);
-
-						// Compute the number of faces we will add to the mesh and allocate the necessary memory in one pass
-						unsigned int size = 0;
-						for(std::list<std::vector<unsigned int>>::iterator it(data.begin()), end(data.end()); it != end; ++it) {
-							size += it->size() - 2;
-						}
-						mesh->Faces.Reserve(mesh->mNumFaces + size);
-
-						for(std::list<std::vector<unsigned int>>::iterator it(data.begin()), end(data.end()); it != end; ++it) {		
-							for(unsigned int i = 0; i < it->size() - (nb_vertices - 1); i++) {
-								aiFace face;
-
-								face.mNumIndices = nb_vertices;
-								face.mIndices = new unsigned int[nb_vertices];
-							
-								face.mIndices[0] = (*it)[0];
-								for(unsigned int j = 1; j < nb_vertices; j++) {
-									face.mIndices[j] = (*it)[i + j];
-								}
-							
-								mesh->Faces.Set(mesh->mNumFaces, face);
-							}
-						}
-					}
-				}
-
-				params.me->mCurrentSurface = old_surface;
 			}, 1, XMLParser::XSD::unbounded));
 			
 			return std::move(map);
 		})(), 1, 1);
 
-		_3DXMLStructure::MaterialAttributes::ID old_surface = mCurrentSurface;
+		if(mCurrentRep) {
+			// Add a new group of faces to the current PolygonalRep
+			mCurrentRep->surfaces.emplace_back();
 
-		params.me = this;
+			params.me = this;
+			params.surface = &(mCurrentRep->surfaces.back());
 
-		mReader.ParseElement(mapping, params);
-
-		mCurrentSurface = old_surface;
+			mReader.ParseElement(mapping, params);
+		}
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	void _3DXMLRepresentation::ReadEdges() { PROFILER;
 		struct Params {
 			_3DXMLRepresentation* me;
+			Edges* lines;
 		} params;
 
 		static const XMLParser::XSD::Sequence<Params> mapping(([](){
 			XMLParser::XSD::Sequence<Params>::type map;
 
 			// Parse LineAttributes element
-			map.emplace_back("LineAttributes", XMLParser::XSD::Element<Params>([](const XMLParser* /*parser*/, Params& params){params.me->ReadLineAttributes();}, 0, 1));
+			map.emplace_back("LineAttributes", XMLParser::XSD::Element<Params>([](const XMLParser* /*parser*/, Params& params){
+				params.me->ReadLineAttributes(params.lines->line_attribute);
+			}, 0, 1));
 
 			// Parse Polyline element
 			map.emplace_back("Polyline", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
@@ -566,69 +769,41 @@ namespace Assimp {
 
 					// Parse LineAttributes element
 					map.emplace_back("LineAttributes", XMLParser::XSD::Element<Params>([](const XMLParser* /*parser*/, Params& params){
-						params.me->ReadLineAttributes();
+						params.me->ReadLineAttributes(params.lines->edges.back().line_attribute);
 					}, 0, 1));
 
 					return std::move(map);
 				})(), 1, 1);
 
-				Optional<std::string> vertices = parser->GetAttribute<std::string>("vertices");
+				// Create a new line in this group of lines
+				params.lines->edges.emplace_back();
 
-				_3DXMLStructure::MaterialAttributes::ID old_line = params.me->mCurrentLine;
+				Polyline& edge = params.lines->edges.back();
+
+				edge.vertices = parser->GetAttribute<std::string>("vertices");
 
 				parser->ParseElement(mapping, params);
-
-				std::vector<aiVector3D> lines;
-				if(vertices) {
-					params.me->ParseArray(*vertices, lines);
-				}
-
-				if(! lines.empty()) {
-					auto it = params.me->mCurrentMeshes.emplace(params.me->mCurrentLine,
-							_3DXMLStructure::ReferenceRep::Geometry(_3DXMLStructure::ReferenceRep::Geometry::LINES)
-					);
-
-					aiMesh* mesh = it->second.mesh.get();
-
-					const unsigned int nb_faces = lines.size() - 1;
-					unsigned int index = mesh->mNumVertices;
-
-					// Compute the number of faces and vertices we will add to the mesh and allocate the necessary memory in one pass
-					mesh->Faces.Reserve(mesh->mNumFaces + nb_faces);
-					mesh->Vertices.Reserve(mesh->mNumVertices + nb_faces * 2);
-
-					for(unsigned int i = 0; i < lines.size() - 1; i++, index += 2) {
-						mesh->Vertices.Set(index, lines[i]);
-						mesh->Vertices.Set(index + 1, lines[i + 1]);
-						
-						aiFace face;
-						face.Indices.Set(face.mNumIndices, index);
-						face.Indices.Set(face.mNumIndices, index + 1);
-
-						mesh->Faces.Set(mesh->mNumFaces, face);
-					}
-				}
-
-				params.me->mCurrentLine = old_line;
 			}, 1, XMLParser::XSD::unbounded));
 			
 			return std::move(map);
 		})(), 1, 1);
 
-		_3DXMLStructure::MaterialAttributes::ID old_line = mCurrentLine;
+		if(mCurrentRep) {
+			// Add a new group of lines to the current PolygonalRep
+			mCurrentRep->lines.emplace_back();
 
-		params.me = this;
+			params.me = this;
+			params.lines = &(mCurrentRep->lines.back());
 
-		mReader.ParseElement(mapping, params);
-
-		mCurrentLine = old_line;
+			mReader.ParseElement(mapping, params);
+		}
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	void _3DXMLRepresentation::ReadVertexBuffer() { PROFILER;
 		struct Params {
 			_3DXMLRepresentation* me;
-			std::unique_ptr<aiMesh> mesh;
+			aiMesh* vertex_buffer;
 		} params;
 
 		static const XMLParser::XSD::Sequence<Params> mapping(([](){
@@ -638,14 +813,14 @@ namespace Assimp {
 			map.emplace_back("Positions", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
 				std::string vertices = *(parser->GetContent<std::string>(true));
 
-				params.me->ParseArray(vertices, params.mesh->Vertices, 0);
+				params.me->ParseArray(vertices, params.vertex_buffer->Vertices, 0);
 			}, 1, 1));
 			
 			// Parse Normals element
 			map.emplace_back("Normals", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
 				std::string normals = *(parser->GetContent<std::string>(true));
 
-				params.me->ParseArray(normals, params.mesh->Normals, 0);
+				params.me->ParseArray(normals, params.vertex_buffer->Normals, 0);
 			}, 0, 1));
 			
 			// Parse TextureCoordinates element
@@ -676,9 +851,9 @@ namespace Assimp {
 					params.me->ThrowException("Invalid dimension for texture coordinate format \"" + format + "\".");
 				}
 
-				params.mesh->mNumUVComponents[channel] = dimension;
+				params.vertex_buffer->mNumUVComponents[channel] = dimension;
 
-				params.me->ParseMultiArray(coordinates, params.mesh->TextureCoords, channel, 0, dimension);
+				params.me->ParseMultiArray(coordinates, params.vertex_buffer->TextureCoords, channel, 0, dimension);
 			}, 0, XMLParser::XSD::unbounded));
 			
 			// Parse DiffuseColors element
@@ -687,9 +862,9 @@ namespace Assimp {
 				std::string color = *(parser->GetContent<std::string>(true));
 
 				if(format.compare("RGB") == 0) {
-					params.me->ParseMultiArray(color, params.mesh->Colors, 0, 0, false);
+					params.me->ParseMultiArray(color, params.vertex_buffer->Colors, 0, 0, false);
 				} else if(format.compare("RGBA") == 0) {
-					params.me->ParseMultiArray(color, params.mesh->Colors, 0, 0, true);
+					params.me->ParseMultiArray(color, params.vertex_buffer->Colors, 0, 0, true);
 				} else {
 					params.me->ThrowException("Unsupported color format \"" + format + "\".");
 				}
@@ -701,9 +876,9 @@ namespace Assimp {
 				std::string color = *(parser->GetContent<std::string>(true));
 
 				if(format.compare("RGB") == 0) {
-					params.me->ParseMultiArray(color, params.mesh->Colors, 1, 0, false);
+					params.me->ParseMultiArray(color, params.vertex_buffer->Colors, 1, 0, false);
 				} else if(format.compare("RGBA") == 0) {
-					params.me->ParseMultiArray(color, params.mesh->Colors, 1, 0, true);
+					params.me->ParseMultiArray(color, params.vertex_buffer->Colors, 1, 0, true);
 				} else {
 					params.me->ThrowException("Unsupported color format \"" + format + "\".");
 				}
@@ -712,115 +887,21 @@ namespace Assimp {
 			return std::move(map);
 		})(), 1, 1);
 
+		if(mCurrentRep->vertex_buffer.mNumVertices != 0) {
+			ThrowException("Multiple VertexBuffer detected for one PolygonalRep.");
+		}
+
 		params.me = this;
-		params.mesh = std::unique_ptr<aiMesh>(new aiMesh());
+		params.vertex_buffer = &(mCurrentRep->vertex_buffer);
 
 		mReader.ParseElement(mapping, params);
-
-		if(params.mesh->mNumVertices != 0) {
-			// Duplicate the vertices to avoid different faces sharing the same (and to pass the ValidateDataStructure test...)
-			for(_3DXMLStructure::ReferenceRep::Meshes::iterator it(mCurrentMeshes.begin()), end(mCurrentMeshes.end()); it != end; ++it) {
-				if(it->second.type == _3DXMLStructure::ReferenceRep::Geometry::MESH) {
-					aiMesh* mesh = it->second.mesh.get();
-
-					// Compute the final number of vertices for this mesh
-					unsigned int final_vertices_size = mesh->mNumVertices;
-					for(unsigned int i = 0; i < mesh->mNumFaces; i++) {
-						final_vertices_size += mesh->mFaces[i].mNumIndices;
-					}
-
-					// Make sure all the source arrays are exactly the same size
-					if(params.mesh->HasPositions()) {
-						params.mesh->Vertices.Reserve(params.mesh->mNumVertices);
-					}
-					if(params.mesh->HasNormals()) {
-						params.mesh->Normals.Reserve(params.mesh->mNumVertices);
-					}
-					if(params.mesh->HasTangentsAndBitangents()) {
-						params.mesh->Tangents.Reserve(params.mesh->mNumVertices);
-						params.mesh->Bitangents.Reserve(params.mesh->mNumVertices);
-					}
-					for(unsigned int k = 0; k < AI_MAX_NUMBER_OF_TEXTURECOORDS; k++) {
-						if(params.mesh->HasTextureCoords(k)) {
-							params.mesh->TextureCoords.Get(k).Reserve(params.mesh->mNumVertices);
-						}
-					}
-					for(unsigned int k = 0; k < AI_MAX_NUMBER_OF_COLOR_SETS; k++) {
-						if(params.mesh->HasVertexColors(k)) {
-							params.mesh->Colors.Get(k).Reserve(params.mesh->mNumVertices);
-						}
-					}
-
-					// Make sure the destination arrays are allocated to the correct size, even if no data is present
-					if(mesh->HasPositions() || params.mesh->HasPositions()) {
-						mesh->Vertices.Reserve(final_vertices_size);
-					}
-					if(mesh->HasNormals() || params.mesh->HasNormals()) {
-						mesh->Normals.Reserve(final_vertices_size);
-					}
-					if(mesh->HasTangentsAndBitangents() || params.mesh->HasTangentsAndBitangents()) {
-						mesh->Tangents.Reserve(final_vertices_size);
-						mesh->Bitangents.Reserve(final_vertices_size);
-					}
-					for(unsigned int k = 0; k < AI_MAX_NUMBER_OF_TEXTURECOORDS; k++) {
-						if(mesh->HasTextureCoords(k) || params.mesh->HasTextureCoords(k)) {
-							mesh->mNumUVComponents[k] = std::max(mesh->mNumUVComponents[k], params.mesh->mNumUVComponents[k]);
-							mesh->TextureCoords.Get(k).Reserve(final_vertices_size);
-						}
-					}
-					for(unsigned int k = 0; k < AI_MAX_NUMBER_OF_COLOR_SETS; k++) {
-						if(mesh->HasVertexColors(k) || params.mesh->HasVertexColors(k)) {
-							mesh->Colors.Get(k).Reserve(final_vertices_size);
-						}
-					}
-
-					unsigned int vertice_index = mesh->mNumVertices;
-
-					// Duplicate the vertices to avoid joined vertices (or validation of the structure will fail)
-					for(unsigned int i = 0; i < mesh->mNumFaces; i++) {
-						aiFace& face = mesh->mFaces[i];
-
-						for(unsigned int j = 0; j < face.mNumIndices; j++) {
-							unsigned int index = face.mIndices[j];
-
-							face.mIndices[j] = vertice_index;
-
-							if(params.mesh->HasPositions()) {
-								mesh->mVertices[vertice_index] = params.mesh->mVertices[index];
-							}
-							if(params.mesh->HasNormals()) {
-								mesh->mNormals[vertice_index] = params.mesh->mNormals[index];
-							}
-							if(params.mesh->HasTangentsAndBitangents()) {
-								mesh->mTangents[vertice_index] = params.mesh->mTangents[index];
-								mesh->mBitangents[vertice_index] = params.mesh->mBitangents[index];
-							}
-							for(unsigned int k = 0; k < AI_MAX_NUMBER_OF_TEXTURECOORDS; k++) {
-								if(params.mesh->HasTextureCoords(k)) {
-									mesh->mTextureCoords[k][vertice_index] = params.mesh->mTextureCoords[k][index];
-								}
-							}
-							for(unsigned int k = 0; k < AI_MAX_NUMBER_OF_COLOR_SETS; k++) {
-								if(params.mesh->HasVertexColors(k)) {
-									mesh->mColors[k][vertice_index] = params.mesh->mColors[k][index];
-								}
-							}
-
-							vertice_index++;
-						}
-					}
-
-					mesh->mNumVertices = vertice_index;
-				}
-			}
-		}
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLRepresentation::ReadSurfaceAttributes() { PROFILER;
+	void _3DXMLRepresentation::ReadSurfaceAttributes(_3DXMLStructure::MaterialAttributes::ID& attributes) { PROFILER;
 		struct Params {
 			_3DXMLRepresentation* me;
-			_3DXMLStructure::MaterialAttributes::ID previous_surface;
+			_3DXMLStructure::MaterialAttributes* attributes;
 		} params;
 
 		//TODO: SurfaceAttribute is a choice and MaterialApplication is a sequence in {1, unbounded}, therefore we are not strictly compliant with 3DXML schemas v4.x
@@ -834,7 +915,7 @@ namespace Assimp {
 				float blue = *(parser->GetAttribute<float>("blue", true));
 				Optional<float> alpha = parser->GetAttribute<float>("alpha");
 
-				aiColor4D& color = params.me->mCurrentSurface->color;
+				aiColor4D& color = params.attributes->color;
 				color.r = red;
 				color.g = green;
 				color.b = blue;
@@ -846,39 +927,34 @@ namespace Assimp {
 				}
 
 				// Record that we defined a color
-				params.me->mCurrentSurface->is_color = true;
-
-				// Add the MaterialApplication of the previous material in the stack
-				if(params.previous_surface) {
-					for(auto it(params.previous_surface->materials.begin()), end(params.previous_surface->materials.end()); it != end; ++it) {
-						params.me->mCurrentSurface->materials.emplace_back(*it);
-					}
-				}
+				params.attributes->is_color = true;
 			}, 0, 1));
 
 			// Parse MaterialApplication elements
 			map.emplace_back("MaterialApplication", XMLParser::XSD::Element<Params>([](const XMLParser* /*parser*/, Params& params){
-				params.me->ReadMaterialApplication();
+				params.me->ReadMaterialApplication(params.attributes);
 			}, 0, XMLParser::XSD::unbounded));
 			
 			return std::move(map);
 		})(), 1, 1);
 
 		if(mReader.HasElements()) {
-			// Record the parameters of the previous material in the stack (in case we have a color)
-			params.previous_surface = mCurrentSurface;
+			if(attributes) {
+				ThrowException("Multiple SurfaceAttributes detected for one PolygonalRep.");
+			}
 
 			// Create the new surface attributes
-			mCurrentSurface = _3DXMLStructure::MaterialAttributes::ID(new _3DXMLStructure::MaterialAttributes());
+			attributes = _3DXMLStructure::MaterialAttributes::ID(new _3DXMLStructure::MaterialAttributes());
 
 			params.me = this;
+			params.attributes = &(*attributes);
 
 			mReader.ParseElement(mapping, params);
 		}
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLRepresentation::ReadMaterialApplication() { PROFILER;
+	void _3DXMLRepresentation::ReadMaterialApplication(_3DXMLStructure::MaterialAttributes* attributes) { PROFILER;
 		struct Params {
 			_3DXMLRepresentation* me;
 			_3DXMLStructure::MaterialAttributes* attributes;
@@ -977,7 +1053,7 @@ namespace Assimp {
 		}
 
 		params.me = this;
-		params.attributes = &(*mCurrentSurface);
+		params.attributes = attributes;
 
 		mReader.ParseElement(mapping, params);
 
@@ -989,10 +1065,10 @@ namespace Assimp {
 	}
 	
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLRepresentation::ReadLineAttributes() { PROFILER;
+	void _3DXMLRepresentation::ReadLineAttributes(_3DXMLStructure::MaterialAttributes::ID& attributes) { PROFILER;
 		struct Params {
 			_3DXMLRepresentation* me;
-			_3DXMLStructure::MaterialAttributes::ID previous_line;
+			_3DXMLStructure::MaterialAttributes* attributes;
 		} params;
 
 		static const XMLParser::XSD::Sequence<Params> mapping(([](){
@@ -1005,7 +1081,7 @@ namespace Assimp {
 				float blue = *(parser->GetAttribute<float>("blue", true));
 				Optional<float> alpha = parser->GetAttribute<float>("alpha");
 
-				aiColor4D& color = params.me->mCurrentLine->color;
+				aiColor4D& color = params.attributes->color;
 				color.r = red;
 				color.g = green;
 				color.b = blue;
@@ -1017,27 +1093,22 @@ namespace Assimp {
 				}
 
 				// Record that we defined a color
-				params.me->mCurrentLine->is_color = true;
-
-				// Add the MaterialApplication of the previous material in the stack
-				if(params.previous_line) {
-					for(auto it(params.previous_line->materials.begin()), end(params.previous_line->materials.end()); it != end; ++it) {
-						params.me->mCurrentLine->materials.emplace_back(*it);
-					}
-				}
+				params.attributes->is_color = true;
 			}, 0, 1));
 			
 			return std::move(map);
 		})(), 1, 1);
 
 		if(mReader.HasElements()) {
-			// Record the parameters of the previous material in the stack (in case we have a color)
-			params.previous_line = mCurrentLine;
+			if(attributes) {
+				ThrowException("Multiple LineAttributes detected for one PolygonalRep.");
+			}
 
 			// Create the new line attributes
-			mCurrentLine = _3DXMLStructure::MaterialAttributes::ID(new _3DXMLStructure::MaterialAttributes());
+			attributes = _3DXMLStructure::MaterialAttributes::ID(new _3DXMLStructure::MaterialAttributes());
 
 			params.me = this;
+			params.attributes = &(*attributes);
 			//TODO: support lineType & thickness?
 
 			mReader.ParseElement(mapping, params);
