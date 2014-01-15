@@ -557,15 +557,9 @@ namespace Assimp {
 				}
 				
 				// If a color is defined
-				if((*it_mat)->is_color) {
-					if(material) {
-						// We use the color as the ambient component of the defined material
-						material->RemoveProperty(AI_MATKEY_COLOR_AMBIENT);
-						material->AddProperty(&((*it_mat)->color), 1, AI_MATKEY_COLOR_AMBIENT);
-					} else {
-						// We generate a new material based on the color
-						BuildColorMaterial(material, "Color Material " + parser->ToString(color_mat_counter++), (*it_mat)->color);
-					}
+				if((*it_mat)->is_color && ! material) {
+					// We use the color only if no complex material is defined (seems to be the behavior of 3DXML Player)
+					BuildColorMaterial(material, "Color Material " + parser->ToString(color_mat_counter++), (*it_mat)->color);
 				}
 			} else {
 				// Default material
@@ -793,6 +787,11 @@ namespace Assimp {
 
 					// Build the hierarchy recursively
 					BuildStructure(parser, root, mContent.scene->mRootNode, Optional<unsigned int>());
+
+					// Test if we have some meshes. If not, validation step will fail and it probably means that the file use the binary representation for meshes (UVR format).
+					if(mContent.scene->mNumMeshes == 0) {
+						ThrowException(parser, "The scene does not contain any mesh. The meshes are probably defined in the unsupported binary format.");
+					}
 				} else {
 					ThrowException(parser, "The root Reference3D should not be instantiated.");
 				}

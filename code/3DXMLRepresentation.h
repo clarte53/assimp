@@ -54,20 +54,67 @@ namespace Assimp {
 
 		protected:
 
+			struct Face {
+
+				_3DXMLStructure::MaterialAttributes::ID surface_attribute;
+
+				Optional<std::string> triangles;
+
+				Optional<std::string> strips;
+
+				Optional<std::string> fans;
+
+			}; // struct Face
+
+			struct Faces {
+
+				_3DXMLStructure::MaterialAttributes::ID surface_attribute;
+
+				std::list<Face> faces;
+
+			}; // struct Faces
+
+			struct Polyline {
+
+				_3DXMLStructure::MaterialAttributes::ID line_attribute;
+
+				Optional<std::string> vertices;
+
+			}; // struct Polyline
+
+			struct Edges {
+
+
+				_3DXMLStructure::MaterialAttributes::ID line_attribute;
+
+				std::list<Polyline> edges;
+
+			}; // struct Edges
+
+			struct PolygonalRep {
+
+				_3DXMLStructure::MaterialAttributes::ID surface_attribute;
+
+				_3DXMLStructure::MaterialAttributes::ID line_attribute;
+
+				std::list<Faces> surfaces;
+
+				std::list<Edges> lines;
+
+				aiMesh vertex_buffer;
+
+				_3DXMLStructure::ReferenceRep::Meshes meshes;
+
+			}; // struct PolygonalRep
+
 			/** xml reader */
 			XMLParser mReader;
 
+			/** Data corresponding to the currently parsed PolygonalRep */
+			std::unique_ptr<PolygonalRep> mCurrentRep;
+
 			/** List containing the parsed meshes */
 			_3DXMLStructure::ReferenceRep::Meshes& mMeshes;
-
-			/** List geometries corresponding to the currently parsed PolygonalRep */
-			_3DXMLStructure::ReferenceRep::Meshes mCurrentMeshes;
-
-			/** The material of the mesh currently parsed */
-			_3DXMLStructure::MaterialAttributes::ID mCurrentSurface;
-
-			/** The material of the lines currently parsed */
-			_3DXMLStructure::MaterialAttributes::ID mCurrentLine;
 
 			/** List of files this representation depends on */
 			_3DXMLStructure::Dependencies& mDependencies;
@@ -79,6 +126,8 @@ namespace Assimp {
 			virtual ~_3DXMLRepresentation();
 
 		protected:
+
+			static void PropagateAttributes(_3DXMLStructure::MaterialAttributes::ID& parent, _3DXMLStructure::MaterialAttributes::ID& child);
 
 			/** Aborts the file reading with an exception */
 			void ThrowException(const std::string& error) const;
@@ -93,6 +142,14 @@ namespace Assimp {
 
 			void ParseTriangles(const std::string& content, std::list<std::vector<unsigned int>>& triangles) const;
 
+			void ParseFaces(const Face& face);
+
+			void ParseEdges(const Polyline& edge);
+
+			void ParseVertexBuffer();
+
+			void ParsePolygonalRep();
+
 			void ReadVisualizationRep();
 
 			void ReadBagRep();
@@ -105,11 +162,11 @@ namespace Assimp {
 
 			void ReadVertexBuffer();
 
-			void ReadSurfaceAttributes();
+			void ReadSurfaceAttributes(_3DXMLStructure::MaterialAttributes::ID& attributes);
 
-			void ReadMaterialApplication();
+			void ReadMaterialApplication(_3DXMLStructure::MaterialAttributes* attributes);
 
-			void ReadLineAttributes();
+			void ReadLineAttributes(_3DXMLStructure::MaterialAttributes::ID& attributes);
 
 	}; // class _3DXMLRepresentation
 
