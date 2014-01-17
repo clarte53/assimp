@@ -119,7 +119,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 	}
 
 	public interface MutableDynamicArray<T> : DynamicArray<T> {
-		void Set(uint index, T value);
+		bool Set(uint index, T value);
 	}
 
 	public interface MultiArray<T> : DynamicArray<T> {
