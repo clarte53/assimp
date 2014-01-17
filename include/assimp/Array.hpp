@@ -157,8 +157,11 @@ class Array {
 		
 		inline T Get(unsigned int index) {
 			#ifdef ASSIMP_BUILD_DEBUG
-				if(mData == NULL || (*mData) == NULL || index >= Size()) {
-					throw std::out_of_range("Invalid index to unallocated memory");
+				if(mData == NULL || mSize == NULL) {
+					throw std::out_of_range("Invalid access to uninitialized array.");
+				}
+				if((*mData) == NULL || index >= Size()) {
+					throw std::out_of_range("Invalid index to unallocated memory.");
 				}
 			#endif
 			
@@ -168,8 +171,16 @@ class Array {
 		}
 		
 		// Warning: copy the value into the data array
-		inline void Set(unsigned int index, const T& value) {
-			if(mData != NULL) {
+		inline bool Set(unsigned int index, const T& value) {
+			#ifdef ASSIMP_BUILD_DEBUG
+				if(mData == NULL || mSize == NULL) {
+					throw std::out_of_range("Invalid access to uninitialized array.");
+				}
+			#endif
+			
+			bool result = false;
+
+			if(mData != NULL || mSize == NULL) {
 				if(index + 1 > Size()) {
 					(*mSize) = index + 1;
 				}
@@ -177,7 +188,10 @@ class Array {
 				Update();
 
 				(*mData)[index] = value;
+				result = true;
 			}
+
+			return result;
 		}
 		
 	protected:
@@ -291,8 +305,11 @@ class Array<T*> {
 		
 		inline T& Get(unsigned int index) {
 			#ifdef ASSIMP_BUILD_DEBUG
-				if(mData == NULL || (*mData) == NULL || index >= Size()) {
-					throw std::out_of_range("Invalid index to unallocated memory");
+				if(mData == NULL || mSize == NULL) {
+					throw std::out_of_range("Invalid access to uninitialized array.");
+				}
+				if((*mData) == NULL || index >= Size()) {
+					throw std::out_of_range("Invalid index to unallocated memory.");
 				}
 			#endif
 			
@@ -302,8 +319,16 @@ class Array<T*> {
 		}
 		
 		// Warning: copy the pointer into the data array but does not take ownership of it (you still have to free the associated memory)
-		inline void Set(unsigned int index, T* value) {
-			if(mData != NULL) {
+		inline bool Set(unsigned int index, T* value) {
+			#ifdef ASSIMP_BUILD_DEBUG
+				if(mData == NULL || mSize == NULL) {
+					throw std::out_of_range("Invalid access to uninitialized array.");
+				}
+			#endif
+
+			bool result = false;
+
+			if(mData != NULL || mSize == NULL) {
 				if(index + 1 > Size()) {
 					(*mSize) = index + 1;
 				}
@@ -311,7 +336,10 @@ class Array<T*> {
 				Update();
 
 				(*mData)[index] = value;
+				result = true;
 			}
+
+			return result;
 		}
 		
 	protected:
@@ -378,18 +406,24 @@ class MultiArray {
 		
 		inline Array<T>& Get(unsigned int index) const {
 			#ifdef ASSIMP_BUILD_DEBUG
-				if(mData == NULL || index >= Size()) {
-					throw std::out_of_range("Invalid index to unallocated memory");
+				if(mData == NULL) {
+					throw std::out_of_range("Invalid access to uninitialized array.");
+				}
+				if(index >= Size()) {
+					throw std::out_of_range("Invalid index to unallocated memory.");
 				}
 			#endif
 			
 			return *(mData[index]);
 		}
 		
-		inline void Set(unsigned int index, Array<T>* value, bool dealloc = true) const {
+		inline bool Set(unsigned int index, Array<T>* value, bool dealloc = true) const {
 			#ifdef ASSIMP_BUILD_DEBUG
-				if(mData == NULL || index >= Size()) {
-					throw std::out_of_range("Invalid index to unallocated memory");
+				if(mData == NULL) {
+					throw std::out_of_range("Invalid access to uninitialized array.");
+				}
+				if(index >= Size()) {
+					throw std::out_of_range("Invalid index to unallocated memory.");
 				}
 			#endif
 
@@ -398,6 +432,8 @@ class MultiArray {
 			}
 			
 			mData[index] = value;
+
+			return true;
 		}
 
 	protected:
@@ -434,22 +470,30 @@ class FixedArray {
 		
 		inline T Get(unsigned int index) const {
 			#ifdef ASSIMP_BUILD_DEBUG
-				if(mData == NULL || index >= Size()) {
-					throw std::out_of_range("Invalid index to unallocated memory");
+				if(mData == NULL) {
+					throw std::out_of_range("Invalid access to uninitialized array.");
+				}
+				if(index >= Size()) {
+					throw std::out_of_range("Invalid index to unallocated memory.");
 				}
 			#endif
 			
 			return mData[index];
 		}
 		
-		inline void Set(unsigned int index, const T& value) const {
+		inline bool Set(unsigned int index, const T& value) const {
 			#ifdef ASSIMP_BUILD_DEBUG
-				if(mData == NULL || index >= Size()) {
-					throw std::out_of_range("Invalid index to unallocated memory");
+				if(mData == NULL) {
+					throw std::out_of_range("Invalid access to uninitialized array.");
+				}
+				if(index >= Size()) {
+					throw std::out_of_range("Invalid index to unallocated memory.");
 				}
 			#endif
 			
 			mData[index] = value;
+
+			return true;
 		}
 		
 	protected:

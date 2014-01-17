@@ -483,8 +483,6 @@ SET( PostProcessing_SRCS
 	SortByPTypeProcess.h
 	SplitLargeMeshes.cpp
 	SplitLargeMeshes.h
-	TerragenLoader.cpp
-	TerragenLoader.h
 	TextureTransform.cpp
 	TextureTransform.h
 	TriangulateProcess.cpp
@@ -541,6 +539,12 @@ SET( STL_SRCS
 	STLExporter.cpp
 )
 SOURCE_GROUP( STL FILES ${STL_SRCS})
+
+SET( Terragen_SRCS
+	TerragenLoader.cpp
+	TerragenLoader.h
+)
+SOURCE_GROUP( Terragen FILES ${Terragen_SRCS})
 
 SET( Unreal_SRCS
 	UnrealLoader.cpp
@@ -678,6 +682,7 @@ SET( assimp_src
 	${Raw_SRCS}
 	${SMD_SRCS}
 	${STL_SRCS}
+	${Terragen_SRCS}
 	${Unreal_SRCS}
 	${XFile_SRCS}
 	${Extra_SRCS}
