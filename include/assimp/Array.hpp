@@ -161,7 +161,7 @@ class Array {
 			return (*mSize);
 		}
 		
-		inline T Get(unsigned int index) {
+		inline T& Get(unsigned int index) {
 			Update();
 			
 			#ifdef ASSIMP_BUILD_DEBUG
@@ -466,7 +466,7 @@ class FixedArray {
 			return mSize;
 		}
 		
-		inline T Get(unsigned int index) const {
+		inline T& Get(unsigned int index) const {
 			#ifdef ASSIMP_BUILD_DEBUG
 				if(mData == NULL) {
 					throw std::out_of_range("Invalid access to uninitialized array.");

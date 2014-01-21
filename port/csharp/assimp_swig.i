@@ -136,6 +136,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %}
 }
 
+%typemap(cstype) unsigned int*, unsigned int& "uint"
+%typemap(csout, excode=SWIGEXCODE) unsigned int*, unsigned int& {
+	uint ret = (uint) Marshal.ReadInt32($imcall);$excode
+	return ret;
+}
+
 %define ENUM_FLAGS_DECL(TYPE)
 %typemap(csclassmodifiers) TYPE %{[System.Flags] public enum%}
 %enddef
