@@ -463,12 +463,20 @@ ADD_UNMANAGED_OPTION(aiScene);
 %ignore aiScene::mPrivate;
 
 /////// aiString 
+ADD_UNMANAGED_OPTION(aiString);
 %rename(Data) aiString::data;
 %rename(Length) aiString::length;
 %typemap(cscode) aiString %{
-	public override string ToString() {
-		return Data;
-	}
+  public override string ToString() {
+    return Data;
+  }
+
+  // We need to define manually this method because swig seems to not accept multiple 'cscode' typemaps for the same class
+  public aiString Unmanaged() {
+    this.swigCMemOwn = false;
+		
+    return this;
+  }
 %}
 
 /////// aiTexel 
