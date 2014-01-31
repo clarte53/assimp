@@ -119,7 +119,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 	}
 
 	public interface MutableDynamicArray<T> : DynamicArray<T> {
-		void Set(uint index, T value);
+		bool Set(uint index, T value);
 	}
 
 	public interface MultiArray<T> : DynamicArray<T> {
@@ -134,6 +134,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 		void Clear();
 	}
 %}
+}
+
+%typemap(cstype) unsigned int*, unsigned int& "uint"
+%typemap(csout, excode=SWIGEXCODE) unsigned int*, unsigned int& {
+	uint ret = (uint) Marshal.ReadInt32($imcall);$excode
+	return ret;
 }
 
 %define ENUM_FLAGS_DECL(TYPE)
@@ -457,12 +463,20 @@ ADD_UNMANAGED_OPTION(aiScene);
 %ignore aiScene::mPrivate;
 
 /////// aiString 
+ADD_UNMANAGED_OPTION(aiString);
 %rename(Data) aiString::data;
 %rename(Length) aiString::length;
 %typemap(cscode) aiString %{
-	public override string ToString() {
-		return Data;
-	}
+  public override string ToString() {
+    return Data;
+  }
+
+  // We need to define manually this method because swig seems to not accept multiple 'cscode' typemaps for the same class
+  public aiString Unmanaged() {
+    this.swigCMemOwn = false;
+		
+    return this;
+  }
 %}
 
 /////// aiTexel 
