@@ -1477,6 +1477,11 @@ namespace Assimp {
 			aiTexture* texture = img.texture.get();
 
 			if(mArchive->isOpen()) {
+				if(! mArchive->Exists(uri.filename.c_str())) {
+					// Try with a different filename encoding
+					BaseImporter::ConvertUTF8toISO8859_1(uri.filename);
+				}
+
 				if(mArchive->Exists(uri.filename.c_str())) {
 					// Open the manifest files
 					IOStream* stream = mArchive->Open(uri.filename.c_str());
