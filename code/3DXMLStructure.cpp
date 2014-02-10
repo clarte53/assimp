@@ -190,8 +190,16 @@ namespace Assimp {
 	
 	// ------------------------------------------------------------------------------------------------
 	bool _3DXMLStructure::MaterialAttributes::operator<(const MaterialAttributes& other) const {
-		return color < other.color || (
-			color == other.color && list_less<MaterialApplication>()(materials, other.materials)
+		return (
+			is_color < other.is_color || (
+				is_color == other.is_color && (
+					color < other.color || (
+						color == other.color && (
+							list_less<MaterialApplication>()(materials, other.materials)
+						)
+					)
+				)
+			)
 		);
 	}
 
