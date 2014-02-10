@@ -153,9 +153,11 @@ namespace Assimp {
 
 			std::list<MaterialApplication> materials;
 
+			bool is_color;
+
 			unsigned int index;
 
-			bool is_color;
+			std::map<unsigned int, unsigned int> uv_translation;
 
 			MaterialAttributes();
 

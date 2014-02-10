@@ -179,12 +179,12 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::MaterialAttributes::MaterialAttributes() : color(), materials(), index(0), is_color(false) {
+	_3DXMLStructure::MaterialAttributes::MaterialAttributes() : color(), materials(), is_color(false), index(0), uv_translation() {
 	
 	}
 	
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLStructure::MaterialAttributes::MaterialAttributes(MaterialAttributes&& other) : color(other.color), materials(std::move(other.materials)), index(other.index), is_color(other.is_color) {
+	_3DXMLStructure::MaterialAttributes::MaterialAttributes(MaterialAttributes&& other) : color(other.color), materials(std::move(other.materials)), is_color(other.is_color), index(other.index), uv_translation(std::move(other.uv_translation)) {
 	
 	}
 	

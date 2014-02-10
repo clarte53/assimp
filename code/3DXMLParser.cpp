@@ -369,9 +369,13 @@ namespace Assimp {
 							unsigned int channel = it_mat_app->first->channel;
 
 							// Set the correct channel for this material
-							// TODO: do it only for relevant properties?
 							for(unsigned int i = 0; i < mat->mNumProperties; ++i) {
-								mat->mProperties[i]->mIndex = channel;
+								aiMaterialProperty* prop = mat->mProperties[i];
+
+								// If the property defines a texture
+								if (std::string(prop->mKey.data).substr(0, 5).compare("$tex.") == 0) {
+									prop->mIndex = channel;
+								}
 							}
 
 							// Should we disable backface culling?
@@ -423,6 +427,45 @@ namespace Assimp {
 			} else {
 				// Default material
 				BuildColorMaterial(material, "Default material", aiColor4D(0.5, 0.5, 0.5, 1.0));
+			}
+
+			// Simplify UV channel when possible
+			if(material) {
+				std::set<unsigned int> channels;
+
+				for(unsigned int i = 0; i < material->mNumProperties; i++) {
+					aiMaterialProperty* prop = material->mProperties[i];
+
+					// If the property defines a texture
+					if (std::string(prop->mKey.data).compare("$tex.file") == 0)	{
+						 // Record the used channel index
+						channels.emplace(prop->mIndex);
+					}
+				}
+
+				unsigned int current_channel = 0;
+				for(std::set<unsigned int>::iterator it_channel(channels.begin()), end_channel(channels.end()); it_channel != end_channel; ++it_channel) {
+					if(*it_channel != current_channel) {
+						for(unsigned int i = 0; i < material->mNumProperties; ++i) {
+							aiMaterialProperty* prop = material->mProperties[i];
+
+							// If the property defines a texture
+							if (std::string(prop->mKey.data).substr(0, 5).compare("$tex.") == 0) {
+								// Set the new channel
+								prop->mIndex = current_channel;
+							}
+						}
+
+						// Record the channel translation to update the meshes
+						if(*it_mat) {
+							(*it_mat)->uv_translation.emplace(*it_channel, current_channel);
+						} else {
+							ThrowException(parser, "The default material should not defined uv translations.");
+						}
+
+						current_channel++;
+					}
+				}
 			}
 
 			// Get the index for this material
@@ -605,6 +648,17 @@ namespace Assimp {
 
 					// Save the index of the material to use
 					mesh_ptr->mMaterialIndex = index_mat;
+
+					// Translate the UVs based on the selected material
+					if(it_meshes->first) {
+						for(std::map<unsigned int, unsigned int>::iterator it_uv(it_meshes->first->uv_translation.begin()), end_uv(it_meshes->first->uv_translation.end()); it_uv != end_uv; ++it_uv) {
+							mesh_ptr->mNumUVComponents[it_uv->second] = mesh_ptr->mNumUVComponents[it_uv->first];
+							mesh_ptr->mTextureCoords[it_uv->second] = mesh_ptr->mTextureCoords[it_uv->first];
+
+							mesh_ptr->mNumUVComponents[it_uv->first] = 0;
+							mesh_ptr->mTextureCoords[it_uv->first] = NULL;
+						}
+					}
 
 					// Save the index of the mesh depending for the special material index corresponding to mixed materials defined at the mesh level
 					list_indexes.push_back(index_mesh);
