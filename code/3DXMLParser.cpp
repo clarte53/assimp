@@ -1692,19 +1692,21 @@ namespace Assimp {
 					aiTexture* texture = img->texture.get();
 
 					if(mArchive->isOpen()) {
-						if(! mArchive->Exists(uri.filename.c_str())) {
+						std::string file = uri.filename.c_str();
+
+						if(! mArchive->Exists(file.c_str())) {
 							// Try with a different filename encoding
-							BaseImporter::ConvertUTF8toISO8859_1(uri.filename);
+							BaseImporter::ConvertUTF8toISO8859_1(file);
 						}
 
-						if(mArchive->Exists(uri.filename.c_str())) {
+						if(mArchive->Exists(file.c_str())) {
 							// Open the manifest files
-							IOStream* stream = mArchive->Open(uri.filename.c_str());
+							IOStream* stream = mArchive->Open(file.c_str());
 							if(stream == nullptr) {
 								// because Q3BSPZipArchive (now) correctly close all open files automatically on destruction,
 								// we do not have to worry about closing the stream explicitly on exceptions
 
-								throw DeadlyImportError(uri.filename + " not found.");
+								throw DeadlyImportError(file + " not found.");
 							}
 
 							// Assume compressed textures are used, even if it is not the case.
