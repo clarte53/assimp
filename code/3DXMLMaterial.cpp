@@ -60,19 +60,26 @@ namespace Assimp {
 	_3DXMLMaterial::_3DXMLMaterial(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, aiMaterial* material, _3DXMLStructure::Dependencies& dependencies) : mReader(archive, filename), mMaterial(material), mDependencies(dependencies) { PROFILER;
 		struct Params {
 			_3DXMLMaterial* me;
+			GlobalData data;
 		} params;
 
 		static const XMLParser::XSD::Sequence<Params> mapping(([](){
 			XMLParser::XSD::Sequence<Params>::type map;
 
 			// Parse Feature element
-			map.emplace_back("Feature", XMLParser::XSD::Element<Params>([](const XMLParser* /*parser*/, Params& params){params.me->ReadFeature();}, 0, XMLParser::XSD::unbounded));
+			map.emplace_back("Feature", XMLParser::XSD::Element<Params>([](const XMLParser* /*parser*/, Params& params){params.me->ReadFeature(&params.data);}, 0, XMLParser::XSD::unbounded));
 			
 			return std::move(map);
 		})(), 1, 1);
 
 
 		params.me = this;
+		params.data.mapping_type = NONE;
+		params.data.mapping_operator = aiTextureMapping_UV;
+		params.data.has_transform = false;
+		params.data.ambient_coef = 1.0f;
+		params.data.diffuse_coef = 1.0f;
+		params.data.emissive_coef = 0.0f;
 
 		// Parse the 3DRep file
 		while(mReader.Next()) {
@@ -84,6 +91,49 @@ namespace Assimp {
 		}
 
 		mReader.Close();
+
+		SetCoefficient(params.data.ambient_coef, AI_MATKEY_COLOR_AMBIENT);
+		SetCoefficient(params.data.diffuse_coef, AI_MATKEY_COLOR_DIFFUSE);
+		SetCoefficient(params.data.emissive_coef, AI_MATKEY_COLOR_EMISSIVE);
+
+		switch(params.data.mapping_type) {
+		case IMPLICIT_MAPPING:
+			params.data.mapping_operator = aiTextureMapping_UV;
+			mMaterial->AddProperty((int*) &params.data.mapping_operator, 1, AI_MATKEY_MAPPING_DIFFUSE(0));
+
+			break;
+		case OPERATOR_MAPPING:
+			if(params.data.mapping_operator != aiTextureMapping_UV) {
+				mMaterial->AddProperty((int*) &params.data.mapping_operator, 1, AI_MATKEY_MAPPING_DIFFUSE(0));
+			} else {
+				_3DXMLParser::LogMessage(Logger::Warn, "In Feature: Operator mapping defined but no operator provided.");
+
+				params.data.mapping_operator = aiTextureMapping_UV;
+				mMaterial->AddProperty((int*) &params.data.mapping_operator, 1, AI_MATKEY_MAPPING_DIFFUSE(0));
+			}
+
+			break;
+		case ENVIRONMENT_MAPPING:
+			_3DXMLParser::LogMessage(Logger::Err, "In Feature: Environment mapping not supported. Using UV coordinates instead.");
+
+			params.data.mapping_operator = aiTextureMapping_UV;
+			mMaterial->AddProperty((int*) &params.data.mapping_operator, 1, AI_MATKEY_MAPPING_DIFFUSE(0));
+
+			break;
+		default:
+			break;
+		}
+
+		if(params.data.has_transform) {
+			mMaterial->AddProperty(&params.data.transform, 1, AI_MATKEY_UVTRANSFORM_DIFFUSE(0));
+		}
+
+		// Default material options that have no equivalent in 3DXML
+		aiBlendMode blend = aiBlendMode_Default;
+		mMaterial->AddProperty((int*) &blend, 1, AI_MATKEY_BLEND_FUNC);
+
+		//TODO: AI_MATKEY_UVWSRC(t, n)
+		//TODO: AI_MATKEY_TEXMAP_AXIS(t, n)
 	}
 
 	// ------------------------------------------------------------------------------------------------
@@ -96,17 +146,25 @@ namespace Assimp {
 	void _3DXMLMaterial::ThrowException(const std::string& error) const { PROFILER;
 		throw DeadlyImportError(boost::str(boost::format("3DXML: %s - %s") % mReader.GetFilename() % error));
 	}
+
+	// ------------------------------------------------------------------------------------------------
+	void _3DXMLMaterial::SetCoefficient(float coef, const char* key, unsigned int type, unsigned int index) {
+		aiColor3D color;
+
+		if(mMaterial->Get(key, type, index, color) == aiReturn_SUCCESS) {
+			color = color * coef;
+
+			mMaterial->RemoveProperty(key, type, index);
+			mMaterial->AddProperty(&color, 1, key, type, index);
+		}
+	}
 	
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLMaterial::ReadFeature() { PROFILER;
-		enum MappingType {ENVIRONMENT_MAPPING, IMPLICIT_MAPPING, OPERATOR_MAPPING};
-
+	void _3DXMLMaterial::ReadFeature(GlobalData* data) { PROFILER;
 		struct Params {
 			_3DXMLMaterial* me;
 			std::string value;
-			MappingType mapping_type;
-			aiTextureMapping mapping_operator;
-			aiUVTransform transform;
+			GlobalData* data;
 		} params;
 
 		static const XMLParser::XSD::Sequence<Params> mapping(([](){
@@ -137,8 +195,10 @@ namespace Assimp {
 				static const std::map<std::string, std::function<void(Params&)>> attributes([]() {
 					std::map<std::string, std::function<void(Params&)>> map;
 
-					//TODO: AmbientCoef
-
+					map.emplace("AmbientCoef", [](Params& params) {
+						params.data->ambient_coef = params.me->ReadValue<float>(params.value);
+					});
+					
 					map.emplace("AmbientColor", [](Params& params) {
 						std::vector<float> values = params.me->ReadValues<float>(params.value);
 
@@ -150,8 +210,10 @@ namespace Assimp {
 							params.me->ThrowException("In attribute AmbientColor: invalid number of color components (" + params.me->mReader.ToString(values.size()) + " instead of 3).");
 						}
 					});
-
-					//TODO: DiffuseCoef
+					
+					map.emplace("DiffuseCoef", [](Params& params) {
+						params.data->diffuse_coef = params.me->ReadValue<float>(params.value);
+					});
 
 					map.emplace("DiffuseColor", [](Params& params) {
 						std::vector<float> values = params.me->ReadValues<float>(params.value);
@@ -164,7 +226,7 @@ namespace Assimp {
 							params.me->ThrowException("In attribute DiffuseColor: invalid number of color components (" + params.me->mReader.ToString(values.size()) + " instead of 3).");
 						}
 					});
-
+					
 					map.emplace("SpecularCoef", [](Params& params) {
 						float value = params.me->ReadValue<float>(params.value);
 
@@ -200,8 +262,10 @@ namespace Assimp {
 						params.me->mMaterial->AddProperty((int*) &shading, 1, AI_MATKEY_SHADING_MODEL);
 					});
 
-					//TODO: EmissiveCoeff
-
+					map.emplace("EmissiveCoeff", [](Params& params) {
+						params.data->emissive_coef = params.me->ReadValue<float>(params.value);
+					});
+					
 					map.emplace("EmissiveColor", [](Params& params) {
 						std::vector<float> values = params.me->ReadValues<float>(params.value);
 
@@ -213,7 +277,7 @@ namespace Assimp {
 							params.me->ThrowException("In attribute EmissiveColor: invalid number of color components (" + params.me->mReader.ToString(values.size()) + " instead of 3).");
 						}
 					});
-
+					
 					//TODO: BlendColor
 
 					map.emplace("Transparency", [](Params& params) {
@@ -223,7 +287,7 @@ namespace Assimp {
 
 						params.me->mMaterial->AddProperty(&value, 1, AI_MATKEY_OPACITY);
 					});
-
+					
 					map.emplace("Reflectivity", [](Params& params) {
 						float value = params.me->ReadValue<float>(params.value);
 
@@ -235,26 +299,26 @@ namespace Assimp {
 
 						params.me->mMaterial->AddProperty(&value, 1, AI_MATKEY_REFRACTI);
 					});
-
+					
 					map.emplace("MappingType", [](Params& params) {
 						int value = params.me->ReadValue<int>(params.value);
 
 						switch(value) {
 							case 0:
-								params.mapping_operator = aiTextureMapping_PLANE;
+								params.data->mapping_operator = aiTextureMapping_PLANE;
 								break;
 							case 1:
-								params.mapping_operator = aiTextureMapping_SPHERE; //TODO: Switch "aiTextureMapping_SPHERE" and "aiTextureMapping_BOX"?
+								params.data->mapping_operator = aiTextureMapping_SPHERE; //TODO: Switch "aiTextureMapping_SPHERE" and "aiTextureMapping_BOX"?
 								break;
 							case 2:
-								params.mapping_operator = aiTextureMapping_CYLINDER;
+								params.data->mapping_operator = aiTextureMapping_CYLINDER;
 								break;
 							default:
 							case 3:
-								params.mapping_operator = aiTextureMapping_BOX;
+								params.data->mapping_operator = aiTextureMapping_BOX;
 								break;
 							case 4:
-								params.mapping_operator = aiTextureMapping_OTHER;
+								params.data->mapping_operator = aiTextureMapping_OTHER;
 								break;
 						}
 					});
@@ -264,36 +328,41 @@ namespace Assimp {
 
 						switch(value) {
 							case 0:
-								params.mapping_type = ENVIRONMENT_MAPPING;
+								params.data->mapping_type = ENVIRONMENT_MAPPING;
 								break;
 							case 1:
-								params.mapping_type = IMPLICIT_MAPPING;
+								params.data->mapping_type = IMPLICIT_MAPPING;
 								break;
 							default:
 							case 2:
-								params.mapping_type = OPERATOR_MAPPING;
+								params.data->mapping_type = OPERATOR_MAPPING;
 								break;
 						}
 					});
 
 					map.emplace("TranslationU", [](Params& params) {
-						params.transform.mTranslation.x = params.me->ReadValue<float>(params.value);
+						params.data->transform.mTranslation.x = params.me->ReadValue<float>(params.value);
+						params.data->has_transform = true;
 					});
 
 					map.emplace("TranslationV", [](Params& params) {
-						params.transform.mTranslation.y = params.me->ReadValue<float>(params.value);
+						params.data->transform.mTranslation.y = params.me->ReadValue<float>(params.value);
+						params.data->has_transform = true;
 					});
 
 					map.emplace("Rotation", [](Params& params) {
-						params.transform.mRotation = params.me->ReadValue<float>(params.value);
+						params.data->transform.mRotation = params.me->ReadValue<float>(params.value);
+						params.data->has_transform = true;
 					});
 
 					map.emplace("ScaleU", [](Params& params) {
-						params.transform.mScaling.x = params.me->ReadValue<float>(params.value);
+						params.data->transform.mScaling.x = params.me->ReadValue<float>(params.value);
+						params.data->has_transform = true;
 					});
 
 					map.emplace("ScaleV", [](Params& params) {
-						params.transform.mScaling.y = params.me->ReadValue<float>(params.value);
+						params.data->transform.mScaling.y = params.me->ReadValue<float>(params.value);
+						params.data->has_transform = true;
 					});
 
 					map.emplace("WrappingModeU", [](Params& params) {
@@ -397,7 +466,7 @@ namespace Assimp {
 						aiTextureOp tex_op = aiTextureOp_SmoothAdd;
 						params.me->mMaterial->AddProperty((int*) &tex_op, 1, AI_MATKEY_TEXOP_REFLECTION(0));
 					});
-
+					
 					return std::move(map);
 				}());
 
@@ -432,8 +501,7 @@ namespace Assimp {
 		})(), 1, 1);
 
 		params.me = this;
-		params.mapping_type = OPERATOR_MAPPING;
-		params.mapping_operator = aiTextureMapping_UV;
+		params.data = data;
 
 		unsigned int id = *(mReader.GetAttribute<unsigned int>("Id", true));
 		std::string start_up = *(mReader.GetAttribute<std::string>("StartUp", true));
@@ -441,33 +509,6 @@ namespace Assimp {
 		Optional<unsigned int> aggregating = mReader.GetAttribute<unsigned int>("Aggregating");
 
 		mReader.ParseElement(mapping, params);
-
-		switch(params.mapping_type) {
-			case IMPLICIT_MAPPING:
-				params.mapping_operator = aiTextureMapping_UV;
-				mMaterial->AddProperty((int*) &params.mapping_operator, 1, AI_MATKEY_MAPPING_DIFFUSE(0));
-				break;
-			case OPERATOR_MAPPING:
-				if(params.mapping_operator != aiTextureMapping_UV) {
-					mMaterial->AddProperty((int*) &params.mapping_operator, 1, AI_MATKEY_MAPPING_DIFFUSE(0));
-				} else {
-					// No explicit id for this warning message as most 3DXML exporter generates invalid materials and repeated output garbage the logs
-					_3DXMLParser::LogMessage(Logger::Warn, "In Feature: Operator mapping defined but no operator provided.");
-				}
-				break;
-			case ENVIRONMENT_MAPPING:
-				_3DXMLParser::LogMessage(Logger::Err, "In Feature \"" + mReader.ToString(id) + "\": Environment mapping not supported. Using UV coordinates instead.");
-				break;
-		}
-
-		mMaterial->AddProperty(&params.transform, 1, AI_MATKEY_UVTRANSFORM_DIFFUSE(0));
-
-		// Default material options that have no equivalent in 3DXML
-		aiBlendMode blend = aiBlendMode_Default;
-		mMaterial->AddProperty((int*) &blend, 1, AI_MATKEY_BLEND_FUNC);
-
-		//TODO: AI_MATKEY_UVWSRC(t, n)
-		//TODO: AI_MATKEY_TEXMAP_AXIS(t, n)
 	}
 
 } // Namespace Assimp

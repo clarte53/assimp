@@ -566,6 +566,21 @@ namespace Assimp {
 					}
 
 					mesh->mNumVertices = vertice_index;
+
+					// Simplify vertex colors
+					for(unsigned int k = 0; k < AI_MAX_NUMBER_OF_COLOR_SETS; k++) {
+						if(! mesh->HasVertexColors(k)) {
+							bool found = false;
+
+							for(unsigned int x = k + 1; ! found && x < AI_MAX_NUMBER_OF_COLOR_SETS; x++) {
+								if(mesh->HasVertexColors(x)) {
+									mesh->mColors[k] = mesh->mColors[x];
+									mesh->mColors[x] = NULL;
+									found = true;
+								}
+							}
+						}
+					}
 				}
 			}
 		}

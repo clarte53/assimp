@@ -54,6 +54,28 @@ namespace Assimp {
 		
 		protected:
 
+			enum MappingType {NONE, ENVIRONMENT_MAPPING, IMPLICIT_MAPPING, OPERATOR_MAPPING};
+
+			struct GlobalData {
+
+				public:
+
+					MappingType mapping_type;
+
+					aiTextureMapping mapping_operator;
+
+					aiUVTransform transform;
+
+					bool has_transform;
+
+					float ambient_coef;
+
+					float diffuse_coef;
+
+					float emissive_coef;
+
+			};
+
 			/** xml reader */
 			XMLParser mReader;
 
@@ -72,7 +94,9 @@ namespace Assimp {
 			/** Aborts the file reading with an exception */
 			void ThrowException(const std::string& error) const;
 
-			void ReadFeature();
+			void SetCoefficient(float coef, const char* key, unsigned int type, unsigned int index);
+
+			void ReadFeature(GlobalData* data);
 
 			template<typename T>
 			inline T ReadValue(const std::string& value_str) const;
