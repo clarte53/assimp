@@ -79,6 +79,9 @@ namespace Assimp {
 			/** Content of the 3DXML file */
 			_3DXMLStructure mContent;
 
+			/** Flag to know if we encountered meshes in invalid UVR format (for improving output messages) */
+			bool mHasUVR;
+
 		public:
 
 			/** Constructor from XML file */

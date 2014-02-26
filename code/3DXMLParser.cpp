@@ -61,7 +61,7 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Constructor to be privately used by Importer
-	_3DXMLParser::_3DXMLParser(const std::string& file, aiScene* scene) : mWorkers(), mTasks(), mCondition(), mMutex(), mError(""), mFinished(false), mArchive(new Q3BSP::Q3BSPZipArchive(file)), mContent(scene, &mCondition) { PROFILER;
+	_3DXMLParser::_3DXMLParser(const std::string& file, aiScene* scene) : mWorkers(), mTasks(), mCondition(), mMutex(), mError(""), mFinished(false), mArchive(new Q3BSP::Q3BSPZipArchive(file)), mContent(scene, &mCondition), mHasUVR(false) { PROFILER;
 		// Load the compressed archive
 		if (! mArchive->isOpen()) {
 			ThrowException(nullptr, "Failed to open file " + file + "." );
@@ -844,7 +844,11 @@ namespace Assimp {
 
 					// Test if we have some meshes. If not, validation step will fail and it probably means that the file use the binary representation for meshes (UVR format).
 					if(mContent.scene->mNumMeshes == 0) {
-						ThrowException(parser, "The scene does not contain any mesh. The meshes are probably defined in the unsupported binary format.");
+						if(mHasUVR) {
+							ThrowException(parser, "This is a binary 3DXML file (unsupported). Please re-export your file with XML tessellation option enabled.");
+						} else {
+							ThrowException(parser, "The scene does not contain any mesh.");
+						}
 					}
 				} else {
 					ThrowException(parser, "The root Reference3D should not be instantiated.");
@@ -1315,6 +1319,10 @@ namespace Assimp {
 		} else {
 			// Unsupported format. We warn the user and ignore it
 			LogMessage(Logger::Warn, "In ReferenceRep \"" + parser->ToString(id) + "\": unsupported representation format \"" + format + "\".");
+
+			if(format.compare("UVR") == 0) {
+				mHasUVR = true;
+			}
 		}
 	}
 
