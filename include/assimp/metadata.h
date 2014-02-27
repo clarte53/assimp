@@ -72,9 +72,9 @@ struct aiMetadata
 
 #ifdef __cplusplus
 
-	Array<aiString*> Keys;
+	Array<aiString> Keys;
 	
-	Array<aiString*> Values;
+	Array<aiString> Values;
 
 	/** Constructor */
 	aiMetadata()
