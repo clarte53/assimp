@@ -572,6 +572,7 @@ DEF_ENUM(aiPostProcessSteps, pFlags);
 %ignore Assimp::Importer::SetPropertyFloat(const char*, float, bool*);
 %ignore Assimp::Importer::SetPropertyInteger(const char*, int, bool*);
 %ignore Assimp::Importer::SetPropertyString(const char*, const std::string&, bool*);
+%ignore Assimp::Importer::SetPropertyMatrix(const char*, const aiMatrix4x4&, bool*);
 %ignore Assimp::Importer::UnregisterLoader;
 %ignore Assimp::Importer::UnregisterPPStep;
 %extend Assimp::Importer {
@@ -642,12 +643,13 @@ ADD_UNMANAGED_OPTION_TEMPLATE(aiMatrix3x3, aiMatrix3x3t<float>);
 %ignore aiMatrix4x4t<float>::operator[];
 ADD_UNMANAGED_OPTION_TEMPLATE(aiMatrix4x4, aiMatrix4x4t<float>);
 
+ARRAY_DECL(aiString, aiString);
 ARRAY_DECL(aiFace, aiFace);
 ARRAY_DECL(aiMeshKey, aiMeshKey);
 ARRAY_DECL(aiQuatKey, aiQuatKey);
 ARRAY_DECL(aiUInt, unsigned int);
 ARRAY_DECL(aiVectorKey, aiVectorKey);
-ARRAY_DECL(aiVertexWeighth, aiVertexWeight);
+ARRAY_DECL(aiVertexWeight, aiVertexWeight);
 
 ARRAY_DECL(aiAnimation, aiAnimation*);
 ARRAY_DECL(aiAnimMesh, aiAnimMesh*);
@@ -659,7 +661,6 @@ ARRAY_DECL(aiMesh, aiMesh*);
 ARRAY_DECL(aiMeshAnim, aiMeshAnim*);
 ARRAY_DECL(aiNode, aiNode*);
 ARRAY_DECL(aiNodeAnim, aiNodeAnim*);
-ARRAY_DECL(aiString, aiString*);
 ARRAY_DECL(aiTexture, aiTexture*);
 
 FIXED_ARRAY_DECL(aiUInt, unsigned int);
