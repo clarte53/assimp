@@ -109,30 +109,30 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 %extend Interface {
 %typemap(cscode) Interface %{
-	public interface Unmanagable<T> {
-		T Unmanaged();
-	}
+  public interface Unmanagable<T> {
+    T Unmanaged();
+  }
 
-	public interface DynamicArray<T> {
-		uint Size();
-		T Get(uint index);
-	}
+  public interface DynamicArray<T> {
+    uint Size();
+    T Get(uint index);
+  }
 
-	public interface MutableDynamicArray<T> : DynamicArray<T> {
-		bool Set(uint index, T value);
-	}
+  public interface MutableDynamicArray<T> : DynamicArray<T> {
+    bool Set(uint index, T value);
+  }
 
-	public interface MultiArray<T> : DynamicArray<T> {
+  public interface MultiArray<T> : DynamicArray<T> {
 
-	}
-	
-	public interface FixedArray<T> : MutableDynamicArray<T> {
+  }
 
-	}
-	
-	public interface Array<T> : MutableDynamicArray<T> {
-		void Clear();
-	}
+  public interface FixedArray<T> : MutableDynamicArray<T> {
+
+  }
+
+  public interface Array<T> : MutableDynamicArray<T> {
+    void Clear();
+  }
 %}
 }
 
@@ -164,11 +164,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %define ADD_UNMANAGED_OPTION_BASE(NAME, CTYPE)
 %typemap(csinterfaces) CTYPE "IDisposable, Interface.Unmanagable<$typemap(cstype, CTYPE)>"
 %typemap(cscode) CTYPE %{
-	public NAME Unmanaged() {
-		this.swigCMemOwn = false;
-		
-		return this;
-	}
+  public NAME Unmanaged() {
+    this.swigCMemOwn = false;
+
+    return this;
+  }
 %}
 %enddef
 
