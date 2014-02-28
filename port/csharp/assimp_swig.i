@@ -201,6 +201,7 @@ ADD_UNMANAGED_OPTION_BASE(NAME, CTYPE);
 %ignore MultiArray<CTYPE>::Create;
 %ignore MultiArray<CTYPE>::Clear;
 %ignore MultiArray<CTYPE>::Set;
+ARRAY_DECL(NAME, CTYPE);
 %template(NAME##MultiArray) MultiArray<CTYPE>;
 %enddef
 
