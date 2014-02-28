@@ -161,18 +161,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %typemap(csin)                       TYPE *OUTPUT, TYPE &OUTPUT "out $csinput"
 %enddef
 
-%define ADD_UNMANAGED_OPTION(CTYPE)
-%typemap(csinterfaces) CTYPE "IDisposable, Interface.Unmanagable<$typemap(cstype, CTYPE)>"
-%typemap(cscode) CTYPE %{
-	public CTYPE Unmanaged() {
-		this.swigCMemOwn = false;
-		
-		return this;
-	}
-%}
-%enddef
-
-%define ADD_UNMANAGED_OPTION_TEMPLATE(NAME, CTYPE)
+%define ADD_UNMANAGED_OPTION_BASE(NAME, CTYPE)
 %typemap(csinterfaces) CTYPE "IDisposable, Interface.Unmanagable<$typemap(cstype, CTYPE)>"
 %typemap(cscode) CTYPE %{
 	public NAME Unmanaged() {
@@ -181,6 +170,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 		return this;
 	}
 %}
+%enddef
+
+%define ADD_UNMANAGED_OPTION(CTYPE)
+ADD_UNMANAGED_OPTION_BASE(CTYPE, CTYPE);
+%enddef
+
+%define ADD_UNMANAGED_OPTION_TEMPLATE(NAME, CTYPE)
+ADD_UNMANAGED_OPTION_BASE(NAME, CTYPE);
 %template(NAME) CTYPE;
 %enddef
 
@@ -204,7 +201,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %ignore MultiArray<CTYPE>::Create;
 %ignore MultiArray<CTYPE>::Clear;
 %ignore MultiArray<CTYPE>::Set;
-ARRAY_DECL(NAME, CTYPE);
 %template(NAME##MultiArray) MultiArray<CTYPE>;
 %enddef
 
