@@ -166,7 +166,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %typemap(cscode) CTYPE %{
   public NAME Unmanaged() {
     this.swigCMemOwn = false;
-
     return this;
   }
 %}
@@ -174,11 +173,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 %define ADD_UNMANAGED_OPTION(CTYPE)
 ADD_UNMANAGED_OPTION_BASE(CTYPE, CTYPE);
-%enddef
-
-%define ADD_UNMANAGED_OPTION_TEMPLATE(NAME, CTYPE)
-ADD_UNMANAGED_OPTION_BASE(NAME, CTYPE);
-%template(NAME) CTYPE;
 %enddef
 
 %define ARRAY_DECL(NAME, CTYPE)
@@ -284,7 +278,8 @@ ARRAY_DECL(NAME, CTYPE);
 ADD_UNMANAGED_OPTION(aiColor3D);
 
 /////// aiColor4D 
-ADD_UNMANAGED_OPTION(aiColor4D);
+// cf template section
+ADD_UNMANAGED_OPTION_BASE(aiColor4D, aiColor4t<float>);
 
 /////// aiComponent
 ENUM_FLAGS_DECL(aiComponent);
@@ -370,10 +365,14 @@ MATERIAL_TEXTURE(0, float,            TextureBlend,          AI_MATKEY_TEXBLEND)
 MATERIAL_TEXTURE(0, aiUVTransform,    UVTransform,           AI_MATKEY_UVTRANSFORM);             // TODO: Check if TYPE is correct !
 
 /////// aiMatrix3x3 
-// Done
+// cf template section
+ADD_UNMANAGED_OPTION_BASE(aiMatrix3x3, aiMatrix3x3t<float>);
+%ignore aiMatrix3x3t<float>::operator[];
 
 /////// aiMatrix4x4 
-// Done
+// cf template section
+ADD_UNMANAGED_OPTION_BASE(aiMatrix4x4, aiMatrix4x4t<float>);
+%ignore aiMatrix4x4t<float>::operator[];
 
 /////// aiMesh 
 DEF_ENUM(aiPrimitiveType, mPrimitiveTypes);
@@ -435,7 +434,8 @@ ENUM_FLAGS_DECL(aiPostProcessSteps);
 ENUM_FLAGS_DECL(aiPrimitiveType);
 
 /////// aiQuaternion 
-// Done
+// cf template section
+ADD_UNMANAGED_OPTION_BASE(aiQuaternion, aiQuaterniont<float>);
 
 /////// aiQuatKey 
 // Done
@@ -471,7 +471,6 @@ ADD_UNMANAGED_OPTION(aiString);
   // We need to define manually this method because swig seems to not accept multiple 'cscode' typemaps for the same class
   public aiString Unmanaged() {
     this.swigCMemOwn = false;
-		
     return this;
   }
 %}
@@ -526,7 +525,6 @@ ADD_UNMANAGED_OPTION(aiTexture);
   // We need to define manually this method because swig seems to not accept multiple 'cscode' typemaps for the same class
   public aiTexture Unmanaged() {
     this.swigCMemOwn = false;
-		
     return this;
   }
 %}
@@ -538,10 +536,12 @@ ENUM_FLAGS_DECL(aiTextureFlags);
 // Done
 
 /////// aiVector2D 
-ADD_UNMANAGED_OPTION(aiVector2D);
+// cf template section
+ADD_UNMANAGED_OPTION_BASE(aiVector2D, aiVector2t<float>);
 
 /////// aiVector3D 
-ADD_UNMANAGED_OPTION(aiVector3D);
+// cf template section
+ADD_UNMANAGED_OPTION_BASE(aiVector3D, aiVector3t<float>);
 
 /////// aiVectorKey 
 // Done
@@ -630,21 +630,20 @@ DEF_ENUM(aiPostProcessSteps, pFlags);
 %include "..\..\include\assimp\LogStream.hpp"
 %include "..\..\include\assimp\ProgressHandler.hpp"
 
-ADD_UNMANAGED_OPTION_TEMPLATE(aiColor4D, aiColor4t<float>);
 
-ADD_UNMANAGED_OPTION_TEMPLATE(aiVector2D, aiVector2t<float>);
-ADD_UNMANAGED_OPTION_TEMPLATE(aiVector3D, aiVector3t<float>);
-ADD_UNMANAGED_OPTION_TEMPLATE(aiQuaternion, aiQuaterniont<float>);
-%ignore aiMatrix3x3t<float>::operator[];
-ADD_UNMANAGED_OPTION_TEMPLATE(aiMatrix3x3, aiMatrix3x3t<float>);
-%ignore aiMatrix4x4t<float>::operator[];
-ADD_UNMANAGED_OPTION_TEMPLATE(aiMatrix4x4, aiMatrix4x4t<float>);
+%template(aiColor4D) aiColor4t<float>;
+%template(aiVector2D) aiVector2t<float>;
+%template(aiVector3D) aiVector3t<float>;
+%template(aiQuaternion) aiQuaterniont<float>;
+%template(aiMatrix3x3) aiMatrix3x3t<float>;
+%template(aiMatrix4x4) aiMatrix4x4t<float>;
 
-ARRAY_DECL(aiString, aiString);
+ARRAY_DECL(aiUInt, unsigned int);
+
 ARRAY_DECL(aiFace, aiFace);
+ARRAY_DECL(aiString, aiString);
 ARRAY_DECL(aiMeshKey, aiMeshKey);
 ARRAY_DECL(aiQuatKey, aiQuatKey);
-ARRAY_DECL(aiUInt, unsigned int);
 ARRAY_DECL(aiVectorKey, aiVectorKey);
 ARRAY_DECL(aiVertexWeight, aiVertexWeight);
 
