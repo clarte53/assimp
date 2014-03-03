@@ -57,7 +57,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLMaterial::_3DXMLMaterial(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, aiMaterial* material, _3DXMLStructure::Dependencies& dependencies) : mReader(archive, filename), mMaterial(material), mDependencies(dependencies) { PROFILER;
+	_3DXMLMaterial::_3DXMLMaterial(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, aiMaterial* material, _3DXMLStructure::Dependencies& dependencies) : mReader(archive, filename), mMaterial(material), mDependencies(dependencies) {
 		struct Params {
 			_3DXMLMaterial* me;
 			GlobalData data;
@@ -137,13 +137,13 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLMaterial::~_3DXMLMaterial() { PROFILER;
+	_3DXMLMaterial::~_3DXMLMaterial() {
 
 	}
 	
 	// ------------------------------------------------------------------------------------------------
 	// Aborts the file reading with an exception
-	void _3DXMLMaterial::ThrowException(const std::string& error) const { PROFILER;
+	void _3DXMLMaterial::ThrowException(const std::string& error) const {
 		throw DeadlyImportError(boost::str(boost::format("3DXML: %s - %s") % mReader.GetFilename() % error));
 	}
 
@@ -160,7 +160,7 @@ namespace Assimp {
 	}
 	
 	// ------------------------------------------------------------------------------------------------
-	void _3DXMLMaterial::ReadFeature(GlobalData* data) { PROFILER;
+	void _3DXMLMaterial::ReadFeature(GlobalData* data) {
 		struct Params {
 			_3DXMLMaterial* me;
 			std::string value;

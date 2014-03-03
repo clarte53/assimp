@@ -57,8 +57,8 @@ namespace Assimp {
 	const unsigned int XMLParser::XSD::unbounded = std::numeric_limits<unsigned int>::max();
 
 	// ------------------------------------------------------------------------------------------------
-	void XMLParser::OpenInArchive(const std::string& file) { PROFILER;
-		if(mArchive->Exists(file.c_str())) { PROFILER;
+	void XMLParser::OpenInArchive(const std::string& file) {
+		if(mArchive->Exists(file.c_str())) {
 			// Open the manifest files
 			mStream = mArchive->Open(file.c_str());
 			if(mStream == nullptr) {
@@ -88,19 +88,19 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	XMLParser::XMLParser(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& file) : mFileName(""), mArchive(archive), mStream(nullptr), mReader(nullptr) { PROFILER;
+	XMLParser::XMLParser(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& file) : mFileName(""), mArchive(archive), mStream(nullptr), mReader(nullptr) {
 		Open(file);
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	XMLParser::~XMLParser() { PROFILER;
+	XMLParser::~XMLParser() {
 		Close();
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	void XMLParser::Open(const std::string& file) { PROFILER;
+	void XMLParser::Open(const std::string& file) {
 		if(mStream == nullptr && mReader == nullptr) {
-			if(mArchive->isOpen()) { PROFILER;
+			if(mArchive->isOpen()) {
 				try {
 					OpenInArchive(file);
 				} catch(...) {
@@ -117,7 +117,7 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	void XMLParser::Close() { PROFILER;
+	void XMLParser::Close() {
 		if(mStream != nullptr) {
 			mArchive->Close(mStream);
 			mStream = nullptr;
@@ -131,19 +131,19 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Aborts the file reading with an exception
-	void XMLParser::ThrowException(const std::string& error) const { PROFILER;
+	void XMLParser::ThrowException(const std::string& error) const {
 		throw DeadlyImportError(boost::str(boost::format("XML parser: %s - %s") % mFileName % error));
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	// Skip an element
-	void XMLParser::SkipElement() const { PROFILER;
+	void XMLParser::SkipElement() const {
 		SkipUntilEnd(mReader->getNodeName());
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	// Skip recursively until the end of element "name"
-	void XMLParser::SkipUntilEnd(const std::string& name) const { PROFILER;
+	void XMLParser::SkipUntilEnd(const std::string& name) const {
 		irr::io::EXML_NODE node_type = mReader->getNodeType();
 		bool is_same_name = name.compare(mReader->getNodeName()) == 0;
 		unsigned int depth = 0;
@@ -172,13 +172,13 @@ namespace Assimp {
 	
 	// ------------------------------------------------------------------------------------------------
 	template<>
-	std::string XMLParser::ToString(const std::string& value) const { PROFILER;
+	std::string XMLParser::ToString(const std::string& value) const {
 		return value;
 	}
 
 	// ------------------------------------------------------------------------------------------------
 	template<>
-	std::string XMLParser::FromString(const std::string& string) const { PROFILER;
+	std::string XMLParser::FromString(const std::string& string) const {
 		return string;
 	}
 
