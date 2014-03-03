@@ -42,6 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 %include "typemaps.i"
 %include "std_string.i"
+%include "arrays_csharp.i"
 
 %{
 #include "..\..\include\assimp\defs.h"
@@ -276,10 +277,12 @@ ARRAY_DECL(NAME, CTYPE);
 
 /////// aiColor3D 
 ADD_UNMANAGED_OPTION(aiColor3D);
+%ignore aiColor3D::operator[](unsigned int);
 
 /////// aiColor4D 
 // cf template section
 ADD_UNMANAGED_OPTION_BASE(aiColor4D, aiColor4t<float>);
+%ignore aiColor4t<float>::operator[](unsigned int);
 
 /////// aiComponent
 ENUM_FLAGS_DECL(aiComponent);
@@ -289,6 +292,11 @@ ENUM_FLAGS_DECL(aiDefaultLogStream);
 
 /////// aiExportDataBlob
 %ignore aiExportDataBlob::data;
+
+/////// aiExportFormatDesc
+%immutable aiExportFormatDesc::id;
+%immutable aiExportFormatDesc::description;
+%immutable aiExportFormatDesc::fileExtension;
 
 /////// aiFace
 ADD_UNMANAGED_OPTION(aiFace);
@@ -306,6 +314,13 @@ ADD_UNMANAGED_OPTION(aiFace);
 /////// aiFileIO
 %ignore aiFileIO::CloseProc;
 %ignore aiFileIO::OpenProc;
+
+/////// aiImporterDesc
+%immutable aiImporterDesc::mName;
+%immutable aiImporterDesc::mAuthor;
+%immutable aiImporterDesc::mMaintainer;
+%immutable aiImporterDesc::mComments;
+%immutable aiImporterDesc::mFileExtensions;
 
 /////// aiImporterFlags
 ENUM_FLAGS_DECL(aiImporterFlags);
@@ -327,6 +342,7 @@ ENUM_TYPEMAP(aiTextureFlags);
 ENUM_TYPEMAP(aiTextureMapMode);
 ENUM_TYPEMAP(aiTextureOp);
 ADD_UNMANAGED_OPTION(aiMaterial);
+#pragma SWIG nowarn=305
 %ignore aiMaterial::AddBinaryProperty;
 %ignore aiMaterial::AddProperty;
 %ignore aiMaterial::Get;
@@ -410,6 +426,8 @@ ADD_UNMANAGED_OPTION(aiNode);
 %ignore aiNode::mChildren;
 %ignore aiNode::mNumMeshes;
 %ignore aiNode::mMeshes;
+%ignore aiNode::FindNode(aiString const &);
+%ignore aiNode::FindNode(char const *);
 
 /////// aiNodeAnim 
 %ignore aiNodeAnim::mNumPositionKeys;
@@ -461,6 +479,8 @@ ADD_UNMANAGED_OPTION(aiScene);
 
 /////// aiString 
 ADD_UNMANAGED_OPTION(aiString);
+%ignore aiString::operator=(std::string const &);
+%ignore aiString::Set(std::string const &);
 %rename(Data) aiString::data;
 %rename(Length) aiString::length;
 %typemap(cscode) aiString %{
@@ -476,7 +496,7 @@ ADD_UNMANAGED_OPTION(aiString);
 %}
 
 /////// aiTexel 
-// Done
+%ignore aiTexel::operator aiColor4D() const;
 
 /////// aiTexture 
 ADD_UNMANAGED_OPTION(aiTexture);
@@ -538,10 +558,12 @@ ENUM_FLAGS_DECL(aiTextureFlags);
 /////// aiVector2D 
 // cf template section
 ADD_UNMANAGED_OPTION_BASE(aiVector2D, aiVector2t<float>);
+%ignore aiVector2t<float>::operator[](unsigned int);
 
 /////// aiVector3D 
 // cf template section
 ADD_UNMANAGED_OPTION_BASE(aiVector3D, aiVector3t<float>);
+%ignore aiVector3t<float>::operator[](unsigned int);
 
 /////// aiVectorKey 
 // Done
@@ -555,14 +577,20 @@ DEF_ENUM(Logger.ErrorSeverity, severity);
 
 /////// Exporter
 DEF_ENUM(aiPostProcessSteps, pPreprocessing);
+%warnfilter(SWIGWARN_PARSE_NAMED_NESTED_CLASS) Assimp::Exporter::ExportFormatEntry;
 %ignore Assimp::Exporter::RegisterExporter;
+%ignore Assimp::Exporter::ExportToBlob(aiScene const *, std::string const &);
+%ignore Assimp::Exporter::Export(aiScene const *, std::string const &, std::string const &);
+%ignore Assimp::Exporter::Export(aiScene const *, std::string const &, std::string const &, unsigned int);
+%ignore Assimp::Exporter::ExportToBlob(aiScene const *, std::string const &, unsigned int);
 
 /////// Importer
 DEF_ENUM(aiPostProcessSteps, pFlags);
 %ignore Assimp::Importer::GetExtensionList;
 %ignore Assimp::Importer::GetImporter;
+%ignore Assimp::Importer::IsExtensionSupported(std::string const &) const;
 %ignore Assimp::Importer::Pimpl;
-%ignore Assimp::Importer::ReadFileFromMemory;
+%ignore Assimp::Importer::ReadFile(std::string const &, unsigned int);
 %ignore Assimp::Importer::RegisterLoader;
 %ignore Assimp::Importer::RegisterPPStep;
 %ignore Assimp::Importer::SetPropertyBool(const char*, bool, bool*);
@@ -583,6 +611,18 @@ DEF_ENUM(aiPostProcessSteps, pFlags);
 /////// IOStream
 %ignore Assimp::IOStream::Read;
 %ignore Assimp::IOStream::Write;
+
+/////// IOSystem
+%ignore Assimp::IOSystem::ComparePaths(std::string const &, std::string const &) const;
+%ignore Assimp::IOSystem::Exists(char const *) const;
+%ignore Assimp::IOSystem::Open(std::string const &);
+%ignore Assimp::IOSystem::Open(std::string const &, std::string const &);
+
+/////// Logger
+%ignore Assimp::Logger::debug(std::string const &);
+%ignore Assimp::Logger::error(std::string const &);
+%ignore Assimp::Logger::info(std::string const &);
+%ignore Assimp::Logger::warn(std::string const &);
 
 /////// Globals
 %ignore ::aiCopyScene;
