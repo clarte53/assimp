@@ -630,7 +630,6 @@ DEF_ENUM(aiPostProcessSteps, pFlags);
 %include "..\..\include\assimp\LogStream.hpp"
 %include "..\..\include\assimp\ProgressHandler.hpp"
 
-
 %template(aiColor4D) aiColor4t<float>;
 %template(aiVector2D) aiVector2t<float>;
 %template(aiVector3D) aiVector3t<float>;
