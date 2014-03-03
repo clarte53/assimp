@@ -586,6 +586,8 @@ DEF_ENUM(aiPostProcessSteps, pPreprocessing);
 
 /////// Importer
 DEF_ENUM(aiPostProcessSteps, pFlags);
+CSHARP_ARRAYS(void, byte)
+%apply void INPUT[]  {const void* pBuffer}
 %ignore Assimp::Importer::GetExtensionList;
 %ignore Assimp::Importer::GetImporter;
 %ignore Assimp::Importer::IsExtensionSupported(std::string const &) const;
