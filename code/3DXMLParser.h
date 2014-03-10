@@ -85,7 +85,7 @@ namespace Assimp {
 		public:
 
 			/** Constructor from XML file */
-			_3DXMLParser(const std::string& file, aiScene* scene);
+			_3DXMLParser(IOSystem* io_handler, const std::string& file, aiScene* scene);
 
 			virtual ~_3DXMLParser();
 			

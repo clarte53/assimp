@@ -61,7 +61,7 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Constructor to be privately used by Importer
-	_3DXMLParser::_3DXMLParser(const std::string& file, aiScene* scene) : mWorkers(), mTasks(), mCondition(), mMutex(), mError(""), mFinished(false), mArchive(new Q3BSP::Q3BSPZipArchive(file)), mContent(scene, &mCondition), mHasUVR(false) {
+	_3DXMLParser::_3DXMLParser(IOSystem* io_handler, const std::string& file, aiScene* scene) : mWorkers(), mTasks(), mCondition(), mMutex(), mError(""), mFinished(false), mArchive(new Q3BSP::Q3BSPZipArchive(io_handler, file)), mContent(scene, &mCondition), mHasUVR(false) {
 		// Load the compressed archive
 		if (! mArchive->isOpen()) {
 			ThrowException(nullptr, "Failed to open file " + file + "." );

@@ -93,8 +93,8 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	//	Import method.
-	void _3DXMLImporter::InternReadFile(const std::string& pFile, aiScene* pScene, IOSystem* /*pIOHandler*/) {
-		_3DXMLParser fileParser(pFile, pScene);
+	void _3DXMLImporter::InternReadFile(const std::string& pFile, aiScene* pScene, IOSystem* pIOHandler) {
+		_3DXMLParser fileParser(pIOHandler, pFile, pScene);
 	}
 
 } // end of namespace Assimp
