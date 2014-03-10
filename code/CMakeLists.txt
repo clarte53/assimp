@@ -77,7 +77,6 @@ SOURCE_GROUP(Boost FILES ${Boost_SRCS})
 
 SET( Logging_SRCS
 	${HEADER_PATH}/DefaultLogger.hpp
-	${HEADER_PATH}/IOStream.hpp
 	${HEADER_PATH}/LogStream.hpp
 	${HEADER_PATH}/Logger.hpp
 	${HEADER_PATH}/NullLogger.hpp
@@ -109,6 +108,7 @@ SET( Common_SRCS
 	Hash.h
 	Importer.cpp
 	IFF.h
+	MemoryIOWrapper.h
 	ParsingUtils.h
 	StreamReader.h
 	StringComparison.h
@@ -732,6 +732,11 @@ SET_TARGET_PROPERTIES( assimp PROPERTIES
 	SOVERSION ${ASSIMP_SOVERSION} # use full version 
     OUTPUT_NAME assimp${ASSIMP_LIBRARY_SUFFIX}
 )
+
+if (APPLE)
+    SET_TARGET_PROPERTIES( assimp PROPERTIES INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/${LIB_INSTALL_DIR}")
+endif()
+
 # Build against external unzip, or add ../contrib/unzip so
 # assimp can #include "unzip.h"
 if (UNZIP_FOUND)
