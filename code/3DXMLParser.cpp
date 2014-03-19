@@ -867,7 +867,7 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	// Add the meshes indices and children nodes into the given node recursively
+	// Compute the number of references on each instance even in complex pattern of instances of instances 
 	void _3DXMLParser::UpdateReferences(const XMLParser* parser, _3DXMLStructure::Reference3D& root) {
 		typedef std::list<_3DXMLStructure::Reference3D*> Parents;
 		typedef std::pair<_3DXMLStructure::Reference3D*, Parents> Node;
