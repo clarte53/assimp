@@ -112,6 +112,8 @@ namespace Assimp {
 
 			void BuildRoot(const XMLParser* parser, const std::string& main_file);
 
+			void UpdateReferences(const XMLParser* parser, _3DXMLStructure::Reference3D& root);
+
 			void BuildStructure(const XMLParser* parser, _3DXMLStructure::Reference3D& ref, aiNode* node, Optional<unsigned int> material_index);
 
 			void ReadManifest(const XMLParser* parser, std::string& main_file);

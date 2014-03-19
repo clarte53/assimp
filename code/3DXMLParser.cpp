@@ -839,6 +839,10 @@ namespace Assimp {
 						it_rep->first->nb_references = it_rep->second.size();
 					}
 
+					// Update the references of the different instances
+					root.nb_references = 1;
+					UpdateReferences(parser, root);
+
 					// Build the hierarchy recursively
 					BuildStructure(parser, root, mContent.scene->mRootNode, Optional<unsigned int>());
 
@@ -864,9 +868,53 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Add the meshes indices and children nodes into the given node recursively
+	void _3DXMLParser::UpdateReferences(const XMLParser* parser, _3DXMLStructure::Reference3D& root) {
+		typedef std::list<_3DXMLStructure::Reference3D*> Parents;
+		typedef std::pair<_3DXMLStructure::Reference3D*, Parents> Node;
+
+		std::list<Node> queue;
+
+		// Initialize the structure
+		root.total_references = root.nb_references;
+		queue.push_back(std::make_pair(&root, Parents()));
+
+		// We need to use a Breadth first algorithm for parsing + detection of duplicated elements because of instances
+		while(! queue.empty()) {
+			Node node = queue.front();
+
+			queue.pop_front();
+
+			// Compute the number of references for this node
+			for(Parents::iterator it_parent(node.second.begin()), end_parent(node.second.end()); it_parent != end_parent; ++it_parent) {
+				node.first->total_references += (*it_parent)->total_references * node.first->nb_references;
+			}
+
+			// Add the children to the list list of nodes to do
+			for(std::map<_3DXMLStructure::ID, _3DXMLStructure::Instance3D>::iterator it_child(node.first->instances.begin()), end_child(node.first->instances.end()); it_child != end_child; ++it_child) {
+				bool found = false;
+				
+				// Search if the child is already in the queue
+				for(std::list<Node>::iterator it_queue(queue.begin()), end_queue(queue.end()); ! found && it_queue != end_queue; ++it_queue) {
+					if(it_queue->first == it_child->second.instance_of) {
+						it_queue->second.push_back(node.first);
+
+						found = true;
+					}
+				}
+
+				// Otherwise add it to the queue
+				if(! found) {
+					queue.push_back(std::make_pair(it_child->second.instance_of, Parents(1, node.first)));
+				}
+			}
+		}
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	// Add the meshes indices and children nodes into the given node recursively
 	void _3DXMLParser::BuildStructure(const XMLParser* parser, _3DXMLStructure::Reference3D& ref, aiNode* node, Optional<unsigned int> material_index) {
 		// Decrement the counter of instances to this Reference3D (used for memory managment)
-		ref.nb_references--;
+		ref.total_references--;
 
 		if(node != nullptr) {
 			// Copy the indexes of the meshes contained into this instance into the proper aiNode
@@ -922,11 +970,11 @@ namespace Assimp {
 						BuildStructure(parser, *child.instance_of, child.node.get(), child.material_index);
 
 						// If the counter of references is null, this mean this instance is the last instance of this Reference3D
-						if(ref.nb_references == 0) {
+						if(ref.total_references == 0) {
 							// Therefore we can copy the child node directly into the children array
 							child.node->mParent = node;
 							node->Children.Set(node->Children.Size(), child.node.release());
-						} else if(ref.nb_references > 0) {
+						} else if(ref.total_references > 0) {
 							// Otherwise we need to make a deep copy of the child node in order to avoid duplicate nodes in the scene hierarchy
 							// (which would cause assimp to deallocate them multiple times, therefore making the application crash)
 							aiNode* copy_node = nullptr;

@@ -267,6 +267,8 @@ namespace Assimp {
 
 			int nb_references;
 
+			int total_references;
+
 			std::map<ID, Instance3D> instances;
 
 			std::map<ID, InstanceRep> meshes;
