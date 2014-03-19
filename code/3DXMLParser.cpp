@@ -961,31 +961,30 @@ namespace Assimp {
 					_3DXMLStructure::Instance3D& child = it_child->second;
 
 					if(child.node.get() != nullptr && child.instance_of != nullptr) {
+						aiNode* child_node = nullptr;
+
 						// Test if the node name is an id to see if we better take the Reference3D instead
 						if(! child.has_name && child.instance_of->has_name) {
 							child.node->mName = child.instance_of->name;
 						}
 
-						// Construct the hierarchy recursively
-						BuildStructure(parser, *child.instance_of, child.node.get(), child.material_index);
-
 						// If the counter of references is null, this mean this instance is the last instance of this Reference3D
 						if(ref.total_references == 0) {
 							// Therefore we can copy the child node directly into the children array
-							child.node->mParent = node;
-							node->Children.Set(node->Children.Size(), child.node.release());
+							child_node = child.node.release();
 						} else if(ref.total_references > 0) {
 							// Otherwise we need to make a deep copy of the child node in order to avoid duplicate nodes in the scene hierarchy
 							// (which would cause assimp to deallocate them multiple times, therefore making the application crash)
-							aiNode* copy_node = nullptr;
-
-							SceneCombiner::Copy(&copy_node, child.node.get());
-
-							copy_node->mParent = node;
-							node->Children.Set(node->Children.Size(), copy_node);
+							SceneCombiner::Copy(&child_node, child.node.get());
 						} else {
 							ThrowException(parser, "Invalid number of references to Reference3D \"" + parser->ToString(ref.id) + "\".");
 						}
+
+						child_node->mParent = node;
+						node->Children.Set(node->Children.Size(), child_node);
+
+						// Construct the hierarchy recursively
+						BuildStructure(parser, *child.instance_of, child_node, child.material_index);
 					} else {
 						ThrowException(parser, "One Instance3D of Reference3D \"" + parser->ToString(ref.id) + "\" is unresolved.");
 					}
