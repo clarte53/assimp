@@ -760,9 +760,7 @@ namespace Assimp {
 			std::list<unsigned int>& list_indexes = rep.indexes[material_index];
 
 			// Decrement the counter of instances to this Reference3D (used for memory managment)
-			if(rep.nb_references > 0) {
-				rep.nb_references--;
-			}
+			rep.nb_references--;
 
 			for(_3DXMLStructure::ReferenceRep::Meshes::iterator it_meshes(rep.meshes.begin()), end_meshes(rep.meshes.end()); it_meshes != end_meshes; ++it_meshes) {
 				std::unique_ptr<aiMesh>* mesh = &(it_meshes->second.mesh);
@@ -773,8 +771,10 @@ namespace Assimp {
 
 					if(rep.nb_references == 0) {
 						mesh_ptr = mesh->release();
-					} else {
+					} else if(rep.nb_references > 0) {
 						SceneCombiner::Copy(&mesh_ptr, mesh->get());
+					} else {
+						ThrowException(parser, "Invalid number of references to ReferenceRep \"" + parser->ToString(rep.id) + "\".");
 					}
 
 					// Save the new mesh in the scene
@@ -866,9 +866,7 @@ namespace Assimp {
 	// Add the meshes indices and children nodes into the given node recursively
 	void _3DXMLParser::BuildStructure(const XMLParser* parser, _3DXMLStructure::Reference3D& ref, aiNode* node, Optional<unsigned int> material_index) {
 		// Decrement the counter of instances to this Reference3D (used for memory managment)
-		if(ref.nb_references > 0) {
-			ref.nb_references--;
-		}
+		ref.nb_references--;
 
 		if(node != nullptr) {
 			// Copy the indexes of the meshes contained into this instance into the proper aiNode
@@ -928,7 +926,7 @@ namespace Assimp {
 							// Therefore we can copy the child node directly into the children array
 							child.node->mParent = node;
 							node->Children.Set(node->Children.Size(), child.node.release());
-						} else {
+						} else if(ref.nb_references > 0) {
 							// Otherwise we need to make a deep copy of the child node in order to avoid duplicate nodes in the scene hierarchy
 							// (which would cause assimp to deallocate them multiple times, therefore making the application crash)
 							aiNode* copy_node = nullptr;
@@ -937,6 +935,8 @@ namespace Assimp {
 
 							copy_node->mParent = node;
 							node->Children.Set(node->Children.Size(), copy_node);
+						} else {
+							ThrowException(parser, "Invalid number of references to Reference3D \"" + parser->ToString(ref.id) + "\".");
 						}
 					} else {
 						ThrowException(parser, "One Instance3D of Reference3D \"" + parser->ToString(ref.id) + "\" is unresolved.");
@@ -1224,7 +1224,7 @@ namespace Assimp {
 
 		// Save the information corresponding to this instance
 		if(params.instance_of.id) {
-			// Create the refered Reference3D if necessary
+			// Create the referred Reference3D if necessary
 			params.instance.instance_of = &(mContent.references_node[_3DXMLStructure::ID(params.instance_of.filename, *(params.instance_of.id))]);
 
 			// Update the number of instances of this Reference3D

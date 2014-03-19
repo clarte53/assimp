@@ -265,7 +265,7 @@ namespace Assimp {
 
 			std::string name;
 
-			unsigned int nb_references;
+			int nb_references;
 
 			std::map<ID, Instance3D> instances;
 
@@ -303,7 +303,7 @@ namespace Assimp {
 					
 			std::string name;
 
-			unsigned int nb_references;
+			int nb_references;
 
 			std::map<unsigned int, std::list<unsigned int>> indexes;
 
