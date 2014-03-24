@@ -420,6 +420,12 @@ ADD_UNMANAGED_OPTION(aiMesh);
 %ignore aiMetadata::mKeys;
 %ignore aiMetadata::mValues;
 
+/////// aiMetadataEntry
+%ignore aiMetadataEntry::mData;
+
+/////// aiMetadataType
+%ignore GetAiType(uint64_t);
+
 /////// aiNode 
 ADD_UNMANAGED_OPTION(aiNode);
 %ignore aiNode::mNumChildren;
@@ -684,6 +690,7 @@ ARRAY_DECL(aiUInt, unsigned int);
 ARRAY_DECL(aiFace, aiFace);
 ARRAY_DECL(aiString, aiString);
 ARRAY_DECL(aiMeshKey, aiMeshKey);
+ARRAY_DECL(aiMetadataEntry, aiMetadataEntry);
 ARRAY_DECL(aiQuatKey, aiQuatKey);
 ARRAY_DECL(aiVectorKey, aiVectorKey);
 ARRAY_DECL(aiVertexWeight, aiVertexWeight);
