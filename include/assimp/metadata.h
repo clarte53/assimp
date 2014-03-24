@@ -131,7 +131,7 @@ struct aiMetadata
 
 	Array<aiString> Keys;
 	
-	Array<aiString> Values;
+	Array<aiMetadataEntry> Values;
 
 	/** Constructor */
 	aiMetadata()
