@@ -594,6 +594,7 @@ DEF_ENUM(aiPostProcessSteps, pPreprocessing);
 DEF_ENUM(aiPostProcessSteps, pFlags);
 CSHARP_ARRAYS(void, byte)
 %apply void INPUT[]  {const void* pBuffer}
+%apply void INPUT[]  {const void* pFilename}
 %ignore Assimp::Importer::GetExtensionList;
 %ignore Assimp::Importer::GetImporter;
 %ignore Assimp::Importer::IsExtensionSupported(std::string const &) const;
@@ -613,6 +614,16 @@ CSHARP_ARRAYS(void, byte)
     std::string tmp;
     $self->GetExtensionList(tmp);
     return tmp;
+  }
+
+  const aiScene* ReadFile(const void* pFilename, unsigned int pSize, unsigned int pFlags) {
+    std::string filename(pSize, '\0');
+
+    for(unsigned int i = 0; i < pSize; i++) {
+      filename[i] = ((const char*) pFilename)[i];
+    }
+
+    return $self->ReadFile(filename, pFlags);
   }
 }
 
