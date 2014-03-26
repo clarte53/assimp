@@ -447,7 +447,7 @@ ADD_UNMANAGED_OPTION(aiNode);
 // Done
 
 /////// aiPostProcessSteps
-ENUM_FLAGS_DECL(aiPostProcessSteps);
+%typemap(csclassmodifiers) aiPostProcessSteps %{[System.Flags, System.Serializable] public enum%}
 %typemap(cscode) aiPostProcessSteps %{, aiProcess_ConvertToLeftHanded = aiProcess_MakeLeftHanded | aiProcess_FlipUVs | aiProcess_FlipWindingOrder,
   aiProcessPreset_TargetRealtime_Fast = aiProcess_CalcTangentSpace | aiProcess_GenNormals | aiProcess_JoinIdenticalVertices | aiProcess_Triangulate | aiProcess_GenUVCoords | aiProcess_SortByPType,
   aiProcessPreset_TargetRealtime_Quality = aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices | aiProcess_ImproveCacheLocality | aiProcess_LimitBoneWeights | aiProcess_RemoveRedundantMaterials | aiProcess_SplitLargeMeshes | aiProcess_Triangulate | aiProcess_GenUVCoords | aiProcess_SortByPType | aiProcess_FindDegenerates | aiProcess_FindInvalidData,
