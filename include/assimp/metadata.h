@@ -46,7 +46,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define __AI_METADATA_H_INC__
 
 #include <assert.h>
+
+#if defined(_MSC_VER) && (_MSC_VER <= 1500)
+#include "pstdint.h"
+#else
 #include <stdint.h>
+#endif
 
 
 
@@ -55,7 +60,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   * Enum used to distinguish data types
   */
  // -------------------------------------------------------------------------------
-enum aiMetadataType
+typedef enum aiMetadataType
 {
 	AI_BOOL = 0, 
 	AI_INT = 1, 
@@ -67,7 +72,7 @@ enum aiMetadataType
 #ifndef SWIG
 	FORCE_32BIT = INT_MAX
 #endif
-};
+} aiMetadataType;
 
 
 
