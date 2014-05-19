@@ -503,10 +503,10 @@ namespace Assimp {
 		params.me = this;
 		params.data = data;
 
-		unsigned int id = *(mReader.GetAttribute<unsigned int>("Id", true));
-		std::string start_up = *(mReader.GetAttribute<std::string>("StartUp", true));
-		std::string alias = *(mReader.GetAttribute<std::string>("Alias", true));
-		Optional<unsigned int> aggregating = mReader.GetAttribute<unsigned int>("Aggregating");
+		mReader.GetAttribute<unsigned int>("Id", true);
+		mReader.GetAttribute<std::string>("StartUp", true);
+		mReader.GetAttribute<std::string>("Alias", true);
+		//Optional<unsigned int> aggregating = mReader.GetAttribute<unsigned int>("Aggregating");
 
 		mReader.ParseElement(mapping, params);
 	}
