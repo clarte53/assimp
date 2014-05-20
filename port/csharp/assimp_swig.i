@@ -144,7 +144,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 }
 
 %define ENUM_FLAGS_DECL(TYPE)
-%typemap(csclassmodifiers) TYPE %{[System.Flags] public enum%}
+%typemap(csclassmodifiers) TYPE %{[System.Flags, System.Serializable] public enum%}
 %enddef
 
 %define DEF_ENUM(TYPE, NAME)
@@ -447,7 +447,7 @@ ADD_UNMANAGED_OPTION(aiNode);
 // Done
 
 /////// aiPostProcessSteps
-%typemap(csclassmodifiers) aiPostProcessSteps %{[System.Flags, System.Serializable] public enum%}
+ENUM_FLAGS_DECL(aiPostProcessSteps);
 %typemap(cscode) aiPostProcessSteps %{, aiProcess_ConvertToLeftHanded = aiProcess_MakeLeftHanded | aiProcess_FlipUVs | aiProcess_FlipWindingOrder,
   aiProcessPreset_TargetRealtime_Fast = aiProcess_CalcTangentSpace | aiProcess_GenNormals | aiProcess_JoinIdenticalVertices | aiProcess_Triangulate | aiProcess_GenUVCoords | aiProcess_SortByPType,
   aiProcessPreset_TargetRealtime_Quality = aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices | aiProcess_ImproveCacheLocality | aiProcess_LimitBoneWeights | aiProcess_RemoveRedundantMaterials | aiProcess_SplitLargeMeshes | aiProcess_Triangulate | aiProcess_GenUVCoords | aiProcess_SortByPType | aiProcess_FindDegenerates | aiProcess_FindInvalidData,
