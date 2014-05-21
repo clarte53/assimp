@@ -1311,8 +1311,8 @@ namespace Assimp {
 
 		params.name_opt = parser->GetAttribute<std::string>("name");
 		unsigned int id = *(parser->GetAttribute<unsigned int>("id", true));
-		std::string format = *(parser->GetAttribute<std::string>("format", true));
-		std::string file = *(parser->GetAttribute<std::string>("associatedFile", true));
+		Optional<std::string> format = parser->GetAttribute<std::string>("format");
+		Optional<std::string> file = parser->GetAttribute<std::string>("associatedFile");
 		_3DXMLStructure::URI uri;
 
 		parser->ParseElement(mapping, params);
@@ -1333,42 +1333,46 @@ namespace Assimp {
 			rep->has_name = false;
 		}
 
-		// Parse the external URI to the file containing the representation
-		ParseURI(parser, file, uri);
-		if(! uri.external) {
-			ThrowException(parser, "In ReferenceRep \"" + parser->ToString(id) + "\": invalid associated file \"" + file + "\". The field must reference another file in the same archive.");
-		}
+		if(format && file) {
+			// Parse the external URI to the file containing the representation
+			ParseURI(parser, *file, uri);
+			if(! uri.external) {
+				ThrowException(parser, "In ReferenceRep \"" + parser->ToString(id) + "\": invalid associated file \"" + *file + "\". The field must reference another file in the same archive.");
+			}
 
-		// Check the representation format and call the correct parsing function accordingly
-		if(format.compare("TESSELLATED") == 0) {
-			if(uri.extension.compare("3DRep") == 0) {
-				std::unique_lock<std::mutex> lock(mMutex);
-					mTasks.emplace([this, rep, uri]() {
-						try {
-							// Parse the geometry representation
-							_3DXMLRepresentation representation(mArchive, uri.filename, rep->meshes, mContent.dependencies);
-						} catch(DeadlyImportError& error) {
-							std::ostringstream stream;
-							stream << "In ReferenceRep \"" << rep->id << "\": unable to load the representation. " << error.what();
+			// Check the representation format and call the correct parsing function accordingly
+			if(format->compare("TESSELLATED") == 0) {
+				if(uri.extension.compare("3DRep") == 0) {
+					std::unique_lock<std::mutex> lock(mMutex);
+						mTasks.emplace([this, rep, uri]() {
+							try {
+								// Parse the geometry representation
+								_3DXMLRepresentation representation(mArchive, uri.filename, rep->meshes, mContent.dependencies);
+							} catch(DeadlyImportError& error) {
+								std::ostringstream stream;
+								stream << "In ReferenceRep \"" << rep->id << "\": unable to load the representation. " << error.what();
 
-							LogMessage(Logger::Err, stream.str());
+								LogMessage(Logger::Err, stream.str());
 
-							rep->meshes.clear();
-						}
-					});
+								rep->meshes.clear();
+							}
+						});
 
-					mCondition.notify_one();
-				lock.unlock();
+						mCondition.notify_one();
+					lock.unlock();
+				} else {
+					ThrowException(parser, "In ReferenceRep \"" + parser->ToString(id) + "\": unsupported extension \"" + uri.extension + "\" for associated file.");
+				}
 			} else {
-				ThrowException(parser, "In ReferenceRep \"" + parser->ToString(id) + "\": unsupported extension \"" + uri.extension + "\" for associated file.");
+				// Unsupported format. We warn the user and ignore it
+				LogMessage(Logger::Warn, "In ReferenceRep \"" + parser->ToString(id) + "\": unsupported representation format \"" + *format + "\".");
+
+				if(format->compare("UVR") == 0) {
+					mHasUVR = true;
+				}
 			}
 		} else {
-			// Unsupported format. We warn the user and ignore it
-			LogMessage(Logger::Warn, "In ReferenceRep \"" + parser->ToString(id) + "\": unsupported representation format \"" + format + "\".");
-
-			if(format.compare("UVR") == 0) {
-				mHasUVR = true;
-			}
+			LogMessage(Logger::Warn, "In ReferenceRep \"" + parser->ToString(id) + "\": no format or file specified. Representation ignored.");
 		}
 	}
 
