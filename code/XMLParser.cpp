@@ -182,6 +182,26 @@ namespace Assimp {
 		return string;
 	}
 
+
+	// ------------------------------------------------------------------------------------------------
+	template<>
+	std::string XMLParser::FromString(std::istringstream& stream) const {
+		return stream.str();
+	}
+
+
+	// ------------------------------------------------------------------------------------------------
+	template<>
+	float XMLParser::FromString(const std::string& string) const {
+		return (float) FromString<double>(string);
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	template<>
+	float XMLParser::FromString(std::istringstream& stream) const {
+		return (float) FromString<double>(stream);
+	}
+
 } // Namespace Assimp
 
 #endif // ASSIMP_BUILD_NO_Q3BSP_IMPORTER

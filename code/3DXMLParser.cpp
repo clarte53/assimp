@@ -1232,19 +1232,18 @@ namespace Assimp {
 
 				// Save the transformation matrix
 				std::istringstream matrix(relative_matrix);
-				float value;
-				matrix >> value; transformation.a1 = value;
-				matrix >> value; transformation.b1 = value;
-				matrix >> value; transformation.c1 = value;
-				matrix >> value; transformation.a2 = value;
-				matrix >> value; transformation.b2 = value;
-				matrix >> value; transformation.c2 = value;
-				matrix >> value; transformation.a3 = value;
-				matrix >> value; transformation.b3 = value;
-				matrix >> value; transformation.c3 = value;
-				matrix >> value; transformation.a4 = value;
-				matrix >> value; transformation.b4 = value;
-				matrix >> value; transformation.c4 = value;
+				transformation.a1 = parser->FromString<float>(matrix);
+				transformation.b1 = parser->FromString<float>(matrix);
+				transformation.c1 = parser->FromString<float>(matrix);
+				transformation.a2 = parser->FromString<float>(matrix);
+				transformation.b2 = parser->FromString<float>(matrix);
+				transformation.c2 = parser->FromString<float>(matrix);
+				transformation.a3 = parser->FromString<float>(matrix);
+				transformation.b3 = parser->FromString<float>(matrix);
+				transformation.c3 = parser->FromString<float>(matrix);
+				transformation.a4 = parser->FromString<float>(matrix);
+				transformation.b4 = parser->FromString<float>(matrix);
+				transformation.c4 = parser->FromString<float>(matrix);
 				transformation.d1 = transformation.d2 = transformation.d3 = 0.0;
 				transformation.d4 = 1.0;
 			}, 1, 1));

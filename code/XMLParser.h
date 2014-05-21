@@ -218,6 +218,9 @@ namespace Assimp {
 			template<typename T>
 			T FromString(const std::string& string) const;
 
+			template<typename T>
+			T FromString(std::istringstream& stream) const;
+
 	}; // end of class XMLParser
 	
 	template<>
@@ -225,6 +228,15 @@ namespace Assimp {
 			
 	template<>
 	std::string XMLParser::FromString(const std::string& string) const;
+
+	template<>
+	std::string XMLParser::FromString(std::istringstream& stream) const;
+
+	template<>
+	float XMLParser::FromString(const std::string& string) const;
+
+	template<>
+	float XMLParser::FromString(std::istringstream& stream) const;
 
 	// ------------------------------------------------------------------------------------------------
 	template<typename T>
@@ -577,12 +589,19 @@ namespace Assimp {
 	template<typename T>
 	T XMLParser::FromString(const std::string& string) const {
 		std::istringstream stream(string);
+		
+		return FromString<T>(stream);
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	template<typename T>
+	T XMLParser::FromString(std::istringstream& stream) const {
 		T value;
 
 		stream >> value;
 
 		if(stream.fail()) {
-			ThrowException("The value \"" + string + "\" can not be converted into \"" + std::string(typeid(T).name()) + "\".");
+			ThrowException("The value \"" + stream.str() + "\" can not be converted into \"" + std::string(typeid(T).name()) + "\".");
 		}
 
 		// We're using C++11, therefore the value will be automatically moved by the compiler

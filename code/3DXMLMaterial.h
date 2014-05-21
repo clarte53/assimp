@@ -115,7 +115,6 @@ namespace Assimp {
 	std::vector<T> _3DXMLMaterial::ReadValues(const std::string& values_str) const {
 		std::istringstream stream(values_str);
 		std::vector<T> result;
-		T value;
 
 		while(! stream.eof()) {
 			int next = stream.peek();
@@ -125,13 +124,7 @@ namespace Assimp {
 			}
 
 			if(! stream.eof()) {
-				stream >> value;
-
-				if(stream.fail()) {
-					ThrowException("Can not convert array of values \"" + values_str + "\" to \"" + std::string(typeid(T).name()) + "\".");
-				}
-
-				result.push_back(std::move(value));
+				result.push_back(mReader.FromString<T>(stream));
 			}
 		}
 
