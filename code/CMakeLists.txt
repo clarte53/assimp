@@ -112,6 +112,7 @@ SET( Common_SRCS
 	MemoryIOWrapper.h
 	ParsingUtils.h
 	StreamReader.h
+	StreamWriter.h
 	StringComparison.h
 	SGSpatialSort.cpp
 	SGSpatialSort.h
@@ -144,6 +145,7 @@ SET( Common_SRCS
 	LogAux.h
 	Bitmap.cpp
 	Bitmap.h
+	XMLTools.h
 )
 SOURCE_GROUP(Common FILES ${Common_SRCS})
 
@@ -152,6 +154,8 @@ SET( 3DS_SRCS
 	3DSHelper.h
 	3DSLoader.cpp
 	3DSLoader.h
+	3DSExporter.h
+	3DSExporter.cpp
 )
 SOURCE_GROUP(3DS FILES ${3DS_SRCS})
 
@@ -187,6 +191,14 @@ SET( ASE_SRCS
 	ASEParser.h
 )
 SOURCE_GROUP( ASE FILES ${ASE_SRCS})
+
+SET( ASSBIN_SRCS
+	AssbinExporter.h
+	AssbinExporter.cpp
+	AssbinLoader.h
+	AssbinLoader.cpp
+)
+SOURCE_GROUP( Assbin FILES ${ASSBIN_SRCS})
 
 SET( B3D_SRCS
 	B3DImporter.cpp
@@ -632,7 +644,7 @@ SOURCE_GROUP( unzip FILES ${unzip_SRCS})
 
 # VC2010 fixes
 if(MSVC10)
-	OPTION( VC10_STDINT_FIX "Fix for VC10 Compiler regarding pstdint.h redefinition errors" OFF )
+	option( VC10_STDINT_FIX "Fix for VC10 Compiler regarding pstdint.h redefinition errors" OFF )
 	if( VC10_STDINT_FIX )
 		ADD_DEFINITIONS( -D_STDINT )
 	endif( VC10_STDINT_FIX )
@@ -664,6 +676,7 @@ SET( assimp_src
 	${3DXML_SRCS}
 	${AC_SRCS}
 	${ASE_SRCS}
+	${ASSBIN_SRCS}
 	${B3D_SRCS}
 	${BVH_SRCS}
 	${Collada_SRCS}
