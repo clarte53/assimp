@@ -825,12 +825,12 @@ namespace Assimp {
 					mContent.scene->mRootNode = new aiNode(root.name);
 
 					// Set up the global orientation of the scene. In 3DXML, the Z axis is used as the up axis.
-					mContent.scene->mRootNode->mTransformation *= aiMatrix4x4(
-						 1,  0,  0,  0,
-						 0,  0,  1,  0,
-						 0, -1,  0,  0,
-						 0,  0,  0,  1
-					);
+					//mContent.scene->mRootNode->mTransformation *= aiMatrix4x4(
+					//	 1,  0,  0,  0,
+					//	 0,  0,  1,  0,
+					//	 0, -1,  0,  0,
+					//	 0,  0,  0,  1
+					//);
 
 					// Set the number of references for each geometry (depending on the instantiated materials)
 					std::map<_3DXMLStructure::ReferenceRep*, std::set<unsigned int>> materials_per_geometry;
