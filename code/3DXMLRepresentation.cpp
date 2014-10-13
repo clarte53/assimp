@@ -444,28 +444,50 @@ namespace Assimp {
 		}
 
 		if(! lines.empty()) {
-			auto it = mCurrentRep->meshes.emplace(edge.line_attribute,
-				_3DXMLStructure::ReferenceRep::Geometry(_3DXMLStructure::ReferenceRep::Geometry::LINES)
-			);
+			if(lines.size() == 1) {
+				auto it = mCurrentRep->meshes.emplace(edge.line_attribute,
+					_3DXMLStructure::ReferenceRep::Geometry(_3DXMLStructure::ReferenceRep::Geometry::POINTS)
+				);
 
-			aiMesh* mesh = it->second.mesh.get();
+				aiMesh* mesh = it->second.mesh.get();
 
-			const unsigned int nb_faces = lines.size() - 1;
-			unsigned int index = mesh->mNumVertices;
+				const unsigned int nb_faces = 1;
+				unsigned int index = mesh->mNumVertices;
 
-			// Compute the number of faces and vertices we will add to the mesh and allocate the necessary memory in one pass
-			mesh->Faces.Reserve(mesh->mNumFaces + nb_faces);
-			mesh->Vertices.Reserve(mesh->mNumVertices + nb_faces * 2);
+				// Compute the number of faces and vertices we will add to the mesh and allocate the necessary memory in one pass
+				mesh->Faces.Reserve(mesh->mNumFaces + nb_faces);
+				mesh->Vertices.Reserve(mesh->mNumVertices + nb_faces);
 
-			for(unsigned int i = 0; i < lines.size() - 1; i++, index += 2) {
-				mesh->Vertices.Set(index, lines[i]);
-				mesh->Vertices.Set(index + 1, lines[i + 1]);
+				mesh->Vertices.Set(index, lines[0]);
 
 				aiFace face;
 				face.Indices.Set(face.mNumIndices, index);
-				face.Indices.Set(face.mNumIndices, index + 1);
 
 				mesh->Faces.Set(mesh->mNumFaces, face);
+			} else {
+				auto it = mCurrentRep->meshes.emplace(edge.line_attribute,
+					_3DXMLStructure::ReferenceRep::Geometry(_3DXMLStructure::ReferenceRep::Geometry::LINES)
+				);
+
+				aiMesh* mesh = it->second.mesh.get();
+
+				const unsigned int nb_faces = lines.size() - 1;
+				unsigned int index = mesh->mNumVertices;
+
+				// Compute the number of faces and vertices we will add to the mesh and allocate the necessary memory in one pass
+				mesh->Faces.Reserve(mesh->mNumFaces + nb_faces);
+				mesh->Vertices.Reserve(mesh->mNumVertices + nb_faces * 2);
+
+				for(unsigned int i = 0; i < lines.size() - 1; i++, index += 2) {
+					mesh->Vertices.Set(index, lines[i]);
+					mesh->Vertices.Set(index + 1, lines[i + 1]);
+
+					aiFace face;
+					face.Indices.Set(face.mNumIndices, index);
+					face.Indices.Set(face.mNumIndices, index + 1);
+
+					mesh->Faces.Set(mesh->mNumFaces, face);
+				}
 			}
 		}
 	}
