@@ -64,7 +64,7 @@ namespace Assimp {
 	_3DXMLParser::_3DXMLParser(IOSystem* io_handler, const std::string& file, aiScene* scene) : mWorkers(), mTasks(), mCondition(), mMutex(), mError(""), mFinished(false), mArchive(new Q3BSP::Q3BSPZipArchive(io_handler, file)), mContent(scene, &mCondition), mHasUVR(false) {
 		// Load the compressed archive
 		if (! mArchive->isOpen()) {
-			ThrowException(nullptr, "Failed to open file " + file + "." );
+			ThrowException(nullptr, "Failed to open file " + file + ". The 3DXML schema must be >= 4.0." );
 		}
 
 		// Create a xml parser for the manifest
