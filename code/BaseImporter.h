@@ -70,10 +70,6 @@ struct ScopeGuard
 {
 	ScopeGuard(T* obj) : obj(obj), mdismiss(false) {}
 
-	ScopeGuard(const ScopeGuard<T>& other) : obj(NULL), mdismiss(true) {
-		this->operator=(other);
-	}
-
 	~ScopeGuard () throw() {
 		if (!mdismiss) {
 			delete obj;
@@ -84,19 +80,6 @@ struct ScopeGuard
 	T* dismiss() {
 		mdismiss=true;
 		return obj;
-	}
-
-	ScopeGuard<T>& operator=(const ScopeGuard<T>& other) {
-		if(!mdismiss && obj != NULL) {
-			delete obj;
-		}
-
-		obj = other.obj;
-		mdismiss = other.mdismiss;
-
-		const_cast<ScopeGuard<T>*>(&other)->mdismiss = true;
-
-		return *this;
 	}
 
 	operator T*() const {
