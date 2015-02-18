@@ -109,6 +109,7 @@ void ColladaLoader::SetupProperties(const Importer* pImp)
 {
 	noSkeletonMesh = pImp->GetPropertyInteger(AI_CONFIG_IMPORT_NO_SKELETON_MESHES,0) != 0;
 	ignoreUpDirection = pImp->GetPropertyInteger(AI_CONFIG_IMPORT_COLLADA_IGNORE_UP_DIRECTION,0) != 0;
+	invertTransparency = pImp->GetPropertyInteger(AI_CONFIG_IMPORT_COLLADA_INVERT_TRANSPARENCY,0) != 0;
 }
 
 
@@ -985,6 +986,47 @@ void ColladaLoader::CreateAnimation( aiScene* pScene, const ColladaParser& pPars
 				entry.mTransformId = srcChannel.mTarget.substr( slashPos+1);
 			}
 
+			std::string::size_type bracketPos = srcChannel.mTarget.find('(');
+			if (bracketPos != std::string::npos)
+			{
+				entry.mTransformId = srcChannel.mTarget.substr(slashPos + 1, bracketPos - slashPos - 1);
+				std::string subElement = srcChannel.mTarget.substr(bracketPos);
+			
+				if (subElement == "(0)(0)")
+					entry.mSubElement = 0; 
+				else if (subElement == "(1)(0)")
+					entry.mSubElement = 1;
+				else if (subElement == "(2)(0)")
+					entry.mSubElement = 2;
+				else if (subElement == "(3)(0)")
+					entry.mSubElement = 3;
+				else if (subElement == "(0)(1)")
+					entry.mSubElement = 4;
+				else if (subElement == "(1)(1)")
+					entry.mSubElement = 5;
+				else if (subElement == "(2)(1)")
+					entry.mSubElement = 6;
+				else if (subElement == "(3)(1)")
+					entry.mSubElement = 7;
+				else if (subElement == "(0)(2)")
+					entry.mSubElement = 8;
+				else if (subElement == "(1)(2)")
+					entry.mSubElement = 9;
+				else if (subElement == "(2)(2)")
+					entry.mSubElement = 10;
+				else if (subElement == "(3)(2)")
+					entry.mSubElement = 11;
+				else if (subElement == "(0)(3)")
+					entry.mSubElement = 12;
+				else if (subElement == "(1)(3)")
+					entry.mSubElement = 13;
+				else if (subElement == "(2)(3)")
+					entry.mSubElement = 14;
+				else if (subElement == "(3)(3)")
+					entry.mSubElement = 15;
+
+			}
+
 			// determine which transform step is affected by this channel
 			entry.mTransformIndex = SIZE_MAX;
 			for( size_t a = 0; a < srcNode->mTransforms.size(); ++a)
@@ -1289,11 +1331,25 @@ void ColladaLoader::FillMaterials( const ColladaParser& pParser, aiScene* /*pSce
 		mat.AddProperty( &effect.mRefractIndex, 1, AI_MATKEY_REFRACTI);
 
 		// transparency, a very hard one. seemingly not all files are following the
-		// specification here .. but we can trick.
-		if (effect.mTransparency >= 0.f && effect.mTransparency < 1.f) {
-			effect.mTransparency = 1.f- effect.mTransparency;
-			mat.AddProperty( &effect.mTransparency, 1, AI_MATKEY_OPACITY );
-			mat.AddProperty( &effect.mTransparent, 1, AI_MATKEY_COLOR_TRANSPARENT );
+		// specification here (1.0 transparency => completly opaque)...
+		// therefore, we let the opportunity for the user to manually invert
+		// the transparency if necessary and we add preliminary support for RGB_ZERO mode
+		if(effect.mTransparency >= 0.f && effect.mTransparency <= 1.f) {
+			// Trying some support for RGB_ZERO mode
+			if(effect.mRGBTransparency) {
+				effect.mTransparency = 1.f - effect.mTransparent.a;
+			}
+			
+			// Global option
+			if(invertTransparency) {
+				effect.mTransparency = 1.f - effect.mTransparency;
+			}
+
+			// Is the material finally transparent ?
+			if (effect.mHasTransparency || effect.mTransparency < 1.f) {
+				mat.AddProperty( &effect.mTransparency, 1, AI_MATKEY_OPACITY );
+				mat.AddProperty( &effect.mTransparent, 1, AI_MATKEY_COLOR_TRANSPARENT );
+			}
 		}
 
 		// add textures, if given
