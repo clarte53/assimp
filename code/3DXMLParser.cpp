@@ -704,7 +704,8 @@ namespace Assimp {
 				std::map<_3DXMLStructure::ID, _3DXMLStructure::Instance3D*>::iterator it_inst = instances.find(*it_ref);
 
 				if(it_inst != instances.end()) {
-					it_inst->second->material_index = Optional<unsigned int>(index);
+					// Material connection are not used anymore in new versions of 3DXML player (16.7.14143 onward), so we conform. In addition, it solves a few bugs in materials...
+					//it_inst->second->material_index = Optional<unsigned int>(index);
 				} else {
 					ThrowException(parser, "Invalid CATMatConnection referencing unknown Instance3D \"" + parser->ToString(it_ref->id) + "\".");
 				}
