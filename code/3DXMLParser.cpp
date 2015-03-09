@@ -561,9 +561,16 @@ namespace Assimp {
 				}
 				
 				// If a color is defined
-				if((*it_mat)->is_color && ! material) {
-					// We use the color only if no complex material is defined (seems to be the behavior of 3DXML Player)
-					BuildColorMaterial(material, "Color Material " + parser->ToString(color_mat_counter++), (*it_mat)->color);
+				if((*it_mat)->is_color) {
+					if(material) {
+						// We make sure that the color defined at the lowest level take precedence over those defined in complex materials
+						material->AddProperty(&((*it_mat)->color), 1, AI_MATKEY_COLOR_AMBIENT);
+						material->AddProperty(&((*it_mat)->color), 1, AI_MATKEY_COLOR_DIFFUSE);
+						material->AddProperty(&((*it_mat)->color), 1, AI_MATKEY_COLOR_EMISSIVE);
+					} else {
+						// We use the color only if no complex material is defined (seems to be the behavior of 3DXML Player)
+						BuildColorMaterial(material, "Color Material " + parser->ToString(color_mat_counter++), (*it_mat)->color);
+					}
 				}
 			} else {
 				// Default material
