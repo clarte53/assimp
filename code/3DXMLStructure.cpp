@@ -331,10 +331,13 @@ namespace Assimp {
 
 			if(done == files_parsed.end()) {
 				// Add the file to the list of dependencies
-				files_to_parse.push(file);
+				auto result = files_to_parse.insert(file);
 
-				// Warn one of the working threads that a dependencies became available
-				thread_notifier->notify_one();
+				if(result.second)
+				{
+					// Warn one of the working threads that a dependencies became available
+					thread_notifier->notify_one();
+				}
 			}
 		lock.unlock();
 	}
@@ -344,13 +347,15 @@ namespace Assimp {
 		std::string result = "";
 
 		std::unique_lock<std::mutex> lock(mutex);
-			if(! files_to_parse.empty()) {
+			std::set<std::string>::iterator it = files_to_parse.begin();
+
+			if(it != files_to_parse.end()) {
 				// Get the name of the dependency
-				result = files_to_parse.front();
+				result = *it;
 
 				// Move the dependency to the list of processed dependencies
 				files_parsed.insert(result);
-				files_to_parse.pop();
+				files_to_parse.erase(it);
 			}
 		lock.unlock();
 

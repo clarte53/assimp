@@ -357,7 +357,7 @@ namespace Assimp {
 
 				std::set<std::string> files_parsed;
 
-				std::queue<std::string> files_to_parse;
+				std::set<std::string> files_to_parse;
 
 				std::condition_variable* thread_notifier;
 

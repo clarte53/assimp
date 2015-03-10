@@ -68,13 +68,9 @@ namespace Assimp {
 				ThrowException(file + " not found.");
 			}
 
-			PROFILER;
-
 			// generate a XML reader for it
 			// the pointer is automatically deleted at the end of the function, even if some exceptions are raised
 			std::unique_ptr<CIrrXML_IOStreamReader> IOWrapper(new CIrrXML_IOStreamReader(mStream));
-
-			PROFILER;
 
 			mReader = irr::io::createIrrXMLReader(IOWrapper.get());
 			if(mReader == nullptr) {
