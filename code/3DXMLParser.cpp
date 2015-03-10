@@ -61,7 +61,7 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Constructor to be privately used by Importer
-	_3DXMLParser::_3DXMLParser(IOSystem* io_handler, const std::string& file, aiScene* scene) : mWorkers(), mTasks(), mCondition(), mMutex(), mError(""), mFinished(false), mArchive(new Q3BSP::Q3BSPZipArchive(io_handler, file)), mContent(scene, &mCondition), mHasUVR(false) {
+	_3DXMLParser::_3DXMLParser(IOSystem* io_handler, const std::string& file, aiScene* scene, bool use_node_materials) : mWorkers(), mTasks(), mCondition(), mMutex(), mError(""), mUseNodeMaterials(use_node_materials), mFinished(false), mArchive(new Q3BSP::Q3BSPZipArchive(io_handler, file)), mContent(scene, &mCondition), mHasUVR(false) {
 		// Load the compressed archive
 		if (! mArchive->isOpen()) {
 			ThrowException(nullptr, "Failed to open file " + file + ". The 3DXML schema must be >= 4.0." );
@@ -712,7 +712,11 @@ namespace Assimp {
 
 				if(it_inst != instances.end()) {
 					// Material connection are not used anymore in new versions of 3DXML player (16.7.14143 onward), so we conform. In addition, it solves a few bugs in materials...
-					//it_inst->second->material_index = Optional<unsigned int>(index);
+					// However, we might still need it in some cases, so we let the user decide with some option
+					if(mUseNodeMaterials)
+					{
+						it_inst->second->material_index = Optional<unsigned int>(index);
+					}
 				} else {
 					ThrowException(parser, "Invalid CATMatConnection referencing unknown Instance3D \"" + parser->ToString(it_ref->id) + "\".");
 				}

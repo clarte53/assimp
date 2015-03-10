@@ -65,7 +65,7 @@ static const aiImporterDesc desc = {
 
 namespace Assimp {
 
-	_3DXMLImporter::_3DXMLImporter() {
+	_3DXMLImporter::_3DXMLImporter() : mUseNodeMaterials(false) {
 
 	}
 
@@ -86,6 +86,13 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
+	//	Update importer configuration
+	void _3DXMLImporter::SetupProperties(const Importer* pImp)
+	{
+		mUseNodeMaterials = pImp->GetPropertyInteger(AI_CONFIG_IMPORT_3DXML_USE_NODE_MATERIALS, 0) != 0;
+	}
+
+	// ------------------------------------------------------------------------------------------------
 	//	Adds extensions.
 	const aiImporterDesc* _3DXMLImporter::GetInfo () const {
 		return &desc;
@@ -94,7 +101,7 @@ namespace Assimp {
 	// ------------------------------------------------------------------------------------------------
 	//	Import method.
 	void _3DXMLImporter::InternReadFile(const std::string& pFile, aiScene* pScene, IOSystem* pIOHandler) {
-		_3DXMLParser fileParser(pIOHandler, pFile, pScene);
+		_3DXMLParser fileParser(pIOHandler, pFile, pScene, mUseNodeMaterials);
 	}
 
 } // end of namespace Assimp

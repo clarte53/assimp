@@ -65,7 +65,11 @@ namespace Assimp {
 
 		const aiImporterDesc* GetInfo () const;
 
+		void SetupProperties(const Importer* pImp);
+
 		void InternReadFile(const std::string& pFile, aiScene* pScene, IOSystem* pIOHandler);
+
+		bool mUseNodeMaterials;
 
 	}; // end of class _3DXMLImporter
 
