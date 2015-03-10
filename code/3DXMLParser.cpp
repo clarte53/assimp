@@ -66,10 +66,10 @@ namespace Assimp {
 		if (! mArchive->isOpen()) {
 			ThrowException(nullptr, "Failed to open file " + file + ". The 3DXML schema must be >= 4.0." );
 		}
-
+		
 		// Create a xml parser for the manifest
 		std::unique_ptr<XMLParser> parser(new XMLParser(mArchive, "Manifest.xml"));
-
+		
 		// Read the name of the main XML file in the manifest
 		std::string main_file;
 		ReadManifest(parser.get(), main_file);
@@ -92,20 +92,20 @@ namespace Assimp {
 			mContent.dependencies.add(img_file);
 		}
 
+		int nb_threads = std::thread::hardware_concurrency();
 
-		std::size_t nb_threads = std::thread::hardware_concurrency();
-
-		if(nb_threads == 0) {
+		if(nb_threads <= 0) {
 			nb_threads = 1;
 		}
 
 		mFinished = false;
 
 		mWorkers.resize(nb_threads);
-		for(std::size_t index = 0; index < nb_threads; ++index) {
+		for(std::size_t index = 0; index < mWorkers.size(); ++index) {
 			mWorkers[index].second = false;
 		}
-		for(std::size_t index = 0; index < nb_threads; ++index) {
+
+		for(std::size_t index = 0; index < mWorkers.size(); ++index) {
 			mWorkers[index].first = std::thread([this, index]() {
 				bool finished_global = false;
 				bool finished;
@@ -214,7 +214,7 @@ namespace Assimp {
 		if(mError != "") {
 			throw DeadlyImportError(mError);
 		}
-
+		
 		// Construct the materials & meshes from the parsed data
 		BuildMaterials(parser.get());
 
