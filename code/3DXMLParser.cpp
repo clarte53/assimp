@@ -51,6 +51,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "3DXMLMaterial.h"
 #include "3DXMLRepresentation.h"
+#include "fast_atof.h"
 #include "HighResProfiler.h"
 #include "Q3BSPZipArchive.h"
 #include "SceneCombiner.h"
@@ -1238,24 +1239,37 @@ namespace Assimp {
 
 			// Parse RelativeMatrix element
 			map.emplace_back("RelativeMatrix", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
-				std::string relative_matrix = *(parser->GetContent<std::string>(true));
+				std::string value = *(parser->GetContent<std::string>(true));
+
+				const char* relative_matrix = value.c_str();
 
 				aiMatrix4x4& transformation = params.instance.node->mTransformation;
 
 				// Save the transformation matrix
-				std::istringstream matrix(relative_matrix);
-				transformation.a1 = parser->FromString<float>(matrix);
-				transformation.b1 = parser->FromString<float>(matrix);
-				transformation.c1 = parser->FromString<float>(matrix);
-				transformation.a2 = parser->FromString<float>(matrix);
-				transformation.b2 = parser->FromString<float>(matrix);
-				transformation.c2 = parser->FromString<float>(matrix);
-				transformation.a3 = parser->FromString<float>(matrix);
-				transformation.b3 = parser->FromString<float>(matrix);
-				transformation.c3 = parser->FromString<float>(matrix);
-				transformation.a4 = parser->FromString<float>(matrix);
-				transformation.b4 = parser->FromString<float>(matrix);
-				transformation.c4 = parser->FromString<float>(matrix);
+				relative_matrix = fast_atoreal_move<float>(relative_matrix, transformation.a1);
+				SkipSpacesAndLineEnd(&relative_matrix);
+				relative_matrix = fast_atoreal_move<float>(relative_matrix, transformation.b1);
+				SkipSpacesAndLineEnd(&relative_matrix);
+				relative_matrix = fast_atoreal_move<float>(relative_matrix, transformation.c1);
+				SkipSpacesAndLineEnd(&relative_matrix);
+				relative_matrix = fast_atoreal_move<float>(relative_matrix, transformation.a2);
+				SkipSpacesAndLineEnd(&relative_matrix);
+				relative_matrix = fast_atoreal_move<float>(relative_matrix, transformation.b2);
+				SkipSpacesAndLineEnd(&relative_matrix);
+				relative_matrix = fast_atoreal_move<float>(relative_matrix, transformation.c2);
+				SkipSpacesAndLineEnd(&relative_matrix);
+				relative_matrix = fast_atoreal_move<float>(relative_matrix, transformation.a3);
+				SkipSpacesAndLineEnd(&relative_matrix);
+				relative_matrix = fast_atoreal_move<float>(relative_matrix, transformation.b3);
+				SkipSpacesAndLineEnd(&relative_matrix);
+				relative_matrix = fast_atoreal_move<float>(relative_matrix, transformation.c3);
+				SkipSpacesAndLineEnd(&relative_matrix);
+				relative_matrix = fast_atoreal_move<float>(relative_matrix, transformation.a4);
+				SkipSpacesAndLineEnd(&relative_matrix);
+				relative_matrix = fast_atoreal_move<float>(relative_matrix, transformation.b4);
+				SkipSpacesAndLineEnd(&relative_matrix);
+				relative_matrix = fast_atoreal_move<float>(relative_matrix, transformation.c4);
+				
 				transformation.d1 = transformation.d2 = transformation.d3 = 0.0;
 				transformation.d4 = 1.0;
 			}, 1, 1));
