@@ -896,6 +896,15 @@ enum aiComponent
  */
 #define AI_CONFIG_IMPORT_COLLADA_INVERT_TRANSPARENCY "IMPORT_COLLADA_INVERT_TRANSPARENCY"
 
+// ---------- All the Export defines ------------
+
+/** @brief Specifies the xfile use double for real values of float
+ *
+ * Property type: Bool. Default value: false.
+ */
+
+#define AI_CONFIG_EXPORT_XFILE_64BIT "EXPORT_XFILE_64BIT"
+
  // ---------------------------------------------------------------------------
 /** @brief Specifies whether the 3DXML loader will use the materials defined for nodes.
  *
