@@ -94,6 +94,7 @@ namespace Assimp {
 		}
 
 		int nb_threads = std::thread::hardware_concurrency();
+		nb_threads = 1; // TODO: remove to reactivate thread concurency when bugs will be eliminated
 
 		if(nb_threads <= 0) {
 			nb_threads = 1;
