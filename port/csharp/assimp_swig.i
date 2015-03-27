@@ -585,10 +585,12 @@ DEF_ENUM(Logger.ErrorSeverity, severity);
 DEF_ENUM(aiPostProcessSteps, pPreprocessing);
 %warnfilter(SWIGWARN_PARSE_NAMED_NESTED_CLASS) Assimp::Exporter::ExportFormatEntry;
 %ignore Assimp::Exporter::RegisterExporter;
-%ignore Assimp::Exporter::ExportToBlob(aiScene const *, std::string const &);
 %ignore Assimp::Exporter::Export(aiScene const *, std::string const &, std::string const &);
 %ignore Assimp::Exporter::Export(aiScene const *, std::string const &, std::string const &, unsigned int);
+%ignore Assimp::Exporter::Export(aiScene const *, std::string const &, std::string const &, unsigned int, ExportProperties const *);
+%ignore Assimp::Exporter::ExportToBlob(aiScene const *, std::string const &);
 %ignore Assimp::Exporter::ExportToBlob(aiScene const *, std::string const &, unsigned int);
+%ignore Assimp::Exporter::ExportToBlob(aiScene const *, std::string const &, unsigned int, ExportProperties const *);
 
 /////// Importer
 DEF_ENUM(aiPostProcessSteps, pFlags);
