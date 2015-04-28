@@ -604,11 +604,6 @@ CSHARP_ARRAYS(void, byte)
 %ignore Assimp::Importer::ReadFile(std::string const &, unsigned int);
 %ignore Assimp::Importer::RegisterLoader;
 %ignore Assimp::Importer::RegisterPPStep;
-%ignore Assimp::Importer::SetPropertyBool(const char*, bool, bool*);
-%ignore Assimp::Importer::SetPropertyFloat(const char*, float, bool*);
-%ignore Assimp::Importer::SetPropertyInteger(const char*, int, bool*);
-%ignore Assimp::Importer::SetPropertyString(const char*, const std::string&, bool*);
-%ignore Assimp::Importer::SetPropertyMatrix(const char*, const aiMatrix4x4&, bool*);
 %ignore Assimp::Importer::UnregisterLoader;
 %ignore Assimp::Importer::UnregisterPPStep;
 %extend Assimp::Importer {
