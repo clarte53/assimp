@@ -42,8 +42,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *  @brief Implementation of the 3DXML parser of representation helper
  */
 
-#include "AssimpPCH.h"
-
 #ifndef ASSIMP_BUILD_NO_3DXML_IMPORTER
 #ifndef ASSIMP_BUILD_NO_Q3BSP_IMPORTER
 
@@ -56,6 +54,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ProcessHelper.h"
 #include "SceneCombiner.h"
 
+#include <boost/format.hpp>
 #include <cctype>
 
 namespace Assimp {

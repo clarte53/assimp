@@ -45,6 +45,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define AI_SCENE_COMBINER_H_INC
 
 #include "../include/assimp/ai_assert.h"
+#include "../include/assimp/anim.h"
+#include "../include/assimp/mesh.h"
 #include "../include/assimp/types.h"
 #include "Defines.h"
 #include <stddef.h>

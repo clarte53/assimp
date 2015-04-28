@@ -42,19 +42,21 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *  @brief Implementation of the 3DXML parser helper
  */
 
-#include "AssimpPCH.h"
-
 #ifndef ASSIMP_BUILD_NO_3DXML_IMPORTER
 #ifndef ASSIMP_BUILD_NO_Q3BSP_IMPORTER
 
 #include "3DXMLParser.h"
 
+#include "../include/assimp/DefaultLogger.hpp"
 #include "3DXMLMaterial.h"
 #include "3DXMLRepresentation.h"
 #include "fast_atof.h"
 #include "HighResProfiler.h"
 #include "Q3BSPZipArchive.h"
 #include "SceneCombiner.h"
+
+#include <boost/format.hpp>
+#include <sstream>
 
 namespace Assimp {
 

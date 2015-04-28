@@ -48,6 +48,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "3DXMLStructure.h"
 #include "XMLParser.h"
 
+#include <sstream>
+
 namespace Assimp {
 
 	class _3DXMLMaterial : boost::noncopyable {

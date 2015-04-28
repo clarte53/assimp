@@ -42,8 +42,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *  @brief Implementation of an high resolution profiler
  */
 
-#include "AssimpPCH.h"
-
 #ifndef ASSIMP_BUILD_NO_3DXML_IMPORTER
 
 #include "HighResProfiler.h"

@@ -45,11 +45,19 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef AI_3DXMLSTRUCTURE_H_INC
 #define AI_3DXMLSTRUCTURE_H_INC
 
+#include "../include/assimp/color4.h"
+#include "../include/assimp/material.h"
+#include "../include/assimp/mesh.h"
+#include "../include/assimp/scene.h"
 #include "Optional.h"
 
 #include <boost/noncopyable.hpp>
 #include <condition_variable>
+#include <list>
+#include <map>
+#include <memory>
 #include <mutex>
+#include <set>
 
 #if (defined _MSC_VER)
 #	pragma warning (disable:4503)

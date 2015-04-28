@@ -68,6 +68,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 #include <chrono>
+#include <list>
+#include <map>
+#include <string>
 
 namespace Assimp {
 

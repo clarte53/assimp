@@ -42,14 +42,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *  @brief Implementation of the XML parser helper class
  */
 
-#include "AssimpPCH.h"
-
 #ifndef ASSIMP_BUILD_NO_3DXML_IMPORTER
 #ifndef ASSIMP_BUILD_NO_Q3BSP_IMPORTER
 
 #include "XMLParser.h"
 
 #include "Q3BSPZipArchive.h"
+
+#include <boost/format.hpp>
 
 namespace Assimp {
 

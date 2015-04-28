@@ -45,12 +45,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef AI_3DXMLPARSER_H_INC
 #define AI_3DXMLPARSER_H_INC
 
+#include "../include/assimp/Logger.hpp"
 #include "3DXMLStructure.h"
 #include "XMLParser.h"
 
 #include <condition_variable>
 #include <functional>
 #include <mutex>
+#include <queue>
 #include <thread>
 
 namespace Assimp {

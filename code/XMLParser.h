@@ -51,6 +51,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ParsingUtils.h"
 
 #include <functional>
+#include <memory>
+#include <sstream>
 
 namespace Assimp {
 
