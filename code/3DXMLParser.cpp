@@ -1242,36 +1242,38 @@ namespace Assimp {
 
 			// Parse RelativeMatrix element
 			map.emplace_back("RelativeMatrix", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
-				std::string value = *(parser->GetContent<std::string>(true));
+				std::string values_str = *(parser->GetContent<std::string>(true));
 
-				const char* relative_matrix = value.c_str();
+				const char* relative_matrix = values_str.c_str();
 
 				aiMatrix4x4& transformation = params.instance.node->mTransformation;
 
+				float value;
+
 				// Save the transformation matrix
-				relative_matrix = fast_atoreal_move<float>(relative_matrix, transformation.a1);
+				relative_matrix = fast_atoreal_move<float>(relative_matrix, value); transformation.a1 = value;
 				SkipSpacesAndLineEnd(&relative_matrix);
-				relative_matrix = fast_atoreal_move<float>(relative_matrix, transformation.b1);
+				relative_matrix = fast_atoreal_move<float>(relative_matrix, value); transformation.b1 = value;
 				SkipSpacesAndLineEnd(&relative_matrix);
-				relative_matrix = fast_atoreal_move<float>(relative_matrix, transformation.c1);
+				relative_matrix = fast_atoreal_move<float>(relative_matrix, value); transformation.c1 = value;
 				SkipSpacesAndLineEnd(&relative_matrix);
-				relative_matrix = fast_atoreal_move<float>(relative_matrix, transformation.a2);
+				relative_matrix = fast_atoreal_move<float>(relative_matrix, value); transformation.a2 = value;
 				SkipSpacesAndLineEnd(&relative_matrix);
-				relative_matrix = fast_atoreal_move<float>(relative_matrix, transformation.b2);
+				relative_matrix = fast_atoreal_move<float>(relative_matrix, value); transformation.b2 = value;
 				SkipSpacesAndLineEnd(&relative_matrix);
-				relative_matrix = fast_atoreal_move<float>(relative_matrix, transformation.c2);
+				relative_matrix = fast_atoreal_move<float>(relative_matrix, value); transformation.c2 = value;
 				SkipSpacesAndLineEnd(&relative_matrix);
-				relative_matrix = fast_atoreal_move<float>(relative_matrix, transformation.a3);
+				relative_matrix = fast_atoreal_move<float>(relative_matrix, value); transformation.a3 = value;
 				SkipSpacesAndLineEnd(&relative_matrix);
-				relative_matrix = fast_atoreal_move<float>(relative_matrix, transformation.b3);
+				relative_matrix = fast_atoreal_move<float>(relative_matrix, value); transformation.b3 = value;
 				SkipSpacesAndLineEnd(&relative_matrix);
-				relative_matrix = fast_atoreal_move<float>(relative_matrix, transformation.c3);
+				relative_matrix = fast_atoreal_move<float>(relative_matrix, value); transformation.c3 = value;
 				SkipSpacesAndLineEnd(&relative_matrix);
-				relative_matrix = fast_atoreal_move<float>(relative_matrix, transformation.a4);
+				relative_matrix = fast_atoreal_move<float>(relative_matrix, value); transformation.a4 = value;
 				SkipSpacesAndLineEnd(&relative_matrix);
-				relative_matrix = fast_atoreal_move<float>(relative_matrix, transformation.b4);
+				relative_matrix = fast_atoreal_move<float>(relative_matrix, value); transformation.b4 = value;
 				SkipSpacesAndLineEnd(&relative_matrix);
-				relative_matrix = fast_atoreal_move<float>(relative_matrix, transformation.c4);
+				relative_matrix = fast_atoreal_move<float>(relative_matrix, value); transformation.c4 = value;
 				
 				transformation.d1 = transformation.d2 = transformation.d3 = 0.0;
 				transformation.d4 = 1.0;
