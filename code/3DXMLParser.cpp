@@ -374,8 +374,8 @@ namespace Assimp {
 			// Is the merged material already computed?
 			if(! it_ref->second.merged_material) {
 				// List of the different instances of materials referenced by this CATMatReference
-				// (Normally, in schema 4.3 it should be only 1 instance, but we have no garantees that it will remain the case in future versions.
-				// Therefore we merge the different instanciated materials together)
+				// (Normally, in schema 4.3 it should be only 1 instance, but we have no guarantees that it will remain the case in future versions.
+				// Therefore we merge the different instantiated materials together)
 				std::vector<aiMaterial*> mat_list_ref;
 
 				// Get all the instances
