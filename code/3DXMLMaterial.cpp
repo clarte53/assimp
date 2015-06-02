@@ -262,7 +262,7 @@ namespace Assimp {
 						params.me->mMaterial->AddProperty((int*) &shading, 1, AI_MATKEY_SHADING_MODEL);
 					});
 
-					map.emplace("EmissiveCoeff", [](Params& params) {
+					map.emplace("EmissiveCoef", [](Params& params) {
 						params.data->emissive_coef = params.me->ReadValue<float>(params.value);
 					});
 					
