@@ -89,6 +89,7 @@ namespace Assimp {
 	//	Update importer configuration
 	void _3DXMLImporter::SetupProperties(const Importer* pImp)
 	{
+		mUseComplexMaterials = pImp->GetPropertyInteger(AI_CONFIG_IMPORT_3DXML_USE_COMPLEX_MATERIALS, 0) != 0;
 		mUseNodeMaterials = pImp->GetPropertyInteger(AI_CONFIG_IMPORT_3DXML_USE_NODE_MATERIALS, 0) != 0;
 	}
 
@@ -101,7 +102,7 @@ namespace Assimp {
 	// ------------------------------------------------------------------------------------------------
 	//	Import method.
 	void _3DXMLImporter::InternReadFile(const std::string& pFile, aiScene* pScene, IOSystem* pIOHandler) {
-		_3DXMLParser fileParser(pIOHandler, pFile, pScene, mUseNodeMaterials);
+		_3DXMLParser fileParser(pIOHandler, pFile, pScene, mUseComplexMaterials, mUseNodeMaterials);
 	}
 
 } // end of namespace Assimp

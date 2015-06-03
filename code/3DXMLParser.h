@@ -73,6 +73,8 @@ namespace Assimp {
 
 			std::string mError;
 
+			bool mUseComplexMaterials;
+
 			bool mUseNodeMaterials;
 
 			bool mFinished;
@@ -89,7 +91,7 @@ namespace Assimp {
 		public:
 
 			/** Constructor from XML file */
-			_3DXMLParser(IOSystem* io_handler, const std::string& file, aiScene* scene, bool use_node_materials);
+			_3DXMLParser(IOSystem* io_handler, const std::string& file, aiScene* scene, bool use_complex_materials, bool use_node_materials);
 
 			virtual ~_3DXMLParser();
 			

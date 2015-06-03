@@ -905,7 +905,19 @@ enum aiComponent
 
 #define AI_CONFIG_EXPORT_XFILE_64BIT "EXPORT_XFILE_64BIT"
 
- // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+/** @brief Specifies whether the 3DXML loader will use the complex materials defined for the mesh,
+ * or the materials defined at the face level.
+ *
+ * If this property is set to true, the complex materials defined for meshes will be used and will
+ * override the materials defined at the face level. Recent implementations of 3DXML Player
+ * (16.7.14143 onward) seems to ignore such materials attached to meshes. This feature mimic the
+ * behavior of CATIA V5 "textured" rendering view.
+ * Property type: Bool. Default value: false.
+ */
+#define AI_CONFIG_IMPORT_3DXML_USE_COMPLEX_MATERIALS "IMPORT_3DXML_USE_COMPLEX_MATERIALS"
+
+// ---------------------------------------------------------------------------
 /** @brief Specifies whether the 3DXML loader will use the materials defined for nodes.
  *
  * If this property is set to true, the materials defined for nodes will be used and will

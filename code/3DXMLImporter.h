@@ -69,6 +69,8 @@ namespace Assimp {
 
 		void InternReadFile(const std::string& pFile, aiScene* pScene, IOSystem* pIOHandler);
 
+		bool mUseComplexMaterials;
+
 		bool mUseNodeMaterials;
 
 	}; // end of class _3DXMLImporter

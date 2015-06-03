@@ -64,7 +64,7 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Constructor to be privately used by Importer
-	_3DXMLParser::_3DXMLParser(IOSystem* io_handler, const std::string& file, aiScene* scene, bool use_node_materials) : mWorkers(), mTasks(), mCondition(), mMutex(), mError(""), mUseNodeMaterials(use_node_materials), mFinished(false), mArchive(new Q3BSP::Q3BSPZipArchive(io_handler, file)), mContent(scene, &mCondition), mHasUVR(false) {
+	_3DXMLParser::_3DXMLParser(IOSystem* io_handler, const std::string& file, aiScene* scene, bool use_complex_materials, bool use_node_materials) : mWorkers(), mTasks(), mCondition(), mMutex(), mError(""), mUseComplexMaterials(use_complex_materials), mUseNodeMaterials(use_node_materials), mFinished(false), mArchive(new Q3BSP::Q3BSPZipArchive(io_handler, file)), mContent(scene, &mCondition), mHasUVR(false) {
 		// Load the compressed archive
 		if (! mArchive->isOpen()) {
 			ThrowException(nullptr, "Failed to open file " + file + ". The 3DXML schema must be >= 4.0." );
@@ -565,16 +565,9 @@ namespace Assimp {
 				}
 				
 				// If a color is defined
-				if((*it_mat)->is_color) {
-					if(material) {
-						// We make sure that the color defined at the lowest level take precedence over those defined in complex materials
-						material->AddProperty(&((*it_mat)->color), 1, AI_MATKEY_COLOR_AMBIENT);
-						material->AddProperty(&((*it_mat)->color), 1, AI_MATKEY_COLOR_DIFFUSE);
-						material->AddProperty(&((*it_mat)->color), 1, AI_MATKEY_COLOR_EMISSIVE);
-					} else {
-						// We use the color only if no complex material is defined (seems to be the behavior of 3DXML Player)
-						BuildColorMaterial(material, "Color Material " + parser->ToString(color_mat_counter++), (*it_mat)->color);
-					}
+				if((*it_mat)->is_color && ! (material && mUseComplexMaterials)) {
+					// We use the color only if no complex material is defined (seems to be the behavior of 3DXML Player)
+					BuildColorMaterial(material, "Color Material " + parser->ToString(color_mat_counter++), (*it_mat)->color);
 				}
 			} else {
 				// Default material
