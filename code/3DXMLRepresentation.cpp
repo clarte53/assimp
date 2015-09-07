@@ -647,14 +647,17 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	void _3DXMLRepresentation::ReadVisualizationRep() {
-		std::string type = *(mReader.GetAttribute<std::string>("xsi:type", true));
+		Optional<std::string> type = mReader.GetAttribute<std::string>("xsi:type", false); // Should be mandatory, but some exporter creates empty Rep elements...
 
-		if(type.compare("BagRepType") == 0) {
-			ReadBagRep();
-		} else if(type.compare("PolygonalRepType") == 0) {
-			ReadPolygonalRep();
-		} else {
-			ThrowException("Unsupported type of VisualizationRep \"" + type + "\".");
+		if(type)
+		{
+			if(type->compare("BagRepType") == 0) {
+				ReadBagRep();
+			} else if(type->compare("PolygonalRepType") == 0) {
+				ReadPolygonalRep();
+			} else {
+				ThrowException("Unsupported type of VisualizationRep \"" + *type + "\".");
+			}
 		}
 	}
 
