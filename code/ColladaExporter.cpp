@@ -2,7 +2,7 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2012, assimp team
+Copyright (c) 2006-2015, assimp team
 All rights reserved.
 
 Redistribution and use of this software in source and binary forms, 
@@ -1089,4 +1089,3 @@ void ColladaExporter::WriteNode(aiNode* pNode)
 
 #endif
 #endif
-

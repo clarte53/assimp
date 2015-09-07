@@ -18,12 +18,13 @@ set (PROJECT_VERSION "${ASSIMP_VERSION}")
 
 set(ASSIMP_PACKAGE_VERSION "0" CACHE STRING "the package-specific version used for uploading the sources")
 
+# Needed for openddl_parser config, no use of c++11 at this moment
 add_definitions( -DOPENDDL_NO_USE_CPP11 )
 
 # Get the current working branch
 execute_process(
     COMMAND git rev-parse --abbrev-ref HEAD
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     OUTPUT_VARIABLE GIT_BRANCH
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
@@ -31,7 +32,7 @@ execute_process(
 # Get the latest abbreviated commit hash of the working branch
 execute_process(
     COMMAND git log -1 --format=%h
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     OUTPUT_VARIABLE GIT_COMMIT_HASH
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
@@ -93,7 +94,11 @@ SET( ASSIMP_INCLUDE_INSTALL_DIR "include" CACHE PATH
 SET( ASSIMP_BIN_INSTALL_DIR "bin" CACHE PATH
     "Path the tool executables are installed to." )
 
-SET(CMAKE_DEBUG_POSTFIX "d" CACHE STRING "Debug Postfitx for lib, samples and tools")
+IF (CMAKE_BUILD_TYPE STREQUAL "Release")
+  SET(CMAKE_DEBUG_POSTFIX "" CACHE STRING "Debug Postfix for lib, samples and tools")
+ELSE()
+  SET(CMAKE_DEBUG_POSTFIX "d" CACHE STRING "Debug Postfix for lib, samples and tools")
+ENDIF()
 
 # Only generate this target if no higher-level project already has
 IF (NOT TARGET uninstall)
@@ -131,6 +136,8 @@ ENDIF ( ASSIMP_ENABLE_BOOST_WORKAROUND )
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/assimp-config.cmake.in"         "${CMAKE_CURRENT_BINARY_DIR}/assimp-config.cmake" @ONLY IMMEDIATE)
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/assimp-config-version.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/assimp-config-version.cmake" @ONLY IMMEDIATE)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/assimp-config.cmake"             "${CMAKE_CURRENT_BINARY_DIR}/assimp-config-version.cmake" DESTINATION "${ASSIMP_LIB_INSTALL_DIR}/cmake/assimp-${ASSIMP_VERSION_MAJOR}.${ASSIMP_VERSION_MINOR}" COMPONENT ${LIBASSIMP-DEV_COMPONENT})
+
+FIND_PACKAGE( DirectX )
 
 option ( ASSIMP_NO_EXPORT
     "Disable Assimp's export functionality."
@@ -241,9 +248,9 @@ option ( ASSIMP_BUILD_ASSIMP_TOOLS
     ON
 )
 IF ( ASSIMP_BUILD_ASSIMP_TOOLS )
-    IF ( WIN32 )
+  IF ( WIN32 AND DirectX_FOUND )
         ADD_SUBDIRECTORY( tools/assimp_view/ )
-    ENDIF ( WIN32 )
+  ENDIF ( WIN32 AND DirectX_FOUND )
     ADD_SUBDIRECTORY( tools/assimp_cmd/ )
 ENDIF ( ASSIMP_BUILD_ASSIMP_TOOLS )
 

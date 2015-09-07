@@ -376,6 +376,8 @@ ADD_ASSIMP_IMPORTER(OGRE
 )
 
 ADD_ASSIMP_IMPORTER(OPENGEX
+  OpenGEXExporter.cpp
+  OpenGEXExporter.h
     OpenGEXImporter.cpp
     OpenGEXImporter.h
     OpenGEXStructs.h
