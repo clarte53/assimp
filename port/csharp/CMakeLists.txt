@@ -14,8 +14,8 @@ LINK_DIRECTORIES(
 	${Assimp_BINARY_DIR}/code/
 )
 
-SET(CMAKE_SWIG_FLAGS "-c++;-namespace \"Assimp\"")
-SET(CMAKE_SWIG_OUTDIR "./generated")
+SET(CMAKE_SWIG_FLAGS "-c++;-namespace;Assimp")
+SET(CMAKE_SWIG_OUTDIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
 SET_SOURCE_FILES_PROPERTIES(assimp_swig.i PROPERTIES CPLUSPLUS ON)
 
 SWIG_ADD_MODULE(assimp_swig csharp assimp_swig.i)
