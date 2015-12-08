@@ -70,31 +70,27 @@ class IOStream;
 template <typename T>
 struct ScopeGuard
 {
-	ScopeGuard(T* obj) : obj(obj), mdismiss(false) {}
 
-	~ScopeGuard () throw() {
-		if (!mdismiss) {
-			delete obj;
-		}
-		obj = NULL;
-	} 
+    explicit ScopeGuard(T* obj) : obj(obj), mdismiss() {}
+    ~ScopeGuard () throw() {
+        if (!mdismiss) {
+            delete obj;
+        }
+        obj = NULL;
+    }
 
-	T* dismiss() {
-		mdismiss=true;
-		return obj;
-	}
+    T* dismiss() {
+        mdismiss=true;
+        return obj;
+    }
 
-	operator T*() const {
-		return obj;
-	}
+    operator T*() {
+        return obj;
+    }
 
-	T* operator->() const {
-		return obj;
-	}
-
-	T* get() const {
-		return obj;
-	}
+    T* operator -> () {
+        return obj;
+    }
 
 private:
     // no copying allowed.
@@ -131,88 +127,89 @@ public:
 	virtual ~BaseImporter();
 
 public:
-	// -------------------------------------------------------------------
-	/** Returns whether the class can handle the format of the given file.
-	 *
-	 * The implementation should be as quick as possible. A check for
-	 * the file extension is enough. If no suitable loader is found with
-	 * this strategy, CanRead() is called again, the 'checkSig' parameter
-	 * set to true this time. Now the implementation is expected to
-	 * perform a full check of the file structure, possibly searching the
-	 * first bytes of the file for magic identifiers or keywords.
-	 *
-	 * @param pFile Path and file name of the file to be examined.
-	 * @param pIOHandler The IO handler to use for accessing any file.
-	 * @param checkSig Set to true if this method is called a second time.
-	 *   This time, the implementation may take more time to examine the
-	 *   contents of the file to be loaded for magic bytes, keywords, etc
-	 *   to be able to load files with unknown/not existent file extensions.
-	 * @return true if the class can read this file, false if not.
-	 */
-	virtual bool CanRead( 
-		const std::string& pFile, 
-		IOSystem* pIOHandler, 
-		bool checkSig
-		) const = 0;
 
-	// -------------------------------------------------------------------
-	/** Imports the given file and returns the imported data.
-	 * If the import succeeds, ownership of the data is transferred to 
-	 * the caller. If the import fails, NULL is returned. The function
-	 * takes care that any partially constructed data is destroyed
-	 * beforehand.
-	 *
-	 * @param pImp #Importer object hosting this loader.
-	 * @param pFile Path of the file to be imported. 
-	 * @param pIOHandler IO-Handler used to open this and possible other files.
-	 * @return The imported data or NULL if failed. If it failed a 
-	 * human-readable error description can be retrieved by calling 
-	 * GetErrorText()
-	 *
-	 * @note This function is not intended to be overridden. Implement 
-	 * InternReadFile() to do the import. If an exception is thrown somewhere 
-	 * in InternReadFile(), this function will catch it and transform it into
-	 *  a suitable response to the caller.
-	 */
-	aiScene* ReadFile(
-		const Importer* pImp, 
-		const std::string& pFile, 
-		IOSystem* pIOHandler
-		);
+    // -------------------------------------------------------------------
+    /** Returns whether the class can handle the format of the given file.
+     *
+     * The implementation should be as quick as possible. A check for
+     * the file extension is enough. If no suitable loader is found with
+     * this strategy, CanRead() is called again, the 'checkSig' parameter
+     * set to true this time. Now the implementation is expected to
+     * perform a full check of the file structure, possibly searching the
+     * first bytes of the file for magic identifiers or keywords.
+     *
+     * @param pFile Path and file name of the file to be examined.
+     * @param pIOHandler The IO handler to use for accessing any file.
+     * @param checkSig Set to true if this method is called a second time.
+     *   This time, the implementation may take more time to examine the
+     *   contents of the file to be loaded for magic bytes, keywords, etc
+     *   to be able to load files with unknown/not existent file extensions.
+     * @return true if the class can read this file, false if not.
+     */
+    virtual bool CanRead(
+        const std::string& pFile,
+        IOSystem* pIOHandler,
+        bool checkSig
+        ) const = 0;
 
-	// -------------------------------------------------------------------
-	/** Returns the error description of the last error that occured. 
-	 * @return A description of the last error that occured. An empty
-	 * string if there was no error.
-	 */
-	const std::string& GetErrorText() const {
-		return mErrorText;
-	}
+    // -------------------------------------------------------------------
+    /** Imports the given file and returns the imported data.
+     * If the import succeeds, ownership of the data is transferred to
+     * the caller. If the import fails, NULL is returned. The function
+     * takes care that any partially constructed data is destroyed
+     * beforehand.
+     *
+     * @param pImp #Importer object hosting this loader.
+     * @param pFile Path of the file to be imported.
+     * @param pIOHandler IO-Handler used to open this and possible other files.
+     * @return The imported data or NULL if failed. If it failed a
+     * human-readable error description can be retrieved by calling
+     * GetErrorText()
+     *
+     * @note This function is not intended to be overridden. Implement
+     * InternReadFile() to do the import. If an exception is thrown somewhere
+     * in InternReadFile(), this function will catch it and transform it into
+     *  a suitable response to the caller.
+     */
+    aiScene* ReadFile(
+        const Importer* pImp,
+        const std::string& pFile,
+        IOSystem* pIOHandler
+        );
 
-	// -------------------------------------------------------------------
-	/** Called prior to ReadFile().
-	 * The function is a request to the importer to update its configuration
-	 * basing on the Importer's configuration property list.
-	 * @param pImp Importer instance
-	 */
-	virtual void SetupProperties(
-		const Importer* pImp
-		);
+    // -------------------------------------------------------------------
+    /** Returns the error description of the last error that occured.
+     * @return A description of the last error that occured. An empty
+     * string if there was no error.
+     */
+    const std::string& GetErrorText() const {
+        return m_ErrorText;
+    }
 
-	
-	// -------------------------------------------------------------------
-	/** Called by #Importer::GetImporterInfo to get a description of 
-	 *  some loader features. Importers must provide this information. */
-	virtual const aiImporterDesc* GetInfo() const = 0;
+    // -------------------------------------------------------------------
+    /** Called prior to ReadFile().
+     * The function is a request to the importer to update its configuration
+     * basing on the Importer's configuration property list.
+     * @param pImp Importer instance
+     */
+    virtual void SetupProperties(
+        const Importer* pImp
+        );
 
 
+    // -------------------------------------------------------------------
+    /** Called by #Importer::GetImporterInfo to get a description of
+     *  some loader features. Importers must provide this information. */
+    virtual const aiImporterDesc* GetInfo() const = 0;
 
-	// -------------------------------------------------------------------
-	/** Called by #Importer::GetExtensionList for each loaded importer.
-	 *  Take the extension list contained in the structure returned by
-	 *  #GetInfo and insert all file extensions into the given set.
-	 *  @param extension set to collect file extensions in*/
-	void GetExtensionList(std::set<std::string>& extensions);
+
+
+    // -------------------------------------------------------------------
+    /** Called by #Importer::GetExtensionList for each loaded importer.
+     *  Take the extension list contained in the structure returned by
+     *  #GetInfo and insert all file extensions into the given set.
+     *  @param extension set to collect file extensions in*/
+    void GetExtensionList(std::set<std::string>& extensions);
 
 protected:
 
@@ -364,13 +361,34 @@ public: // static utilities
 		IOStream* stream,
 		std::vector<char>& data);
 
+    // -------------------------------------------------------------------
+    /** Utility function to move a std::vector into a aiScene array
+    *  @param vec The vector to be moved
+    *  @param out The output pointer to the allocated array.
+    *  @param numOut The output count of elements copied. */
+    template<typename T>
+    AI_FORCE_INLINE
+    static void CopyVector(
+        std::vector<T>& vec,
+        T*& out,
+        unsigned int& outLength)
+    {
+        outLength = vec.size();
+        if (outLength) {
+            out = new T[outLength];
+            std::swap_ranges(vec.begin(), vec.end(), out);
+        }
+    }
+
+    
+
 protected:
 
-	/** Error description in case there was one. */
-	std::string mErrorText;
+    /** Error description in case there was one. */
+    std::string m_ErrorText;
 
-	/** Currently set progress handler */
-	ProgressHandler* progress;
+    /** Currently set progress handler */
+    ProgressHandler* m_progress;
 };
 
 

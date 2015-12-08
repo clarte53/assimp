@@ -122,104 +122,103 @@ struct aiNode
 	C_STRUCT aiMetadata* mMetaData;
 
 #ifdef __cplusplus
-
-	Array<aiNode*> Children;
+    Array<aiNode*> Children;
 	
-	Array<unsigned int> Meshes;
-
-	/** Constructor */
-	aiNode() 
-		// set all members to zero by default
-		: mName("")
-		, mParent(NULL)
-		, mNumChildren(0)
-		, mChildren(NULL)
-		, mNumMeshes(0)
-		, mMeshes(NULL)
-		, mMetaData(NULL)
-		, Children(&mChildren, &mNumChildren)
-		, Meshes(&mMeshes, &mNumMeshes)
-	{
-	}
+    Array<unsigned int> Meshes;
 	
-
-	/** Construction from a specific name */
-	aiNode(const std::string& name) 
-		// set all members to zero by default
-		: mName(name)
-		, mParent(NULL)
-		, mNumChildren(0)
-		, mChildren(NULL)
-		, mNumMeshes(0)
-		, mMeshes(NULL)
-		, mMetaData(NULL)
-		, Children(&mChildren, &mNumChildren)
-		, Meshes(&mMeshes, &mNumMeshes)
-	{
-	}
-
-	/** Destructor */
-	~aiNode()
-	{
-		// delete all children recursively
-		// to make sure we won't crash if the data is invalid ...
-		if (mChildren && mNumChildren)  
-		{
-			for( unsigned int a = 0; a < mNumChildren; a++)
-				delete mChildren[a];
-		}
-		delete [] mChildren;
-		delete [] mMeshes;
-		delete mMetaData;
-	}
+    /** Constructor */
+    aiNode()
+        // set all members to zero by default
+        : mName("")
+        , mParent(NULL)
+        , mNumChildren(0)
+        , mChildren(NULL)
+        , mNumMeshes(0)
+        , mMeshes(NULL)
+        , mMetaData(NULL)
+        , Children(&mChildren, &mNumChildren)
+        , Meshes(&mMeshes, &mNumMeshes)
+    {
+    }
 
 
-	/** Searches for a node with a specific name, beginning at this
-	 *  nodes. Normally you will call this method on the root node
-	 *  of the scene.
-	 * 
-	 *  @param name Name to search for
-	 *  @return NULL or a valid Node if the search was successful.
-	 */
-	inline const aiNode* FindNode(const aiString& name) const
-	{
-		return FindNode(name.data);
-	}
+    /** Construction from a specific name */
+    explicit aiNode(const std::string& name)
+        // set all members to zero by default
+        : mName(name)
+        , mParent(NULL)
+        , mNumChildren(0)
+        , mChildren(NULL)
+        , mNumMeshes(0)
+        , mMeshes(NULL)
+        , mMetaData(NULL)
+        , Children(&mChildren, &mNumChildren)
+        , Meshes(&mMeshes, &mNumMeshes)
+    {
+    }
+
+    /** Destructor */
+    ~aiNode()
+    {
+        // delete all children recursively
+        // to make sure we won't crash if the data is invalid ...
+        if (mChildren && mNumChildren)
+        {
+            for( unsigned int a = 0; a < mNumChildren; a++)
+                delete mChildren[a];
+        }
+        delete [] mChildren;
+        delete [] mMeshes;
+        delete mMetaData;
+    }
 
 
-	inline aiNode* FindNode(const aiString& name)
-	{
-		return FindNode(name.data);
-	}
+    /** Searches for a node with a specific name, beginning at this
+     *  nodes. Normally you will call this method on the root node
+     *  of the scene.
+     *
+     *  @param name Name to search for
+     *  @return NULL or a valid Node if the search was successful.
+     */
+    inline const aiNode* FindNode(const aiString& name) const
+    {
+        return FindNode(name.data);
+    }
 
 
-	inline const aiNode* FindNode(const char* name) const
-	{
-		if (!::strcmp( mName.data,name))return this;
-		for (unsigned int i = 0; i < mNumChildren;++i)
-		{
-			const aiNode* const p = mChildren[i]->FindNode(name);
-			if (p) {
-				return p;
-			}
-		}
-		// there is definitely no sub-node with this name
-		return NULL;
-	}
+    inline aiNode* FindNode(const aiString& name)
+    {
+        return FindNode(name.data);
+    }
 
-	inline aiNode* FindNode(const char* name) 
-	{
-		if (!::strcmp( mName.data,name))return this;
-		for (unsigned int i = 0; i < mNumChildren;++i)
-		{
-			aiNode* const p = mChildren[i]->FindNode(name);
-			if (p) {
-				return p;
-			}
-		}
-		// there is definitely no sub-node with this name
-		return NULL;
-	}
+
+    inline const aiNode* FindNode(const char* name) const
+    {
+        if (!::strcmp( mName.data,name))return this;
+        for (unsigned int i = 0; i < mNumChildren;++i)
+        {
+            const aiNode* const p = mChildren[i]->FindNode(name);
+            if (p) {
+                return p;
+            }
+        }
+        // there is definitely no sub-node with this name
+        return NULL;
+    }
+
+    inline aiNode* FindNode(const char* name)
+    {
+        if (!::strcmp( mName.data,name))return this;
+        for (unsigned int i = 0; i < mNumChildren;++i)
+        {
+            aiNode* const p = mChildren[i]->FindNode(name);
+            if (p) {
+                return p;
+            }
+        }
+        // there is definitely no sub-node with this name
+        return NULL;
+    }
 
 #endif // __cplusplus
 };

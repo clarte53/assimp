@@ -10,8 +10,8 @@ endif(NOT BUILD_SHARED_LIBS)
 
 # Define here the needed parameters
 set (ASSIMP_VERSION_MAJOR 3)
-set (ASSIMP_VERSION_MINOR 1)
-set (ASSIMP_VERSION_PATCH 1) # subversion revision?
+set (ASSIMP_VERSION_MINOR 2)
+set (ASSIMP_VERSION_PATCH 0) # subversion revision?
 set (ASSIMP_VERSION ${ASSIMP_VERSION_MAJOR}.${ASSIMP_VERSION_MINOR}.${ASSIMP_VERSION_PATCH})
 set (ASSIMP_SOVERSION 3)
 set (PROJECT_VERSION "${ASSIMP_VERSION}")
@@ -25,16 +25,18 @@ add_definitions( -DOPENDDL_NO_USE_CPP11 )
 execute_process(
     COMMAND git rev-parse --abbrev-ref HEAD
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    OUTPUT_VARIABLE GIT_BRANCH
-    OUTPUT_STRIP_TRAILING_WHITESPACE
+  OUTPUT_VARIABLE GIT_BRANCH
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  ERROR_QUIET
 )
 
 # Get the latest abbreviated commit hash of the working branch
 execute_process(
     COMMAND git log -1 --format=%h
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    OUTPUT_VARIABLE GIT_COMMIT_HASH
-    OUTPUT_STRIP_TRAILING_WHITESPACE
+  OUTPUT_VARIABLE GIT_COMMIT_HASH
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  ERROR_QUIET
 )
 
 if(NOT GIT_COMMIT_HASH)
@@ -63,9 +65,11 @@ if( CMAKE_COMPILER_IS_MINGW )
 endif()
 
 if((CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX) AND NOT CMAKE_COMPILER_IS_MINGW)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC") # this is a very important switch and some libraries seem now to have it....
-    # hide all not-exported symbols
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden -Wall" )
+  if (BUILD_SHARED_LIBS AND CMAKE_SIZEOF_VOID_P EQUAL 8) # -fPIC is only required for shared libs on 64 bit
+     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+  endif()
+  # hide all not-exported symbols
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden -Wall" )
 elseif(MSVC)
     # enable multi-core compilation with MSVC
     add_definitions(/MP)
@@ -118,13 +122,15 @@ IF ( ASSIMP_ENABLE_BOOST_WORKAROUND )
     ADD_DEFINITIONS( -DASSIMP_BUILD_BOOST_WORKAROUND )
     MESSAGE( STATUS "Building a non-boost version of Assimp." )
 ELSE ( ASSIMP_ENABLE_BOOST_WORKAROUND )
-    SET( Boost_DETAILED_FAILURE_MSG ON )
-    SET( Boost_ADDITIONAL_VERSIONS "1.47" "1.47.0" "1.48.0" "1.48" "1.49" "1.49.0" "1.50" "1.50.0" "1.51" "1.51.0" "1.52.0" "1.53.0" "1.54.0" "1.55" "1.55.0" "1.56" "1.56.0" "1.57" "1.57.0" "1.58" "1.58.0" )
-    FIND_PACKAGE( Boost )
-    IF ( NOT Boost_FOUND )
-        MESSAGE( FATAL_ERROR
-            "Boost libraries (http://www.boost.org/) not found. "
-            "You can build a non-boost version of Assimp with slightly reduced "
+  SET( Boost_DETAILED_FAILURE_MSG ON )
+  IF ( NOT Boost_ADDITIONAL_VERSIONS )
+    SET( Boost_ADDITIONAL_VERSIONS "1.47" "1.47.0" "1.48.0" "1.48" "1.49" "1.49.0" "1.50" "1.50.0" "1.51" "1.51.0" "1.52.0" "1.53.0" "1.54.0" "1.55" "1.55.0" "1.56" "1.56.0" "1.57" "1.57.0" "1.58" "1.58.0" "1.59" "1.59.0")
+  ENDIF ( NOT Boost_ADDITIONAL_VERSIONS )
+  FIND_PACKAGE( Boost )
+  IF ( NOT Boost_FOUND )
+    MESSAGE( FATAL_ERROR
+      "Boost libraries (http://www.boost.org/) not found. "
+      "You can build a non-boost version of Assimp with slightly reduced "
       "functionality by specifying -DASSIMP_ENABLE_BOOST_WORKAROUND=ON."
         )
     ENDIF ( NOT Boost_FOUND )

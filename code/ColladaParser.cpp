@@ -64,28 +64,47 @@ using namespace Assimp::Collada;
 // ------------------------------------------------------------------------------------------------
 // Constructor to be privately used by Importer
 ColladaParser::ColladaParser( IOSystem* pIOHandler, const std::string& pFile)
-    : mFileName( pFile)
+    : mFileName( pFile )
+    , mReader( NULL )
+    , mDataLibrary()
+    , mAccessorLibrary()
+    , mMeshLibrary()
+    , mNodeLibrary()
+    , mImageLibrary()
+    , mEffectLibrary()
+    , mMaterialLibrary()
+    , mLightLibrary()
+    , mCameraLibrary()
+    , mControllerLibrary()
+    , mRootNode( NULL )
+    , mAnims()
+    , mUnitSize( 1.0f )
+    , mUpDirection( UP_Y )
+    , mFormat(FV_1_5_n )    // We assume the newest file format by default
 {
-    mRootNode = NULL;
-    mUnitSize = 1.0f;
-    mUpDirection = UP_Y;
+    // validate io-handler instance
+    if ( NULL == pIOHandler ) {
+        throw DeadlyImportError("IOSystem is NULL." );
+    }
 
-    // We assume the newest file format by default
-    mFormat = FV_1_5_n;
-
-  // open the file
-  boost::scoped_ptr<IOStream> file( pIOHandler->Open( pFile));
-  if( file.get() == NULL)
-    throw DeadlyImportError( "Failed to open file " + pFile + ".");
+    // open the file
+    boost::scoped_ptr<IOStream> file( pIOHandler->Open( pFile ) );
+    if ( file.get() == NULL ) {
+        throw DeadlyImportError( "Failed to open file " + pFile + "." );
+    }
 
     // generate a XML reader for it
-  boost::scoped_ptr<CIrrXML_IOStreamReader> mIOWrapper( new CIrrXML_IOStreamReader( file.get()));
+    boost::scoped_ptr<CIrrXML_IOStreamReader> mIOWrapper( new CIrrXML_IOStreamReader( file.get()));
     mReader = irr::io::createIrrXMLReader( mIOWrapper.get());
-    if( !mReader)
-        ThrowException( "Collada: Unable to open file.");
+    if (!mReader) {
+        ThrowException("Collada: Unable to open file.");
+    }
 
     // start reading
     ReadContents();
+
+    // release file after import
+    //pIOHandler->Close( file.get() );
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -1240,11 +1259,16 @@ void ColladaParser::ReadEffectProfileCommon( Collada::Effect& pEffect)
             else if( IsElement( "transparent")) {
                 pEffect.mHasTransparency = true;
 
-                // In RGB_ZERO mode, the transparency is interpreted in reverse, go figure...
-                if(::strcmp(mReader->getAttributeValueSafe("opaque"), "RGB_ZERO") == 0) {
-                    // TODO: handle RGB_ZERO mode completely
+                const char* opaque = mReader->getAttributeValueSafe("opaque");
+ 
+                if(::strcmp(opaque, "RGB_ZERO") == 0 || ::strcmp(opaque, "RGB_ONE") == 0) {
                     pEffect.mRGBTransparency = true;
                 }
+
+                // In RGB_ZERO mode, the transparency is interpreted in reverse, go figure...
+				if(::strcmp(opaque, "RGB_ZERO") == 0 || ::strcmp(opaque, "A_ZERO") == 0) {
+					pEffect.mInvertTransparency = true;
+				}
 
                 ReadEffectColor( pEffect.mTransparent,pEffect.mTexTransparent);
             }
@@ -1509,7 +1533,7 @@ void ColladaParser::ReadEffectParam( Collada::EffectParam& pParam)
                 // don't care for remaining stuff
                 SkipElement( "surface");
             }
-            else if( IsElement( "sampler2D"))
+            else if( IsElement( "sampler2D") && (FV_1_4_n == mFormat || FV_1_3_n == mFormat))
             {
                 // surface ID is given inside <source> tags
                 TestOpening( "source");
@@ -1519,6 +1543,19 @@ void ColladaParser::ReadEffectParam( Collada::EffectParam& pParam)
                 TestClosing( "source");
 
                 // don't care for remaining stuff
+                SkipElement( "sampler2D");
+            }
+            else if( IsElement( "sampler2D"))
+            {
+                // surface ID is given inside <instance_image> tags
+                TestOpening( "instance_image");
+                int attrURL = GetAttribute("url");
+                const char* url = mReader->getAttributeValue( attrURL);
+                if( url[0] != '#')
+                    ThrowException( "Unsupported URL format in instance_image");
+                url++;
+                pParam.mType = Param_Sampler;
+                pParam.mReference = url;
                 SkipElement( "sampler2D");
             } else
             {

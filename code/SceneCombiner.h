@@ -161,36 +161,36 @@ struct BoneWithHash : public std::pair<uint32_t,aiString*>	{
  */
 struct SceneHelper
 {
-	SceneHelper ()
-		: scene		(NULL)
-		, idlen		(0)
-	{
-		id[0] = 0;
-	}
+    SceneHelper ()
+        : scene     (NULL)
+        , idlen     (0)
+    {
+        id[0] = 0;
+    }
 
-	SceneHelper (aiScene* _scene)
-		: scene		(_scene)
-		, idlen		(0)
-	{
-		id[0] = 0;
-	}
+    explicit SceneHelper (aiScene* _scene)
+        : scene     (_scene)
+        , idlen     (0)
+    {
+        id[0] = 0;
+    }
 
-	AI_FORCE_INLINE aiScene* operator-> () const
-	{
-		return scene;
-	}
+    AI_FORCE_INLINE aiScene* operator-> () const
+    {
+        return scene;
+    }
 
-	// scene we're working on
-	aiScene* scene;
+    // scene we're working on
+    aiScene* scene;
 
-	// prefix to be added to all identifiers in the scene ...
-	char id [32];
+    // prefix to be added to all identifiers in the scene ...
+    char id [32];
 
-	// and its strlen() 
-	unsigned int idlen;
+    // and its strlen()
+    unsigned int idlen;
 
-	// hash table to quickly check whether a name is contained in the scene
-	std::set<unsigned int> hashes;
+    // hash table to quickly check whether a name is contained in the scene
+    std::set<unsigned int> hashes;
 };
 
 // ---------------------------------------------------------------------------
