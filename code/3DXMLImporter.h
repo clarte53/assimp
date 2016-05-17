@@ -73,6 +73,8 @@ namespace Assimp {
 
 		bool mUseNodeMaterials;
 
+		bool mUseReferencesNames;
+
 	}; // end of class _3DXMLImporter
 
 } // end of namespace Assimp

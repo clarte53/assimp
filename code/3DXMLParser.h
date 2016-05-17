@@ -77,6 +77,8 @@ namespace Assimp {
 
 			bool mUseNodeMaterials;
 
+			bool mUseReferencesNames;
+
 			bool mFinished;
 
 			/** The archive containing the 3DXML files */ 
@@ -91,7 +93,7 @@ namespace Assimp {
 		public:
 
 			/** Constructor from XML file */
-			_3DXMLParser(IOSystem* io_handler, const std::string& file, aiScene* scene, bool use_complex_materials, bool use_node_materials);
+			_3DXMLParser(IOSystem* io_handler, const std::string& file, aiScene* scene, bool use_complex_materials, bool use_node_materials, bool use_references_names);
 
 			virtual ~_3DXMLParser();
 			

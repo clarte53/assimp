@@ -928,4 +928,18 @@ enum aiComponent
  */
 #define AI_CONFIG_IMPORT_3DXML_USE_NODE_MATERIALS "IMPORT_3DXML_USE_NODE_MATERIALS"
 
+ // ---------------------------------------------------------------------------
+/** @brief Specifies whether the 3DXML loader will use the name of references as the node name
+ * or the name of instances.
+ *
+ * If this property is set to true, the name of the node will use the name of the related
+ * reference instead of the related instance. Reference names tends to be more explicit
+ * but are usually not unique. In particular, if a reference is instantiated multiple times,
+ * all the nodes corresponding to those instances will have the same name. On the other hand,
+ * instances tends to have more unique names. Their names depend of the exporter and usually
+ * are the name of the instantiated reference with a suffix to make them unique.
+ * Property type: Bool. Default value: false.
+ */
+#define AI_CONFIG_IMPORT_3DXML_USE_REFERENCES_NAMES "IMPORT_3DXML_USE_REFERENCES_NAMES"
+
 #endif // !! AI_CONFIG_H_INC
