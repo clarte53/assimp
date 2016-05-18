@@ -597,6 +597,7 @@ DEF_ENUM(aiPostProcessSteps, pFlags);
 CSHARP_ARRAYS(void, byte)
 %apply void INPUT[]  {const void* pBuffer}
 %apply void INPUT[]  {const void* pFilename}
+%ignore Assimp::Importer::ApplyCustomizedPostProcessing;
 %ignore Assimp::Importer::GetExtensionList;
 %ignore Assimp::Importer::GetImporter;
 %ignore Assimp::Importer::IsExtensionSupported(std::string const &) const;
