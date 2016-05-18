@@ -283,6 +283,23 @@ ADD_UNMANAGED_OPTION(aiColor3D);
 // cf template section
 ADD_UNMANAGED_OPTION_BASE(aiColor4D, aiColor4t<float>);
 %ignore aiColor4t<float>::operator[](unsigned int);
+%extend aiColor4t<float> {
+	float r() {
+		return $self->r;
+	}
+
+	float g() {
+		return $self->g;
+	}
+
+	float b() {
+		return $self->b;
+	}
+
+	float a() {
+		return $self->a;
+	}
+}
 
 /////// aiComponent
 ENUM_FLAGS_DECL(aiComponent);
@@ -570,6 +587,19 @@ ADD_UNMANAGED_OPTION_BASE(aiVector2D, aiVector2t<float>);
 // cf template section
 ADD_UNMANAGED_OPTION_BASE(aiVector3D, aiVector3t<float>);
 %ignore aiVector3t<float>::operator[](unsigned int);
+%extend aiVector3t<float> {
+	float x() {
+		return $self->x;
+	}
+
+	float y() {
+		return $self->y;
+	}
+
+	float z() {
+		return $self->z;
+	}
+}
 
 /////// aiVectorKey 
 // Done
