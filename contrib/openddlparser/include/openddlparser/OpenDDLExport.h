@@ -31,15 +31,27 @@ BEGIN_ODDLPARSER_NS
 /// @ingroup    IOStreamBase
 ///	@brief      This class represents the stream to write out.
 //-------------------------------------------------------------------------------------------------
+class DLL_ODDLPARSER_EXPORT StreamFormatterBase {
+public:
+    StreamFormatterBase();
+    virtual ~StreamFormatterBase();
+    virtual std::string format( const std::string &statement );
+};
+
+//-------------------------------------------------------------------------------------------------
+/// @ingroup    IOStreamBase
+///	@brief      This class represents the stream to write out.
+//-------------------------------------------------------------------------------------------------
 class DLL_ODDLPARSER_EXPORT IOStreamBase {
 public:
-    IOStreamBase();
+    IOStreamBase( StreamFormatterBase *formatter = ddl_nullptr );
     virtual ~IOStreamBase();
     virtual bool open( const std::string &anme );
     virtual bool close();
-    virtual void write( const std::string &statement );
+    virtual size_t write( const std::string &statement );
 
 private:
+    StreamFormatterBase *m_formatter;
     FILE *m_file;
 };
 
@@ -80,6 +92,10 @@ protected:
     bool writeValueType( Value::ValueType type, size_t numItems, std::string &statement );
     bool writeValue( Value *val, std::string &statement );
     bool writeValueArray( DataArrayList *al, std::string &statement );
+
+private:
+    OpenDDLExport( const OpenDDLExport & ) ddl_no_copy;
+    OpenDDLExport &operator = ( const OpenDDLExport  & ) ddl_no_copy;
 
 private:
     IOStreamBase *m_stream;

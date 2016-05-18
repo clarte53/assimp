@@ -3,7 +3,7 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2015, assimp team
+Copyright (c) 2006-2016, assimp team
 
 All rights reserved.
 
@@ -51,15 +51,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ColladaParser.h"
 #include "fast_atof.h"
 #include "ParsingUtils.h"
-#include <boost/scoped_ptr.hpp>
-#include <boost/foreach.hpp>
+#include <memory>
 #include "../include/assimp/DefaultLogger.hpp"
 #include "../include/assimp/IOSystem.hpp"
 #include "../include/assimp/light.h"
+#include "TinyFormatter.h"
 
 
 using namespace Assimp;
 using namespace Assimp::Collada;
+using namespace Assimp::Formatter;
 
 // ------------------------------------------------------------------------------------------------
 // Constructor to be privately used by Importer
@@ -88,13 +89,13 @@ ColladaParser::ColladaParser( IOSystem* pIOHandler, const std::string& pFile)
     }
 
     // open the file
-    boost::scoped_ptr<IOStream> file( pIOHandler->Open( pFile ) );
-    if ( file.get() == NULL ) {
+    std::unique_ptr<IOStream> file( pIOHandler->Open(pFile ) );
+    if (file.get() == NULL) {
         throw DeadlyImportError( "Failed to open file " + pFile + "." );
     }
 
     // generate a XML reader for it
-    boost::scoped_ptr<CIrrXML_IOStreamReader> mIOWrapper( new CIrrXML_IOStreamReader( file.get()));
+    std::unique_ptr<CIrrXML_IOStreamReader> mIOWrapper(new CIrrXML_IOStreamReader(file.get()));
     mReader = irr::io::createIrrXMLReader( mIOWrapper.get());
     if (!mReader) {
         ThrowException("Collada: Unable to open file.");
@@ -102,9 +103,6 @@ ColladaParser::ColladaParser( IOSystem* pIOHandler, const std::string& pFile)
 
     // start reading
     ReadContents();
-
-    // release file after import
-    //pIOHandler->Close( file.get() );
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -167,7 +165,7 @@ void ColladaParser::ReadContents()
                 ReadStructure();
             } else
             {
-                DefaultLogger::get()->debug( boost::str( boost::format( "Ignoring global element <%s>.") % mReader->getNodeName()));
+                DefaultLogger::get()->debug( format() << "Ignoring global element <" << mReader->getNodeName() << ">." );
                 SkipElement();
             }
         } else
@@ -190,6 +188,8 @@ void ColladaParser::ReadStructure()
                 ReadAssetInfo();
             else if( IsElement( "library_animations"))
                 ReadAnimationLibrary();
+			else if (IsElement("library_animation_clips"))
+				ReadAnimationClipLibrary();
             else if( IsElement( "library_controllers"))
                 ReadControllerLibrary();
             else if( IsElement( "library_images"))
@@ -218,6 +218,8 @@ void ColladaParser::ReadStructure()
             break;
         }
     }
+
+	PostProcessRootAnimations();
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -275,6 +277,131 @@ void ColladaParser::ReadAssetInfo()
 }
 
 // ------------------------------------------------------------------------------------------------
+// Reads the animation clips
+void ColladaParser::ReadAnimationClipLibrary()
+{
+	if (mReader->isEmptyElement())
+		return;
+
+	while (mReader->read())
+	{
+		if (mReader->getNodeType() == irr::io::EXN_ELEMENT)
+		{
+			if (IsElement("animation_clip"))
+			{
+				// optional name given as an attribute
+				std::string animName;
+				int indexName = TestAttribute("name");
+				int indexID = TestAttribute("id");
+				if (indexName >= 0)
+					animName = mReader->getAttributeValue(indexName);
+				else if (indexID >= 0)
+					animName = mReader->getAttributeValue(indexID);
+				else
+					animName = std::string("animation_") + std::to_string(mAnimationClipLibrary.size());
+
+				std::pair<std::string, std::vector<std::string> > clip;
+
+				clip.first = animName;
+
+				while (mReader->read())
+				{
+					if (mReader->getNodeType() == irr::io::EXN_ELEMENT)
+					{
+						if (IsElement("instance_animation"))
+						{
+							int indexUrl = TestAttribute("url");
+							if (indexUrl >= 0)
+							{
+								const char* url = mReader->getAttributeValue(indexUrl);
+								if (url[0] != '#')
+									ThrowException("Unknown reference format");
+
+								url++;
+
+								clip.second.push_back(url);
+							}
+						}
+						else
+						{
+							// ignore the rest
+							SkipElement();
+						}
+					}
+					else if (mReader->getNodeType() == irr::io::EXN_ELEMENT_END)
+					{
+						if (strcmp(mReader->getNodeName(), "animation_clip") != 0)
+							ThrowException("Expected end of <animation_clip> element.");
+
+						break;
+					}
+				}
+
+				if (clip.second.size() > 0)
+				{
+					mAnimationClipLibrary.push_back(clip);
+				}
+			}
+			else
+			{
+				// ignore the rest
+				SkipElement();
+			}
+		}
+		else if (mReader->getNodeType() == irr::io::EXN_ELEMENT_END)
+		{
+			if (strcmp(mReader->getNodeName(), "library_animation_clips") != 0)
+				ThrowException("Expected end of <library_animation_clips> element.");
+
+			break;
+		}
+	}
+}
+
+// ------------------------------------------------------------------------------------------------
+// Re-build animations from animation clip library, if present, otherwise combine single-channel animations
+void ColladaParser::PostProcessRootAnimations()
+{
+	if (mAnimationClipLibrary.size() > 0)
+	{
+		Animation temp;
+
+		for (AnimationClipLibrary::iterator it = mAnimationClipLibrary.begin(); it != mAnimationClipLibrary.end(); ++it)
+		{
+			std::string clipName = it->first;
+
+			Animation *clip = new Animation();
+			clip->mName = clipName;
+
+			temp.mSubAnims.push_back(clip);
+
+			for (std::vector<std::string>::iterator a = it->second.begin(); a != it->second.end(); ++a)
+			{
+				std::string animationID = *a;
+
+				AnimationLibrary::iterator animation = mAnimationLibrary.find(animationID);
+
+				if (animation != mAnimationLibrary.end())
+				{
+					Animation *pSourceAnimation = animation->second;
+
+					pSourceAnimation->CollectChannelsRecursively(clip->mChannels);
+				}
+			}
+		}
+
+		mAnims = temp;
+
+		// Ensure no double deletes.
+		temp.mSubAnims.clear();
+	}
+	else
+	{
+		mAnims.CombineSingleChannelAnimations();
+	}
+}
+
+// ------------------------------------------------------------------------------------------------
 // Reads the animation library
 void ColladaParser::ReadAnimationLibrary()
 {
@@ -321,12 +448,17 @@ void ColladaParser::ReadAnimation( Collada::Animation* pParent)
 
     // optional name given as an attribute
     std::string animName;
+	std::string animID;
     int indexName = TestAttribute( "name");
     int indexID = TestAttribute( "id");
+
+	if (indexID >= 0)
+		animID = mReader->getAttributeValue(indexID);
+
     if( indexName >= 0)
         animName = mReader->getAttributeValue( indexName);
     else if( indexID >= 0)
-        animName = mReader->getAttributeValue( indexID);
+        animName = animID;
     else
         animName = "animation";
 
@@ -398,11 +530,19 @@ void ColladaParser::ReadAnimation( Collada::Animation* pParent)
     // it turned out to have channels - add them
     if( !channels.empty())
     {
+		// FIXME: Is this essentially doing the same as "single-anim-node" codepath in
+		//        ColladaLoader::StoreAnimations? For now, this has been deferred to after
+		//        all animations and all clips have been read. Due to handling of
+		//        <library_animation_clips> this cannot be done here, as the channel owner
+		//        is lost, and some exporters make up animations by referring to multiple
+		//        single-channel animations from an <instance_animation>.
+/*
         // special filtering for stupid exporters packing each channel into a separate animation
         if( channels.size() == 1)
         {
             pParent->mChannels.push_back( channels.begin()->second);
         } else
+*/
         {
             // else create the animation, if not done yet, and store the channels
             if( !anim)
@@ -413,6 +553,11 @@ void ColladaParser::ReadAnimation( Collada::Animation* pParent)
             }
             for( ChannelMap::const_iterator it = channels.begin(); it != channels.end(); ++it)
                 anim->mChannels.push_back( it->second);
+
+			if (indexID >= 0)
+			{
+				mAnimationLibrary[animID] = anim;
+			}
         }
     }
 }
@@ -472,7 +617,7 @@ void ColladaParser::ReadControllerLibrary()
         {
             if( IsElement( "controller"))
             {
-                // read ID. Ask the spec if it's neccessary or optional... you might be surprised.
+                // read ID. Ask the spec if it's necessary or optional... you might be surprised.
                 int attrID = GetAttribute( "id");
                 std::string id = mReader->getAttributeValue( attrID);
 
@@ -581,7 +726,7 @@ void ColladaParser::ReadControllerJoints( Collada::Controller& pController)
 
                 // local URLS always start with a '#'. We don't support global URLs
                 if( attrSource[0] != '#')
-                    ThrowException( boost::str( boost::format( "Unsupported URL format in \"%s\" in source attribute of <joints> data <input> element") % attrSource));
+                    ThrowException( format() << "Unsupported URL format in \"" << attrSource << "\" in source attribute of <joints> data <input> element" );
                 attrSource++;
 
                 // parse source URL to corresponding source
@@ -590,7 +735,7 @@ void ColladaParser::ReadControllerJoints( Collada::Controller& pController)
                 else if( strcmp( attrSemantic, "INV_BIND_MATRIX") == 0)
                     pController.mJointOffsetMatrixSource = attrSource;
                 else
-                    ThrowException( boost::str( boost::format( "Unknown semantic \"%s\" in <joints> data <input> element") % attrSemantic));
+                    ThrowException( format() << "Unknown semantic \"" << attrSemantic << "\" in <joints> data <input> element" );
 
                 // skip inner data, if present
                 if( !mReader->isEmptyElement())
@@ -640,7 +785,7 @@ void ColladaParser::ReadControllerWeights( Collada::Controller& pController)
 
                 // local URLS always start with a '#'. We don't support global URLs
                 if( attrSource[0] != '#')
-                    ThrowException( boost::str( boost::format( "Unsupported URL format in \"%s\" in source attribute of <vertex_weights> data <input> element") % attrSource));
+                    ThrowException( format() << "Unsupported URL format in \"" << attrSource << "\" in source attribute of <vertex_weights> data <input> element" );
                 channel.mAccessor = attrSource + 1;
 
                 // parse source URL to corresponding source
@@ -649,7 +794,7 @@ void ColladaParser::ReadControllerWeights( Collada::Controller& pController)
                 else if( strcmp( attrSemantic, "WEIGHT") == 0)
                     pController.mWeightInputWeights = channel;
                 else
-                    ThrowException( boost::str( boost::format( "Unknown semantic \"%s\" in <vertex_weights> data <input> element") % attrSemantic));
+                    ThrowException( format() << "Unknown semantic \"" << attrSemantic << "\" in <vertex_weights> data <input> element" );
 
                 // skip inner data, if present
                 if( !mReader->isEmptyElement())
@@ -851,7 +996,7 @@ void ColladaParser::ReadMaterialLibrary()
         {
             if( IsElement( "material"))
             {
-                // read ID. By now you propably know my opinion about this "specification"
+                // read ID. By now you probably know my opinion about this "specification"
                 int attrID = GetAttribute( "id");
                 std::string id = mReader->getAttributeValue( attrID);
 
@@ -909,7 +1054,7 @@ void ColladaParser::ReadLightLibrary()
         if( mReader->getNodeType() == irr::io::EXN_ELEMENT) {
             if( IsElement( "light"))
             {
-                // read ID. By now you propably know my opinion about this "specification"
+                // read ID. By now you probably know my opinion about this "specification"
                 int attrID = GetAttribute( "id");
                 std::string id = mReader->getAttributeValue( attrID);
 
@@ -943,7 +1088,7 @@ void ColladaParser::ReadCameraLibrary()
         if( mReader->getNodeType() == irr::io::EXN_ELEMENT) {
             if( IsElement( "camera"))
             {
-                // read ID. By now you propably know my opinion about this "specification"
+                // read ID. By now you probably know my opinion about this "specification"
                 int attrID = GetAttribute( "id");
                 std::string id = mReader->getAttributeValue( attrID);
 
@@ -1260,7 +1405,7 @@ void ColladaParser::ReadEffectProfileCommon( Collada::Effect& pEffect)
                 pEffect.mHasTransparency = true;
 
                 const char* opaque = mReader->getAttributeValueSafe("opaque");
- 
+
                 if(::strcmp(opaque, "RGB_ZERO") == 0 || ::strcmp(opaque, "RGB_ONE") == 0) {
                     pEffect.mRGBTransparency = true;
                 }
@@ -1819,7 +1964,7 @@ void ColladaParser::ReadAccessor( const std::string& pID)
     int attrSource = GetAttribute( "source");
     const char* source = mReader->getAttributeValue( attrSource);
     if( source[0] != '#')
-        ThrowException( boost::str( boost::format( "Unknown reference format in url \"%s\" in source attribute of <accessor> element.") % source));
+        ThrowException( format() << "Unknown reference format in url \"" << source << "\" in source attribute of <accessor> element." );
     int attrCount = GetAttribute( "count");
     unsigned int count = (unsigned int) mReader->getAttributeValueAsInt( attrCount);
     int attrOffset = TestAttribute( "offset");
@@ -1878,7 +2023,7 @@ void ColladaParser::ReadAccessor( const std::string& pID)
                     else if( name == "U") acc.mSubOffset[0] = acc.mParams.size();
                     else if( name == "V") acc.mSubOffset[1] = acc.mParams.size();
                     //else
-                    //  DefaultLogger::get()->warn( boost::str( boost::format( "Unknown accessor parameter \"%s\". Ignoring data channel.") % name));
+                    //  DefaultLogger::get()->warn( format() << "Unknown accessor parameter \"" << name << "\". Ignoring data channel." );
                 }
 
                 // read data type
@@ -1901,7 +2046,7 @@ void ColladaParser::ReadAccessor( const std::string& pID)
                 SkipElement();
             } else
             {
-                ThrowException( boost::str( boost::format( "Unexpected sub element <%s> in tag <accessor>") % mReader->getNodeName()));
+                ThrowException( format() << "Unexpected sub element <" << mReader->getNodeName() << "> in tag <accessor>" );
             }
         }
         else if( mReader->getNodeType() == irr::io::EXN_ELEMENT_END)
@@ -1931,7 +2076,7 @@ void ColladaParser::ReadVertexData( Mesh* pMesh)
                 ReadInputChannel( pMesh->mPerVertexData);
             } else
             {
-                ThrowException( boost::str( boost::format( "Unexpected sub element <%s> in tag <vertices>") % mReader->getNodeName()));
+                ThrowException( format() << "Unexpected sub element <" << mReader->getNodeName() << "> in tag <vertices>" );
             }
         }
         else if( mReader->getNodeType() == irr::io::EXN_ELEMENT_END)
@@ -1984,7 +2129,7 @@ void ColladaParser::ReadIndexData( Mesh* pMesh)
 
     ai_assert( primType != Prim_Invalid);
 
-    // also a number of <input> elements, but in addition a <p> primitive collection and propably index counts for all primitives
+    // also a number of <input> elements, but in addition a <p> primitive collection and probably index counts for all primitives
     while( mReader->read())
     {
         if( mReader->getNodeType() == irr::io::EXN_ELEMENT)
@@ -2029,13 +2174,13 @@ void ColladaParser::ReadIndexData( Mesh* pMesh)
                 SkipElement("extra");
             } else
             {
-                ThrowException( boost::str( boost::format( "Unexpected sub element <%s> in tag <%s>") % mReader->getNodeName() % elementName));
+                ThrowException( format() << "Unexpected sub element <" << mReader->getNodeName() << "> in tag <" << elementName << ">" );
             }
         }
         else if( mReader->getNodeType() == irr::io::EXN_ELEMENT_END)
         {
             if( mReader->getNodeName() != elementName)
-                ThrowException( boost::str( boost::format( "Expected end of <%s> element.") % elementName));
+                ThrowException( format() << "Expected end of <" << elementName << "> element." );
 
             break;
         }
@@ -2068,7 +2213,7 @@ void ColladaParser::ReadInputChannel( std::vector<InputChannel>& poChannels)
     int attrSource = GetAttribute( "source");
     const char* source = mReader->getAttributeValue( attrSource);
     if( source[0] != '#')
-        ThrowException( boost::str( boost::format( "Unknown reference format in url \"%s\" in source attribute of <input> element.") % source));
+        ThrowException( format() << "Unknown reference format in url \"" << source << "\" in source attribute of <input> element." );
     channel.mAccessor = source+1; // skipping the leading #, hopefully the remaining text is the accessor ID only
 
     // read index offset, if per-index <input>
@@ -2082,7 +2227,7 @@ void ColladaParser::ReadInputChannel( std::vector<InputChannel>& poChannels)
         if(attrSet > -1){
             attrSet = mReader->getAttributeValueAsInt( attrSet);
             if(attrSet < 0)
-                ThrowException( boost::str( boost::format( "Invalid index \"%i\" in set attribute of <input> element") % (attrSet)));
+                ThrowException( format() << "Invalid index \"" << (attrSet) << "\" in set attribute of <input> element" );
 
             channel.mIndex = attrSet;
         }
@@ -2105,7 +2250,7 @@ size_t ColladaParser::ReadPrimitives( Mesh* pMesh, std::vector<InputChannel>& pP
     // find the offset index for all per-vertex channels
     size_t numOffsets = 1;
     size_t perVertexOffset = SIZE_MAX; // invalid value
-    BOOST_FOREACH( const InputChannel& channel, pPerIndexChannels)
+    for( const InputChannel& channel : pPerIndexChannels)
     {
         numOffsets = std::max( numOffsets, channel.mOffset+1);
         if( channel.mType == IT_Vertex)
@@ -2118,7 +2263,7 @@ size_t ColladaParser::ReadPrimitives( Mesh* pMesh, std::vector<InputChannel>& pP
     {
         case Prim_Polylist:
         {
-            BOOST_FOREACH( size_t i, pVCount)
+            for( size_t i : pVCount)
                 expectedPointCount += i;
             break;
         }
@@ -2138,7 +2283,7 @@ size_t ColladaParser::ReadPrimitives( Mesh* pMesh, std::vector<InputChannel>& pP
     if( expectedPointCount > 0)
         indices.reserve( expectedPointCount * numOffsets);
 
-    if (pNumPrimitives > 0) // It is possible to not contain any indicies
+    if (pNumPrimitives > 0) // It is possible to not contain any indices
     {
         const char* content = GetTextContent();
         while( *content != 0)
@@ -2173,7 +2318,7 @@ size_t ColladaParser::ReadPrimitives( Mesh* pMesh, std::vector<InputChannel>& pP
 
         // find accessor
         input.mResolved = &ResolveLibraryReference( mAccessorLibrary, input.mAccessor);
-        // resolve accessor's data pointer as well, if neccessary
+        // resolve accessor's data pointer as well, if necessary
         const Accessor* acc = input.mResolved;
         if( !acc->mData)
             acc->mData = &ResolveLibraryReference( mDataLibrary, acc->mSource);
@@ -2196,7 +2341,7 @@ size_t ColladaParser::ReadPrimitives( Mesh* pMesh, std::vector<InputChannel>& pP
 
         // find accessor
         input.mResolved = &ResolveLibraryReference( mAccessorLibrary, input.mAccessor);
-        // resolve accessor's data pointer as well, if neccessary
+        // resolve accessor's data pointer as well, if necessary
         const Accessor* acc = input.mResolved;
         if( !acc->mData)
             acc->mData = &ResolveLibraryReference( mDataLibrary, acc->mSource);
@@ -2306,7 +2451,7 @@ void ColladaParser::ExtractDataObjectFromChannel( const InputChannel& pInput, si
 
     const Accessor& acc = *pInput.mResolved;
     if( pLocalIndex >= acc.mCount)
-        ThrowException( boost::str( boost::format( "Invalid data index (%d/%d) in primitive specification") % pLocalIndex % acc.mCount));
+        ThrowException( format() << "Invalid data index (" << pLocalIndex << "/" << acc.mCount << ") in primitive specification" );
 
     // get a pointer to the start of the data object referred to by the accessor and the local index
     const float* dataObject = &(acc.mData->mValues[0]) + acc.mOffset + pLocalIndex* acc.mStride;
@@ -2732,7 +2877,7 @@ void ColladaParser::ReadScene()
         if( mReader->getNodeType() == irr::io::EXN_ELEMENT) {
             if( IsElement( "instance_visual_scene"))
             {
-                // should be the first and only occurence
+                // should be the first and only occurrence
                 if( mRootNode)
                     ThrowException( "Invalid scene containing multiple root nodes in <instance_visual_scene> element");
 
@@ -2761,19 +2906,19 @@ void ColladaParser::ReadScene()
 // Aborts the file reading with an exception
 AI_WONT_RETURN void ColladaParser::ThrowException( const std::string& pError) const
 {
-    throw DeadlyImportError( boost::str( boost::format( "Collada: %s - %s") % mFileName % pError));
+    throw DeadlyImportError( format() << "Collada: " << mFileName << " - " << pError );
 }
 void ColladaParser::ReportWarning(const char* msg,...)
 {
     ai_assert(NULL != msg);
-    
+
     va_list args;
     va_start(args,msg);
-    
+
     char szBuffer[3000];
     const int iLen = vsprintf(szBuffer,msg,args);
     ai_assert(iLen > 0);
-    
+
     va_end(args);
     DefaultLogger::get()->warn("Validation warning: " + std::string(szBuffer,iLen));
 }
@@ -2812,14 +2957,14 @@ void ColladaParser::TestOpening( const char* pName)
 {
     // read element start
     if( !mReader->read())
-        ThrowException( boost::str( boost::format( "Unexpected end of file while beginning of <%s> element.") % pName));
+        ThrowException( format() << "Unexpected end of file while beginning of <" << pName << "> element." );
     // whitespace in front is ok, just read again if found
     if( mReader->getNodeType() == irr::io::EXN_TEXT)
         if( !mReader->read())
-            ThrowException( boost::str( boost::format( "Unexpected end of file while reading beginning of <%s> element.") % pName));
+            ThrowException( format() << "Unexpected end of file while reading beginning of <" << pName << "> element." );
 
     if( mReader->getNodeType() != irr::io::EXN_ELEMENT || strcmp( mReader->getNodeName(), pName) != 0)
-        ThrowException( boost::str( boost::format( "Expected start of <%s> element.") % pName));
+        ThrowException( format() << "Expected start of <" << pName << "> element." );
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -2832,15 +2977,15 @@ void ColladaParser::TestClosing( const char* pName)
 
     // if not, read some more
     if( !mReader->read())
-        ThrowException( boost::str( boost::format( "Unexpected end of file while reading end of <%s> element.") % pName));
+        ThrowException( format() << "Unexpected end of file while reading end of <" << pName << "> element." );
     // whitespace in front is ok, just read again if found
     if( mReader->getNodeType() == irr::io::EXN_TEXT)
         if( !mReader->read())
-            ThrowException( boost::str( boost::format( "Unexpected end of file while reading end of <%s> element.") % pName));
+            ThrowException( format() << "Unexpected end of file while reading end of <" << pName << "> element." );
 
     // but this has the be the closing tag, or we're lost
     if( mReader->getNodeType() != irr::io::EXN_ELEMENT_END || strcmp( mReader->getNodeName(), pName) != 0)
-        ThrowException( boost::str( boost::format( "Expected end of <%s> element.") % pName));
+        ThrowException( format() << "Expected end of <" << pName << "> element." );
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -2852,7 +2997,7 @@ int ColladaParser::GetAttribute( const char* pAttr) const
         return index;
 
     // attribute not found -> throw an exception
-    ThrowException( boost::str( boost::format( "Expected attribute \"%s\" for element <%s>.") % pAttr % mReader->getNodeName()));
+    ThrowException( format() << "Expected attribute \"" << pAttr << "\" for element <" << mReader->getNodeName() << ">." );
     return -1;
 }
 
@@ -2987,7 +3132,7 @@ Collada::InputType ColladaParser::GetTypeForSemantic( const std::string& pSemant
     else if( pSemantic == "TANGENT" || pSemantic == "TEXTANGENT")
         return IT_Tangent;
 
-    DefaultLogger::get()->warn( boost::str( boost::format( "Unknown vertex input type \"%s\". Ignoring.") % pSemantic));
+    DefaultLogger::get()->warn( format() << "Unknown vertex input type \"" << pSemantic << "\". Ignoring." );
     return IT_Invalid;
 }
 

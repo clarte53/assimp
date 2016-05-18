@@ -2,7 +2,7 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2015, assimp team
+Copyright (c) 2006-2016, assimp team
 All rights reserved.
 
 Redistribution and use of this software in source and binary forms,
@@ -305,7 +305,7 @@ inline void Vec3NormalToLatLng( const aiVector3D& p_vIn, uint16_t& p_iOut )
         b &= 0xff;
 
         ((unsigned char*)&p_iOut)[0] = b;   // longitude
-        ((unsigned char*)&p_iOut)[1] = a;   // lattitude
+        ((unsigned char*)&p_iOut)[1] = a;   // latitude
     }
 }
 

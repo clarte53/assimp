@@ -3,7 +3,7 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2015, assimp team
+Copyright (c) 2006-2016, assimp team
 
 All rights reserved.
 
@@ -51,8 +51,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "MDLLoader.h"
 #include "MDLDefaultColorMap.h"
 #include "MD2FileData.h"
+#include "StringUtils.h"
 #include "../include/assimp/Importer.hpp"
-#include <boost/scoped_ptr.hpp>
+#include <memory>
 #include "../include/assimp/IOSystem.hpp"
 #include "../include/assimp/scene.h"
 #include "../include/assimp/DefaultLogger.hpp"
@@ -155,7 +156,7 @@ void MDLImporter::InternReadFile( const std::string& pFile,
 {
     pScene     = _pScene;
     pIOHandler = _pIOHandler;
-    boost::scoped_ptr<IOStream> file( pIOHandler->Open( pFile));
+    std::unique_ptr<IOStream> file( pIOHandler->Open( pFile));
 
     // Check whether we can read from the file
     if( file.get() == NULL) {
@@ -575,9 +576,13 @@ void MDLImporter::InternReadFile_3DGS_MDL345( )
 
     // current cursor position in the file
     const unsigned char* szCurrent = (const unsigned char*)(pcHeader+1);
+    const unsigned char* szEnd = mBuffer + iFileSize;
 
     // need to read all textures
     for (unsigned int i = 0; i < (unsigned int)pcHeader->num_skins;++i) {
+        if (szCurrent >= szEnd) {
+            throw DeadlyImportError( "Texture data past end of file.");
+        }
         BE_NCONST MDL::Skin* pcSkin;
         pcSkin = (BE_NCONST  MDL::Skin*)szCurrent;
         AI_SWAP4( pcSkin->group);
@@ -942,7 +947,7 @@ void MDLImporter::CalcAbsBoneMatrices_3DGS_MDL7(MDL::IntBone_MDL7** apcOutBones)
 
                 if (AI_MDL7_BONE_STRUCT_SIZE__NAME_IS_NOT_THERE == pcHeader->bone_stc_size) {
                     // no real name for our poor bone is specified :-(
-                    pcOutBone->mName.length = ::sprintf(pcOutBone->mName.data,
+                    pcOutBone->mName.length = ai_snprintf(pcOutBone->mName.data, MAXLEN,
                         "UnnamedBone_%i",iBone);
                 }
                 else    {
@@ -1285,7 +1290,7 @@ void MDLImporter::SortByMaterials_3DGS_MDL7(
                     iMatIndex2 = iNumMaterials-1;
                 }
 
-                // do a slow seach in the list ...
+                // do a slow search in the list ...
                 iNum = 0;
                 bool bFound = false;
                 for (std::vector<MDL::IntMaterial_MDL7>::iterator i =  avMats.begin();i != avMats.end();++i,++iNum){
@@ -1384,7 +1389,8 @@ void MDLImporter::InternReadFile_3DGS_MDL7( )
         avOutList[i].reserve(3);
 
     // buffer to held the names of all groups in the file
-    char* aszGroupNameBuffer = new char[AI_MDL7_MAX_GROUPNAMESIZE*pcHeader->groups_num];
+	const size_t buffersize( AI_MDL7_MAX_GROUPNAMESIZE*pcHeader->groups_num );
+	char* aszGroupNameBuffer = new char[ buffersize ];
 
     // read all groups
     for (unsigned int iGroup = 0; iGroup < (unsigned int)pcHeader->groups_num;++iGroup) {
@@ -1544,9 +1550,12 @@ void MDLImporter::InternReadFile_3DGS_MDL7( )
 
             // setup the name of the node
             char* const szBuffer = &aszGroupNameBuffer[i*AI_MDL7_MAX_GROUPNAMESIZE];
-            if ('\0' == *szBuffer)
-                pcNode->mName.length = ::sprintf(szBuffer,"Group_%u",p);
-            else pcNode->mName.length = ::strlen(szBuffer);
+			if ('\0' == *szBuffer) {
+				const size_t maxSize(buffersize - (i*AI_MDL7_MAX_GROUPNAMESIZE));
+				pcNode->mName.length = ai_snprintf(szBuffer, maxSize, "Group_%u", p);
+			} else {
+				pcNode->mName.length = ::strlen(szBuffer);
+			}
             ::strcpy(pcNode->mName.data,szBuffer);
             ++p;
         }

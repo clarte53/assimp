@@ -2,7 +2,7 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2015, assimp team
+Copyright (c) 2006-2016, assimp team
 All rights reserved.
 
 Redistribution and use of this software in source and binary forms,
@@ -44,7 +44,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef INCLUDED_AI_COB_SCENE_H
 #define INCLUDED_AI_COB_SCENE_H
 
-#include <boost/shared_ptr.hpp>
+#include <memory>
 #include <deque>
 
 #include "BaseImporter.h"
@@ -237,7 +237,7 @@ struct Material : ChunkInfo
     AutoFacet autofacet;
     float autofacet_angle;
 
-    boost::shared_ptr<Texture> tex_env,tex_bump,tex_color;
+    std::shared_ptr<Texture> tex_env,tex_bump,tex_color;
 };
 
 // ------------------
@@ -254,7 +254,7 @@ struct Bitmap : ChunkInfo
     std::vector<char> buff_zipped;
 };
 
-typedef std::deque< boost::shared_ptr<Node> > NodeList;
+typedef std::deque< std::shared_ptr<Node> > NodeList;
 typedef std::vector< Material > MaterialList;
 
 // ------------------

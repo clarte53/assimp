@@ -2,7 +2,7 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2015, assimp team
+Copyright (c) 2006-2016, assimp team
 All rights reserved.
 
 Redistribution and use of this software in source and binary forms,
@@ -50,7 +50,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <map>
 
-#include "boost/scoped_ptr.hpp"
+#include <memory>
 
 
 struct aiScene;
@@ -87,7 +87,7 @@ namespace Assimp
         const aiScene* mScene;
         const ExportProperties* mProperties;
 
-        std::map<std::string, size_t> mTexturesByPath;
+        std::map<std::string, unsigned int> mTexturesByPath;
 
         glTF::Asset* mAsset;
 
@@ -99,7 +99,7 @@ namespace Assimp
         void ExportMetadata();
         void ExportMaterials();
         void ExportMeshes();
-        size_t ExportNode(const aiNode* node);
+        unsigned int ExportNode(const aiNode* node);
         void ExportScene();
     };
 

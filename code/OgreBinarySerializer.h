@@ -2,7 +2,7 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2015, assimp team
+Copyright (c) 2006-2016, assimp team
 All rights reserved.
 
 Redistribution and use of this software in source and binary forms,
@@ -52,7 +52,7 @@ namespace Ogre
 {
 
 typedef Assimp::StreamReaderLE MemoryStreamReader;
-typedef boost::shared_ptr<MemoryStreamReader> MemoryStreamReaderPtr;
+typedef std::shared_ptr<MemoryStreamReader> MemoryStreamReaderPtr;
 
 class OgreBinarySerializer
 {

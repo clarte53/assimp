@@ -3,7 +3,7 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2015, assimp team
+Copyright (c) 2006-2016, assimp team
 All rights reserved.
 
 Redistribution and use of this software in source and binary forms,
@@ -52,6 +52,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "BlenderIntermediate.h"
 #include "BlenderModifier.h"
 #include "BlenderBMesh.h"
+#include "StringUtils.h"
 #include "../include/assimp/scene.h"
 #include "StringComparison.h"
 
@@ -163,7 +164,7 @@ void BlenderImporter::InternReadFile( const std::string& pFile,
 #endif
 
     FileDatabase file;
-    boost::shared_ptr<IOStream> stream(pIOHandler->Open(pFile,"rb"));
+    std::shared_ptr<IOStream> stream(pIOHandler->Open(pFile,"rb"));
     if (!stream) {
         ThrowException("Could not open file for reading");
     }
@@ -189,7 +190,7 @@ void BlenderImporter::InternReadFile( const std::string& pFile,
 
         // http://www.gzip.org/zlib/rfc-gzip.html#header-trailer
         stream->Seek(0L,aiOrigin_SET);
-        boost::shared_ptr<StreamReaderLE> reader = boost::shared_ptr<StreamReaderLE>(new StreamReaderLE(stream));
+        std::shared_ptr<StreamReaderLE> reader = std::shared_ptr<StreamReaderLE>(new StreamReaderLE(stream));
 
         // build a zlib stream
         z_stream zstream;
@@ -259,9 +260,9 @@ void BlenderImporter::InternReadFile( const std::string& pFile,
 }
 
 // ------------------------------------------------------------------------------------------------
-void BlenderImporter::ParseBlendFile(FileDatabase& out, boost::shared_ptr<IOStream> stream)
+void BlenderImporter::ParseBlendFile(FileDatabase& out, std::shared_ptr<IOStream> stream)
 {
-    out.reader = boost::shared_ptr<StreamReaderAny>(new StreamReaderAny(stream,out.little));
+    out.reader = std::shared_ptr<StreamReaderAny>(new StreamReaderAny(stream,out.little));
 
     DNAParser dna_reader(out);
     const DNA* dna = NULL;
@@ -304,7 +305,7 @@ void BlenderImporter::ExtractScene(Scene& out, const FileDatabase& file)
     const Structure& ss = file.dna.structures[(*it).second];
 
     // we need a scene somewhere to start with.
-    for_each(const FileBlockHead& bl,file.entries) {
+    for(const FileBlockHead& bl :file.entries) {
 
         // Fix: using the DNA index is more reliable to locate scenes
         //if (bl.id == "SC") {
@@ -341,7 +342,7 @@ void BlenderImporter::ConvertBlendFile(aiScene* out, const Scene& in,const FileD
     // the file. This is terrible. Here, we're first looking for
     // all objects which don't have parent objects at all -
     std::deque<const Object*> no_parents;
-    for (boost::shared_ptr<Base> cur = boost::static_pointer_cast<Base> ( in.base.first ); cur; cur = cur->next) {
+    for (std::shared_ptr<Base> cur = std::static_pointer_cast<Base> ( in.base.first ); cur; cur = cur->next) {
         if (cur->object) {
             if(!cur->object->parent) {
                 no_parents.push_back(cur->object.get());
@@ -349,7 +350,7 @@ void BlenderImporter::ConvertBlendFile(aiScene* out, const Scene& in,const FileD
             else conv.objects.insert(cur->object.get());
         }
     }
-    for (boost::shared_ptr<Base> cur = in.basact; cur; cur = cur->next) {
+    for (std::shared_ptr<Base> cur = in.basact; cur; cur = cur->next) {
         if (cur->object) {
             if(cur->object->parent) {
                 conv.objects.insert(cur->object.get());
@@ -496,7 +497,7 @@ void BlenderImporter::AddSentinelTexture(aiMaterial* out, const Material* mat, c
     (void)mat; (void)tex; (void)conv_data;
 
     aiString name;
-    name.length = sprintf(name.data, "Procedural,num=%i,type=%s",conv_data.sentinel_cnt++,
+    name.length = ai_snprintf(name.data, MAXLEN, "Procedural,num=%i,type=%s",conv_data.sentinel_cnt++,
         GetTextureTypeDisplayString(tex->tex->type)
     );
     out->AddProperty(&name,AI_MATKEY_TEXTURE_DIFFUSE(
@@ -559,12 +560,12 @@ void BlenderImporter::BuildMaterials(ConversionData& conv_data)
 
     // add a default material if necessary
     unsigned int index = static_cast<unsigned int>( -1 );
-    for_each( aiMesh* mesh, conv_data.meshes.get() ) {
+    for( aiMesh* mesh : conv_data.meshes.get() ) {
         if (mesh->mMaterialIndex == static_cast<unsigned int>( -1 )) {
 
             if (index == static_cast<unsigned int>( -1 )) {
                 // Setup a default material.
-                boost::shared_ptr<Material> p(new Material());
+                std::shared_ptr<Material> p(new Material());
                 ai_assert(::strlen(AI_DEFAULT_MATERIAL_NAME) < sizeof(p->id.name)-2);
                 strcpy( p->id.name+2, AI_DEFAULT_MATERIAL_NAME );
 
@@ -588,7 +589,7 @@ void BlenderImporter::BuildMaterials(ConversionData& conv_data)
         }
     }
 
-    for_each(boost::shared_ptr<Material> mat, conv_data.materials_raw) {
+    for(std::shared_ptr<Material> mat : conv_data.materials_raw) {
 
         // reset per material global counters
         for (size_t i = 0; i < sizeof(conv_data.next_texture)/sizeof(conv_data.next_texture[0]);++i) {
@@ -629,6 +630,12 @@ void BlenderImporter::BuildMaterials(ConversionData& conv_data)
 
         col = aiColor3D(mat->ambr,mat->ambg,mat->ambb);
         mout->AddProperty(&col,1,AI_MATKEY_COLOR_AMBIENT);
+
+        // is mirror enabled?
+        if( mat->mode & MA_RAYMIRROR ) {
+            const float ray_mirror = mat->ray_mirror;
+            mout->AddProperty(&ray_mirror,1,AI_MATKEY_REFLECTIVITY);
+        }
 
         col = aiColor3D(mat->mirr,mat->mirg,mat->mirb);
         mout->AddProperty(&col,1,AI_MATKEY_COLOR_REFLECTIVE);
@@ -715,7 +722,7 @@ void BlenderImporter::ConvertMesh(const Scene& /*in*/, const Object* /*obj*/, co
     temp->reserve(temp->size() + per_mat.size());
 
     std::map<size_t,size_t> mat_num_to_mesh_idx;
-    for_each(MyPair& it, per_mat) {
+    for(MyPair& it : per_mat) {
 
         mat_num_to_mesh_idx[it.first] = temp->size();
         temp->push_back(new aiMesh());
@@ -742,8 +749,8 @@ void BlenderImporter::ConvertMesh(const Scene& /*in*/, const Object* /*obj*/, co
                 ThrowException("Material index is out of range");
             }
 
-            boost::shared_ptr<Material> mat = mesh->mat[it.first];
-            const std::deque< boost::shared_ptr<Material> >::iterator has = std::find(
+            std::shared_ptr<Material> mat = mesh->mat[it.first];
+            const std::deque< std::shared_ptr<Material> >::iterator has = std::find(
                     conv_data.materials_raw.begin(),
                     conv_data.materials_raw.end(),mat
             );
@@ -1010,13 +1017,19 @@ void BlenderImporter::ConvertMesh(const Scene& /*in*/, const Object* /*obj*/, co
 }
 
 // ------------------------------------------------------------------------------------------------
-aiCamera* BlenderImporter::ConvertCamera(const Scene& /*in*/, const Object* obj, const Camera* /*camera*/, ConversionData& /*conv_data*/)
+aiCamera* BlenderImporter::ConvertCamera(const Scene& /*in*/, const Object* obj, const Camera* cam, ConversionData& /*conv_data*/)
 {
     ScopeGuard<aiCamera> out(new aiCamera());
     out->mName = obj->id.name+2;
     out->mPosition = aiVector3D(0.f, 0.f, 0.f);
     out->mUp = aiVector3D(0.f, 1.f, 0.f);
     out->mLookAt = aiVector3D(0.f, 0.f, -1.f);
+    if (cam->sensor_x && cam->lens) {
+        out->mHorizontalFOV = atan2(cam->sensor_x,  2.f * cam->lens);
+    }
+    out->mClipPlaneNear = cam->clipsta;
+    out->mClipPlaneFar = cam->clipend;
+
     return out.dismiss();
 }
 
@@ -1144,7 +1157,7 @@ aiNode* BlenderImporter::ConvertNode(const Scene& in, const Object* obj, Convers
     if (children.size()) {
         node->mNumChildren = static_cast<unsigned int>(children.size());
         aiNode** nd = node->mChildren = new aiNode*[node->mNumChildren]();
-        for_each (const Object* nobj,children) {
+        for (const Object* nobj :children) {
             *nd = ConvertNode(in,nobj,conv_data,node->mTransformation * parentTransform);
             (*nd++)->mParent = node;
         }

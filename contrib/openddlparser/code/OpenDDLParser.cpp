@@ -33,7 +33,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #  include <windows.h>
 #endif // _WIN32
 
-#define DEBUG_HEADER_NAME 
 
 BEGIN_ODDLPARSER_NS
 
@@ -74,25 +73,36 @@ const char *getTypeToken( Value::ValueType  type ) {
 
 static void logInvalidTokenError( char *in, const std::string &exp, OpenDDLParser::logCallback callback ) {
     std::stringstream stream;
-    stream << "Invalid token " << *in << ", " << exp << " expected." << std::endl;
+    stream << "Invalid token \"" << *in << "\"" << " expected \"" << exp << "\"" << std::endl;
+    std::string full(in);
+    std::string part(full.substr(0,50));
+    stream << part;
     callback( ddl_error_msg, stream.str() );
 }
 
 static bool isIntegerType( Value::ValueType integerType ) {
-    if( integerType != Value::ddl_int8 && integerType != Value::ddl_int16 && 
+    if( integerType != Value::ddl_int8 && integerType != Value::ddl_int16 &&
             integerType != Value::ddl_int32 && integerType != Value::ddl_int64 ) {
+        return false;
+    }
+    return true;
+}
+
+static bool isUnsignedIntegerType( Value::ValueType integerType ) {
+    if( integerType != Value::ddl_unsigned_int8 && integerType != Value::ddl_unsigned_int16 &&
+            integerType != Value::ddl_unsigned_int32 && integerType != Value::ddl_unsigned_int64 ) {
         return false;
     }
 
     return true;
 }
 
-static DDLNode *createDDLNode( Identifier *id, OpenDDLParser *parser ) {
+static DDLNode *createDDLNode( Text *id, OpenDDLParser *parser ) {
     if( ddl_nullptr == id || ddl_nullptr == parser ) {
         return ddl_nullptr;
     }
 
-    const std::string type( id->m_text.m_buffer );
+    const std::string type( id->m_buffer );
     DDLNode *parent( parser->top() );
     DDLNode *node = DDLNode::create( type, "", parent );
 
@@ -125,7 +135,7 @@ OpenDDLParser::OpenDDLParser()
     // empty
 }
 
-OpenDDLParser::OpenDDLParser( char *buffer, size_t len )
+OpenDDLParser::OpenDDLParser( const char *buffer, size_t len )
 : m_logCallback( &logMessage )
 , m_buffer()
 , m_context( ddl_nullptr ) {
@@ -152,7 +162,7 @@ OpenDDLParser::logCallback OpenDDLParser::getLogCallback() const {
     return m_logCallback;
 }
 
-void OpenDDLParser::setBuffer( char *buffer, size_t len ) {
+void OpenDDLParser::setBuffer( const char *buffer, size_t len ) {
     clear();
     if( 0 == len ) {
         return;
@@ -182,7 +192,7 @@ size_t OpenDDLParser::getBufferSize() const {
 
 void OpenDDLParser::clear() {
     m_buffer.resize( 0 );
-    if( m_context ) {
+    if( ddl_nullptr != m_context ) {
         m_context->m_root = ddl_nullptr;
     }
 
@@ -193,7 +203,7 @@ bool OpenDDLParser::parse() {
     if( m_buffer.empty() ) {
         return false;
     }
-    
+
     normalizeBuffer( m_buffer );
 
     m_context = new Context;
@@ -206,6 +216,9 @@ bool OpenDDLParser::parse() {
     size_t pos( current - &m_buffer[ 0 ] );
     while( pos < m_buffer.size() ) {
         current = parseNextNode( current, end );
+        if(current==ddl_nullptr) {
+            return false;
+        }
         pos = current - &m_buffer[ 0 ];
     }
     return true;
@@ -215,11 +228,9 @@ bool OpenDDLParser::exportContext( Context *ctx, const std::string &filename ) {
     if( ddl_nullptr == ctx ) {
         return false;
     }
-    
+
     OpenDDLExport myExporter;
     return myExporter.exportContext( ctx, filename );
-
-    return false;
 }
 
 char *OpenDDLParser::parseNextNode( char *in, char *end ) {
@@ -229,53 +240,30 @@ char *OpenDDLParser::parseNextNode( char *in, char *end ) {
     return in;
 }
 
+#ifdef DEBUG_HEADER_NAME
 static void dumpId( Identifier *id ) {
     if( ddl_nullptr != id ) {
-        if ( ddl_nullptr != id->m_text.m_buffer ) { }
+        if ( ddl_nullptr != id->m_text.m_buffer ) {
             std::cout << id->m_text.m_buffer << std::endl;
+	}
     }
 }
+#endif
 
 char *OpenDDLParser::parseHeader( char *in, char *end ) {
     if( ddl_nullptr == in || in == end ) {
         return in;
     }
 
-    Identifier *id( ddl_nullptr );
+    Text *id( ddl_nullptr );
     in = OpenDDLParser::parseIdentifier( in, end, &id );
 
-#ifdef DEBUG_HEADER_NAME    
+#ifdef DEBUG_HEADER_NAME
     dumpId( id );
 #endif // DEBUG_HEADER_NAME
 
     in = lookForNextToken( in, end );
-    Property *first( ddl_nullptr );
     if( ddl_nullptr != id ) {
-        if( *in == Grammar::OpenPropertyToken[ 0 ] ) {
-            in++;
-            Property *prop( ddl_nullptr ), *prev( ddl_nullptr );
-            while( *in != Grammar::ClosePropertyToken[ 0 ] && in != end ) {
-                in = OpenDDLParser::parseProperty( in, end, &prop );
-                in = lookForNextToken( in, end );
-
-                if( *in != Grammar::CommaSeparator[ 0 ] && *in != Grammar::ClosePropertyToken[ 0 ] ) {
-                    logInvalidTokenError( in, Grammar::ClosePropertyToken, m_logCallback );
-                    return in;
-                }
-                
-                if( ddl_nullptr != prop && *in != Grammar::CommaSeparator[ 0 ] ) {
-                    if( ddl_nullptr == first ) {
-                        first = prop;
-                    }
-                    if( ddl_nullptr != prev ) {
-                        prev->m_next = prop;
-                    }
-                    prev = prop;
-                }
-            }
-            in++;
-        }
-
         // store the node
         DDLNode *node( createDDLNode( id, this ) );
         if( ddl_nullptr != node ) {
@@ -284,17 +272,44 @@ char *OpenDDLParser::parseHeader( char *in, char *end ) {
             std::cerr << "nullptr returned by creating DDLNode." << std::endl;
         }
 
-        // set the properties
-        if( ddl_nullptr != first ) {
-            node->setProperties( first );
-        }
-
-        Name *name( ddl_nullptr );
-        in = OpenDDLParser::parseName( in, end, &name );
-        if( ddl_nullptr != name ) {
-            const std::string nodeName( name->m_id->m_text.m_buffer );
+		Name *name(ddl_nullptr);
+		in = OpenDDLParser::parseName(in, end, &name);
+        if( ddl_nullptr != name && ddl_nullptr != node ) {
+            const std::string nodeName( name->m_id->m_buffer );
             node->setName( nodeName );
         }
+
+		Property *first(ddl_nullptr);
+		in = lookForNextToken(in, end);
+		if (*in == Grammar::OpenPropertyToken[0]) {
+			in++;
+			Property *prop(ddl_nullptr), *prev(ddl_nullptr);
+			while (*in != Grammar::ClosePropertyToken[0] && in != end) {
+				in = OpenDDLParser::parseProperty(in, end, &prop);
+				in = lookForNextToken(in, end);
+
+				if (*in != Grammar::CommaSeparator[0] && *in != Grammar::ClosePropertyToken[0]) {
+					logInvalidTokenError(in, Grammar::ClosePropertyToken, m_logCallback);
+					return ddl_nullptr;
+				}
+
+				if (ddl_nullptr != prop && *in != Grammar::CommaSeparator[0]) {
+					if (ddl_nullptr == first) {
+						first = prop;
+					}
+					if (ddl_nullptr != prev) {
+						prev->m_next = prop;
+					}
+					prev = prop;
+				}
+			}
+			in++;
+		}
+
+		// set the properties
+		if (ddl_nullptr != first && ddl_nullptr != node) {
+			node->setProperties(first);
+		}
     }
 
     return in;
@@ -311,16 +326,19 @@ char *OpenDDLParser::parseStructure( char *in, char *end ) {
         // loop over all children ( data and nodes )
         do {
             in = parseStructureBody( in, end, error );
+            if(in == ddl_nullptr){
+                return ddl_nullptr;
+            }
         } while ( *in != '}' );
         in++;
     } else {
         in++;
         logInvalidTokenError( in, std::string( Grammar::OpenBracketToken ), m_logCallback );
         error = true;
-        return in;
+        return ddl_nullptr;
     }
     in = lookForNextToken( in, end );
-    
+
     // pop node from stack after successful parsing
     if( !error ) {
         popNode();
@@ -375,7 +393,7 @@ char *OpenDDLParser::parseStructureBody( char *in, char *end, bool &error ) {
                 setNodeValues( top(), values );
                 setNodeReferences( top(), refs );
             } else if( arrayLen > 1 ) {
-                in = parseDataArrayList( in, end, &dtArrayList );
+                in = parseDataArrayList( in, end, type, &dtArrayList );
                 setNodeDataArrayList( top(), dtArrayList );
             } else {
                 std::cerr << "0 for array is invalid." << std::endl;
@@ -386,6 +404,7 @@ char *OpenDDLParser::parseStructureBody( char *in, char *end, bool &error ) {
         in = lookForNextToken( in, end );
         if( *in != '}' ) {
             logInvalidTokenError( in, std::string( Grammar::CloseBracketToken ), m_logCallback );
+            return ddl_nullptr;
         } else {
             //in++;
         }
@@ -420,7 +439,7 @@ DDLNode *OpenDDLParser::top() {
     if( m_stack.empty() ) {
         return ddl_nullptr;
     }
-    
+
     DDLNode *top( m_stack.back() );
     return top;
 }
@@ -479,9 +498,9 @@ char *OpenDDLParser::parseName( char *in, char *end, Name **name ) {
     if( *in == '%' ) {
         ntype = LocalName;
     }
-
+    in++;
     Name *currentName( ddl_nullptr );
-    Identifier *id( ddl_nullptr );
+    Text *id( ddl_nullptr );
     in = parseIdentifier( in, end, &id );
     if( id ) {
         currentName = new Name( ntype, id );
@@ -489,11 +508,11 @@ char *OpenDDLParser::parseName( char *in, char *end, Name **name ) {
             *name = currentName;
         }
     }
-    
+
     return in;
 }
 
-char *OpenDDLParser::parseIdentifier( char *in, char *end, Identifier **id ) {
+char *OpenDDLParser::parseIdentifier( char *in, char *end, Text **id ) {
     *id = ddl_nullptr;
     if( ddl_nullptr == in || in == end ) {
         return in;
@@ -501,7 +520,7 @@ char *OpenDDLParser::parseIdentifier( char *in, char *end, Identifier **id ) {
 
     // ignore blanks
     in = lookForNextToken( in, end );
-    
+
     // staring with a number is forbidden
     if( isNumeric<const char>( *in ) ) {
         return in;
@@ -510,13 +529,13 @@ char *OpenDDLParser::parseIdentifier( char *in, char *end, Identifier **id ) {
     // get size of id
     size_t idLen( 0 );
     char *start( in );
-    while( !isSeparator( *in ) && !isNewLine( *in ) && ( in != end ) && *in != Grammar::OpenPropertyToken[ 0 ] && *in != Grammar::ClosePropertyToken[ 0 ] ) {
+    while( !isSeparator( *in ) && !isNewLine( *in ) && ( in != end ) && *in != Grammar::OpenPropertyToken[ 0 ] && *in != Grammar::ClosePropertyToken[ 0 ] && *in != '$' ) {
         ++in;
         ++idLen;
     }
-    
+
     const size_t len( idLen );
-    Identifier *newId = new Identifier( start, len );
+    Text *newId = new Text( start, len );
     *id = newId;
 
     return in;
@@ -631,7 +650,7 @@ char *OpenDDLParser::parseIntegerLiteral( char *in, char *end, Value **integer, 
         return in;
     }
 
-    if( !isIntegerType( integerType ) ) {
+    if( !(isIntegerType( integerType ) || isUnsignedIntegerType(integerType)) ) {
         return in;
     }
 
@@ -642,7 +661,13 @@ char *OpenDDLParser::parseIntegerLiteral( char *in, char *end, Value **integer, 
     }
 
     if( isNumeric( *start ) ) {
-        const int value( atoi( start ) );
+#ifdef OPENDDL_NO_USE_CPP11
+        const int64 value( atol( start ) ); // maybe not really 64bit as atoll is but exists without c++11
+        const uint64 uvalue( strtoul( start,ddl_nullptr,10 ) );
+#else
+        const int64 value( atoll( start ) );
+        const uint64 uvalue( strtoull( start,ddl_nullptr,10 ) );
+#endif
         *integer = ValueAllocator::allocPrimData( integerType );
         switch( integerType ) {
             case Value::ddl_int8:
@@ -657,15 +682,27 @@ char *OpenDDLParser::parseIntegerLiteral( char *in, char *end, Value **integer, 
             case Value::ddl_int64:
                     ( *integer )->setInt64( ( int64 ) value );
                     break;
+            case Value::ddl_unsigned_int8:
+                    ( *integer )->setUnsignedInt8( (uint8) uvalue );
+                    break;
+            case Value::ddl_unsigned_int16:
+                    ( *integer )->setUnsignedInt16( ( uint16 ) uvalue );
+                    break;
+            case Value::ddl_unsigned_int32:
+                    ( *integer )->setUnsignedInt32( ( uint32 ) uvalue );
+                    break;
+            case Value::ddl_unsigned_int64:
+                    ( *integer )->setUnsignedInt64( ( uint64 ) uvalue );
+                    break;
             default:
                 break;
         }
-    } 
+    }
 
     return in;
 }
 
-char *OpenDDLParser::parseFloatingLiteral( char *in, char *end, Value **floating ) {
+char *OpenDDLParser::parseFloatingLiteral( char *in, char *end, Value **floating, Value::ValueType floatType) {
     *floating = ddl_nullptr;
     if( ddl_nullptr == in || in == end ) {
         return in;
@@ -679,6 +716,11 @@ char *OpenDDLParser::parseFloatingLiteral( char *in, char *end, Value **floating
 
     // parse the float value
     bool ok( false );
+    if ( isHexLiteral( start, end ) ) {
+        parseHexaLiteral( start, end, floating );
+        return in;
+    }
+
     if( isNumeric( *start ) ) {
         ok = true;
     } else {
@@ -690,9 +732,16 @@ char *OpenDDLParser::parseFloatingLiteral( char *in, char *end, Value **floating
     }
 
     if( ok ) {
-        const float value( ( float ) atof( start ) );
-        *floating = ValueAllocator::allocPrimData( Value::ddl_float );
-        ( *floating )->setFloat( value );
+        if(floatType == Value::ddl_double)
+        {
+            const double value( atof( start ) );
+            *floating = ValueAllocator::allocPrimData( Value::ddl_double );
+            ( *floating )->setDouble( value );
+        } else {
+            const float value( ( float ) atof( start ) );
+            *floating = ValueAllocator::allocPrimData( Value::ddl_float );
+            ( *floating )->setFloat( value );
+        }
     }
 
     return in;
@@ -724,7 +773,7 @@ char *OpenDDLParser::parseStringLiteral( char *in, char *end, Value **stringData
     return in;
 }
 
-static void createPropertyWithData( Identifier *id, Value *primData, Property **prop ) {
+static void createPropertyWithData( Text *id, Value *primData, Property **prop ) {
     if( ddl_nullptr != primData ) {
         ( *prop ) = new Property( id );
         ( *prop )->m_value = primData;
@@ -787,7 +836,7 @@ char *OpenDDLParser::parseProperty( char *in, char *end, Property **prop ) {
     }
 
     in = lookForNextToken( in, end );
-    Identifier *id( ddl_nullptr );
+    Text *id( ddl_nullptr );
     in = parseIdentifier( in, end, &id );
     if( ddl_nullptr != id ) {
         in = lookForNextToken( in, end );
@@ -804,7 +853,7 @@ char *OpenDDLParser::parseProperty( char *in, char *end, Property **prop ) {
             } else if( isStringLiteral( *in ) ) { // string data
                 in = parseStringLiteral( in, end, &primData );
                 createPropertyWithData( id, primData, prop );
-            } else {                          // reference data
+            } else {                              // reference data
                 std::vector<Name*> names;
                 in = parseReference( in, end, names );
                 if( !names.empty() ) {
@@ -813,13 +862,14 @@ char *OpenDDLParser::parseProperty( char *in, char *end, Property **prop ) {
                     ( *prop )->m_ref = ref;
                 }
             }
-        } 
+        }
     }
 
     return in;
 }
 
-char *OpenDDLParser::parseDataList( char *in, char *end, Value::ValueType type, Value **data, size_t &numValues, Reference **refs, size_t &numRefs ) {
+char *OpenDDLParser::parseDataList( char *in, char *end, Value::ValueType type, Value **data, 
+                                    size_t &numValues, Reference **refs, size_t &numRefs ) {
     *data = ddl_nullptr;
     numValues = numRefs = 0;
     if( ddl_nullptr == in || in == end ) {
@@ -833,35 +883,46 @@ char *OpenDDLParser::parseDataList( char *in, char *end, Value::ValueType type, 
         while( '}' != *in ) {
             current = ddl_nullptr;
             in = lookForNextToken( in, end );
-            if (Value::ddl_none == type) {
+            if ( Value::ddl_ref == type ) {
+                std::vector<Name*> names;
+                in = parseReference( in, end, names );
+                if ( !names.empty() ) {
+                    Reference *ref = new Reference( names.size(), &names[ 0 ] );
+                    *refs = ref;
+                    numRefs = names.size();
+                }
+            } else  if ( Value::ddl_none == type ) {
                 if (isInteger( in, end )) {
                     in = parseIntegerLiteral( in, end, &current );
-                }
-                else if (isFloat( in, end )) {
+                } else if (isFloat( in, end )) {
                     in = parseFloatingLiteral( in, end, &current );
-                }
-                else if (isStringLiteral( *in )) {
+                } else if (isStringLiteral( *in )) {
                     in = parseStringLiteral( in, end, &current );
-                }
-                else if (isHexLiteral( in, end )) {
+                } else if (isHexLiteral( in, end )) {
                     in = parseHexaLiteral( in, end, &current );
                 }
-                else {                          // reference data
-                    std::vector<Name*> names;
-                    in = parseReference( in, end, names );
-                    if (!names.empty()) {
-                        Reference *ref = new Reference( names.size(), &names[ 0 ] );
-                        *refs = ref;
-                        numRefs = names.size();
-                    }
-                }
             } else {
-                if (Value::ddl_int32 == type) {
-                    in = parseIntegerLiteral( in, end, &current );
-                } else if (Value::ddl_float == type) {
-                    in = parseFloatingLiteral( in, end, &current );
-                } else if (Value::ddl_string == type) {
-                    in = parseStringLiteral( in, end, &current );
+                switch(type){
+                    case Value::ddl_int8:
+                    case Value::ddl_int16:
+                    case Value::ddl_int32:
+                    case Value::ddl_int64:
+                    case Value::ddl_unsigned_int8:
+                    case Value::ddl_unsigned_int16:
+                    case Value::ddl_unsigned_int32:
+                    case Value::ddl_unsigned_int64:
+                        in = parseIntegerLiteral( in, end, &current, type);
+                        break;
+                    case Value::ddl_half:
+                    case Value::ddl_float:
+                    case Value::ddl_double:
+                        in = parseFloatingLiteral( in, end, &current, type);
+                        break;
+                    case Value::ddl_string:
+                        in = parseStringLiteral( in, end, &current );
+                        break;
+                    default:
+                        break;
                 }
             }
 
@@ -893,10 +954,10 @@ static DataArrayList *createDataArrayList( Value *currentValue, size_t numValues
     dataList->m_numItems = numValues;
 
     return dataList;
-
 }
-char *OpenDDLParser::parseDataArrayList( char *in, char *end, DataArrayList **dataList ) {
-    *dataList = ddl_nullptr;
+
+char *OpenDDLParser::parseDataArrayList( char *in, char *end,Value::ValueType type, DataArrayList **dataArrayList ) {
+    *dataArrayList = ddl_nullptr;
     if( ddl_nullptr == in || in == end ) {
         return in;
     }
@@ -910,12 +971,12 @@ char *OpenDDLParser::parseDataArrayList( char *in, char *end, DataArrayList **da
         do {
             size_t numRefs( 0 ), numValues( 0 );
             currentValue = ddl_nullptr;
-            Value::ValueType type( Value::ddl_none );
+
             in = parseDataList( in, end, type, &currentValue, numValues, &refs, numRefs );
-            if( ddl_nullptr != currentValue ) {
+            if( ddl_nullptr != currentValue || 0 != numRefs ) {
                 if( ddl_nullptr == prev ) {
-                    *dataList = createDataArrayList( currentValue, numValues );
-                    prev = *dataList;
+                    *dataArrayList = createDataArrayList( currentValue, numValues );
+                    prev = *dataArrayList;
                 } else {
                     currentDataList = createDataArrayList( currentValue, numValues );
                     if( ddl_nullptr != prev ) {

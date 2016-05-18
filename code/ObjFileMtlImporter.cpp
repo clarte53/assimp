@@ -3,7 +3,7 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2015, assimp team
+Copyright (c) 2006-2016, assimp team
 
 All rights reserved.
 
@@ -60,6 +60,7 @@ static const std::string AmbientTexture      = "map_Ka";
 static const std::string SpecularTexture     = "map_Ks";
 static const std::string OpacityTexture      = "map_d";
 static const std::string EmmissiveTexture    = "map_emissive";
+static const std::string EmmissiveTexture_1  = "map_Ke";
 static const std::string BumpTexture1        = "map_bump";
 static const std::string BumpTexture2        = "map_Bump";
 static const std::string BumpTexture3        = "bump";
@@ -87,7 +88,7 @@ static const std::string TypeOption         = "-type";
 // -------------------------------------------------------------------
 //  Constructor
 ObjFileMtlImporter::ObjFileMtlImporter( std::vector<char> &buffer,
-                                       const std::string & /*strAbsPath*/,
+                                       const std::string &,
                                        ObjFile::Model *pModel ) :
     m_DataIt( buffer.begin() ),
     m_DataItEnd( buffer.end() ),
@@ -112,14 +113,14 @@ ObjFileMtlImporter::~ObjFileMtlImporter()
 
 // -------------------------------------------------------------------
 //  Private copy constructor
-ObjFileMtlImporter::ObjFileMtlImporter(const ObjFileMtlImporter & /* rOther */ )
+ObjFileMtlImporter::ObjFileMtlImporter(const ObjFileMtlImporter & )
 {
     // empty
 }
 
 // -------------------------------------------------------------------
 //  Private copy constructor
-ObjFileMtlImporter &ObjFileMtlImporter::operator = ( const ObjFileMtlImporter & /*rOther */ )
+ObjFileMtlImporter &ObjFileMtlImporter::operator = ( const ObjFileMtlImporter & )
 {
     return *this;
 }
@@ -284,6 +285,8 @@ void ObjFileMtlImporter::createMaterial()
         }
     }
 
+    name = trim_whitespaces(name);
+
     std::map<std::string, ObjFile::Material*>::iterator it = m_pModel->m_MaterialMap.find( name );
     if ( m_pModel->m_MaterialMap.end() == it) {
         // New Material created
@@ -324,6 +327,10 @@ void ObjFileMtlImporter::getTexture() {
         // Emissive texture
         out = & m_pModel->m_pCurrentMaterial->textureEmissive;
         clampIndex = ObjFile::Material::TextureEmissiveType;
+    } else if ( !ASSIMP_strincmp( pPtr, EmmissiveTexture_1.c_str(), EmmissiveTexture_1.size() ) ) {
+        // Emissive texture
+        out = &m_pModel->m_pCurrentMaterial->textureEmissive;
+        clampIndex = ObjFile::Material::TextureEmissiveType;
     } else if ( !ASSIMP_strincmp( pPtr, BumpTexture1.c_str(), BumpTexture1.size() ) ||
                 !ASSIMP_strincmp( pPtr, BumpTexture2.c_str(), BumpTexture2.size() ) ||
                 !ASSIMP_strincmp( pPtr, BumpTexture3.c_str(), BumpTexture3.size() ) ) {
@@ -337,6 +344,7 @@ void ObjFileMtlImporter::getTexture() {
     } else if(!ASSIMP_strincmp( pPtr, ReflectionTexture.c_str(), ReflectionTexture.size() ) ) {
         // Reflection texture(s)
         //Do nothing here
+        return;
     } else if (!ASSIMP_strincmp( pPtr, DisplacementTexture.c_str(), DisplacementTexture.size() ) ) {
         // Displacement texture
         out = &m_pModel->m_pCurrentMaterial->textureDisp;
@@ -356,7 +364,9 @@ void ObjFileMtlImporter::getTexture() {
 
     std::string texture;
     m_DataIt = getName<DataArrayIt>( m_DataIt, m_DataItEnd, texture );
-    out->Set( texture );
+    if ( NULL!=out ) {
+        out->Set( texture );
+    }
 }
 
 /* /////////////////////////////////////////////////////////////////////////////
@@ -374,11 +384,10 @@ void ObjFileMtlImporter::getTexture() {
  * Because aiMaterial supports clamp option, so we also want to return it
  * /////////////////////////////////////////////////////////////////////////////
  */
-void ObjFileMtlImporter::getTextureOption(bool &clamp, int &clampIndex, aiString *&out)
-{
+void ObjFileMtlImporter::getTextureOption(bool &clamp, int &clampIndex, aiString *&out) {
     m_DataIt = getNextToken<DataArrayIt>(m_DataIt, m_DataItEnd);
 
-    //If there is any more texture option
+    // If there is any more texture option
     while (!isEndOfBuffer(m_DataIt, m_DataItEnd) && *m_DataIt == '-')
     {
         const char *pPtr( &(*m_DataIt) );

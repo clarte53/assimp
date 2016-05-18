@@ -49,8 +49,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "Q3BSPZipArchive.h"
 
-#include <boost/format.hpp>
-
 namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
@@ -128,7 +126,7 @@ namespace Assimp {
 	// ------------------------------------------------------------------------------------------------
 	// Aborts the file reading with an exception
 	void XMLParser::ThrowException(const std::string& error) const {
-		throw DeadlyImportError(boost::str(boost::format("XML parser: %s - %s") % mFileName % error));
+		throw DeadlyImportError("XML parser: " + mFileName + " - " + error);
 	}
 
 	// ------------------------------------------------------------------------------------------------

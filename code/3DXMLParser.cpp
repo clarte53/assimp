@@ -55,7 +55,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Q3BSPZipArchive.h"
 #include "SceneCombiner.h"
 
-#include <boost/format.hpp>
 #include <sstream>
 
 namespace Assimp {
@@ -324,9 +323,9 @@ namespace Assimp {
 	// Aborts the file reading with an exception
 	void _3DXMLParser::ThrowException(const XMLParser* parser, const std::string& error) {
 		if(parser != nullptr) {
-			throw DeadlyImportError(boost::str(boost::format("3DXML: %s - %s") % parser->GetFilename() % error));
+			throw DeadlyImportError("3DXML: " + parser->GetFilename() + " - " + error);
 		} else {
-			throw DeadlyImportError(boost::str(boost::format("3DXML: %s") % error));
+			throw DeadlyImportError("3DXML: " + error);
 		}
 	}
 

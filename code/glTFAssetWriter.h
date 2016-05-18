@@ -2,7 +2,7 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2015, assimp team
+Copyright (c) 2006-2016, assimp team
 All rights reserved.
 
 Redistribution and use of this software in source and binary forms,
@@ -58,7 +58,7 @@ using rapidjson::MemoryPoolAllocator;
 class AssetWriter
 {
     template<class T>
-    friend struct LazyDictWriter;
+    friend void WriteLazyDict(LazyDict<T>& d, AssetWriter& w);
 
 private:
 

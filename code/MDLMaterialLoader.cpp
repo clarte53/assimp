@@ -3,7 +3,7 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2015, assimp team
+Copyright (c) 2006-2016, assimp team
 
 All rights reserved.
 
@@ -47,6 +47,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // internal headers
 #include "MDLLoader.h"
 #include "MDLDefaultColorMap.h"
+#include "StringUtils.h"
 #include "../include/assimp/texture.h"
 #include "../include/assimp/IOSystem.hpp"
 #include "../include/assimp/DefaultLogger.hpp"
@@ -59,7 +60,7 @@ using namespace Assimp;
 static aiTexel* const bad_texel = reinterpret_cast<aiTexel*>(SIZE_MAX);
 
 // ------------------------------------------------------------------------------------------------
-// Find a suitable pallette file or take teh default one
+// Find a suitable pallette file or take the default one
 void MDLImporter::SearchPalette(const unsigned char** pszColorMap)
 {
     // now try to find the color map in the current directory
@@ -128,7 +129,7 @@ aiColor4D MDLImporter::ReplaceTextureWithColor(const aiTexture* pcTexture)
 // Read a texture from a MDL3 file
 void MDLImporter::CreateTextureARGB8_3DGS_MDL3(const unsigned char* szData)
 {
-    const MDL::Header *pcHeader = (const MDL::Header*)mBuffer;  //the endianess is allready corrected in the InternReadFile_3DGS_MDL345 function
+    const MDL::Header *pcHeader = (const MDL::Header*)mBuffer;  //the endianness is already corrected in the InternReadFile_3DGS_MDL345 function
 
     VALIDATE_FILE_SIZE(szData + pcHeader->skinwidth *
         pcHeader->skinheight);
@@ -177,7 +178,7 @@ void MDLImporter::CreateTexture_3DGS_MDL4(const unsigned char* szData,
 {
     ai_assert(NULL != piSkip);
 
-    const MDL::Header *pcHeader = (const MDL::Header*)mBuffer;  //the endianess is allready corrected in the InternReadFile_3DGS_MDL345 function
+    const MDL::Header *pcHeader = (const MDL::Header*)mBuffer;  //the endianness is already corrected in the InternReadFile_3DGS_MDL345 function
 
     if (iType == 1 || iType > 3)
     {
@@ -699,7 +700,7 @@ void MDLImporter::ParseSkinLump_3DGS_MDL7(
 
         // place this as diffuse texture
         char szCurrent[5];
-        ::sprintf(szCurrent,"*%i",this->pScene->mNumTextures);
+        ai_snprintf(szCurrent,5,"*%i",this->pScene->mNumTextures);
 
         aiString szFile;
         const size_t iLen = strlen((const char*)szCurrent);

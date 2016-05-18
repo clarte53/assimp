@@ -2,7 +2,7 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2015, assimp team
+Copyright (c) 2006-2016, assimp team
 All rights reserved.
 
 Redistribution and use of this software in source and binary forms,
@@ -12,7 +12,7 @@ following conditions are met:
 * Redistributions of source code must retain the above
   copyright notice, this list of conditions and the
   following disclaimer.
-
+r
 * Redistributions in binary form must reproduce the above
   copyright notice, this list of conditions and the
   following disclaimer in the documentation and/or other
@@ -46,7 +46,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <exception>
 #include <iterator>
-#include <boost/tuple/tuple.hpp>
 
 #include "FBXImporter.h"
 
@@ -86,7 +85,8 @@ static const aiImporterDesc desc = {
 // ------------------------------------------------------------------------------------------------
 // Constructor to be privately used by #Importer
 FBXImporter::FBXImporter()
-{}
+{
+}
 
 // ------------------------------------------------------------------------------------------------
 // Destructor, private as well
@@ -104,7 +104,7 @@ bool FBXImporter::CanRead( const std::string& pFile, IOSystem* pIOHandler, bool 
     }
 
     else if ((!extension.length() || checkSig) && pIOHandler)   {
-        // at least ascii FBX files usually have a 'FBX' somewhere in their head
+        // at least ASCII-FBX files usually have a 'FBX' somewhere in their head
         const char* tokens[] = {"fbx"};
         return SearchFileHeaderForToken(pIOHandler,pFile,tokens,1);
     }
@@ -141,7 +141,7 @@ void FBXImporter::SetupProperties(const Importer* pImp)
 void FBXImporter::InternReadFile( const std::string& pFile,
     aiScene* pScene, IOSystem* pIOHandler)
 {
-    boost::scoped_ptr<IOStream> stream(pIOHandler->Open(pFile,"rb"));
+    std::unique_ptr<IOStream> stream(pIOHandler->Open(pFile,"rb"));
     if (!stream) {
         ThrowException("Could not open file for reading");
     }

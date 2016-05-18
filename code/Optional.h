@@ -45,8 +45,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef AI_OPTIONAL_H_INC
 #define AI_OPTIONAL_H_INC
 
-#include <boost/noncopyable.hpp>
-
 // Hack for Visual Studio whose support for standard C++ is sometime approximative
 // TODO: check the version the day it will be supported to add this feature (useful to avoid hard to find bugs)
 #if defined(_MSC_VER)
@@ -56,6 +54,21 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 namespace Assimp {
+
+	class noncopyable {
+	
+		protected:
+
+			noncopyable() {}
+
+			~noncopyable() {}
+
+		private:  // emphasize the following members are private
+
+			noncopyable( const noncopyable& );
+
+			const noncopyable& operator=( const noncopyable& );
+	};
 
 	template<typename T>
 	class Optional {
@@ -95,7 +108,7 @@ namespace Assimp {
 	}; // class Optional<T>
 
 	template<typename T>
-	class Optional<T*> : public boost::noncopyable {
+	class Optional<T*> : public noncopyable {
 
 		protected:
 

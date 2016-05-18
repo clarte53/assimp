@@ -51,7 +51,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "../include/assimp/scene.h"
 #include "Optional.h"
 
-#include <boost/noncopyable.hpp>
 #include <condition_variable>
 #include <list>
 #include <map>
@@ -65,7 +64,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace Assimp {
 
-	struct _3DXMLStructure : boost::noncopyable {
+	struct _3DXMLStructure : noncopyable {
 
 		template<typename T>
 		struct list_less {
@@ -157,7 +156,7 @@ namespace Assimp {
 
 		}; // struct MaterialApplication
 
-		struct MaterialAttributes : public boost::noncopyable {
+		struct MaterialAttributes : public noncopyable {
 
 			typedef std::shared_ptr<MaterialAttributes> ID;
 
@@ -179,7 +178,7 @@ namespace Assimp {
 
 		}; // struct MaterialAttributes
 		
-		struct MaterialDomain : public boost::noncopyable {
+		struct MaterialDomain : public noncopyable {
 
 			unsigned int id;
 					
@@ -195,7 +194,7 @@ namespace Assimp {
 
 		}; // struct MaterialDomain
 
-		struct MaterialDomainInstance : public boost::noncopyable {
+		struct MaterialDomainInstance : public noncopyable {
 
 			unsigned int id;
 
@@ -211,7 +210,7 @@ namespace Assimp {
 
 		}; // struct MaterialDomainInstance
 
-		struct CATRepresentationImage : public boost::noncopyable {
+		struct CATRepresentationImage : public noncopyable {
 
 				unsigned int id;
 
@@ -229,7 +228,7 @@ namespace Assimp {
 
 		}; // struct CATRepresentationImage
 
-		struct CATMatReference : public boost::noncopyable {
+		struct CATMatReference : public noncopyable {
 
 			unsigned int id;
 					
@@ -247,7 +246,7 @@ namespace Assimp {
 
 		}; // struct CATMatReference
 
-		struct CATMatConnection : public boost::noncopyable {
+		struct CATMatConnection : public noncopyable {
 
 			unsigned int channel;
 
@@ -265,7 +264,7 @@ namespace Assimp {
 
 		struct InstanceRep;
 
-		struct Reference3D : public boost::noncopyable {
+		struct Reference3D : public noncopyable {
 
 			unsigned int id;
 					
@@ -287,9 +286,9 @@ namespace Assimp {
 
 		}; // struct Reference3D
 
-		struct ReferenceRep : public boost::noncopyable {
+		struct ReferenceRep : public noncopyable {
 
-			struct Geometry : public boost::noncopyable {
+			struct Geometry : public noncopyable {
 
 				enum Type {POINTS = 0, LINES, MESH, NB_TYPES /* do not use as a type */};
 
@@ -325,7 +324,7 @@ namespace Assimp {
 
 		}; // struct ReferenceRep
 
-		struct Instance3D : public boost::noncopyable {
+		struct Instance3D : public noncopyable {
 					
 			unsigned int id;
 					
@@ -343,7 +342,7 @@ namespace Assimp {
 
 		}; // struct Instance3D
 
-		struct InstanceRep : public boost::noncopyable {
+		struct InstanceRep : public noncopyable {
 					
 			unsigned int id;
 
@@ -359,7 +358,7 @@ namespace Assimp {
 
 		}; // struct InstanceRep
 
-		class Dependencies : public boost::noncopyable {
+		class Dependencies : public noncopyable {
 
 			protected:
 

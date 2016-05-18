@@ -29,8 +29,10 @@ if( MSVC )
     set(MSVC_PREFIX "vc110")
   elseif( MSVC12 )
     set(MSVC_PREFIX "vc120")
+  elseif( MSVC14 )
+    set(MSVC_PREFIX "vc140")
   else()
-    set(MSVC_PREFIX "vc130")
+    set(MSVC_PREFIX "vc150")
   endif()
   set(ASSIMP_LIBRARY_SUFFIX "@ASSIMP_LIBRARY_SUFFIX@-${MSVC_PREFIX}-mt" CACHE STRING "the suffix for the assimp windows library" FORCE)
 else()
@@ -62,7 +64,7 @@ set( ASSIMP_LIBRARIES ${ASSIMP_LIBRARIES}@CMAKE_DEBUG_POSTFIX@)
 # the boost version assimp was compiled with
 set( ASSIMP_Boost_VERSION "@Boost_MAJOR_VERSION@.@Boost_MINOR_VERSION@")
 
-# for compatibility wiht pkg-config
+# for compatibility with pkg-config
 set(ASSIMP_CFLAGS_OTHER "${ASSIMP_CXX_FLAGS}")
 set(ASSIMP_LDFLAGS_OTHER "${ASSIMP_LINK_FLAGS}")
 

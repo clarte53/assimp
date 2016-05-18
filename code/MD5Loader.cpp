@@ -3,7 +3,7 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2015, assimp team
+Copyright (c) 2006-2016, assimp team
 
 All rights reserved.
 
@@ -54,7 +54,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "SkeletonMeshBuilder.h"
 #include "../include/assimp/Importer.hpp"
 #include "../include/assimp/scene.h"
-#include <boost/scoped_ptr.hpp>
+#include <memory>
 #include "../include/assimp/IOSystem.hpp"
 #include "../include/assimp/DefaultLogger.hpp"
 
@@ -354,7 +354,7 @@ void MD5Importer::AttachChilds_Anim(int iParentID,aiNode* piParent, AnimBoneList
 void MD5Importer::LoadMD5MeshFile ()
 {
     std::string pFile = mFile + "md5mesh";
-    boost::scoped_ptr<IOStream> file( pIOHandler->Open( pFile, "rb"));
+    std::unique_ptr<IOStream> file( pIOHandler->Open( pFile, "rb"));
 
     // Check whether we can read from the file
     if( file.get() == NULL || !file->FileSize())    {
@@ -569,7 +569,7 @@ void MD5Importer::LoadMD5MeshFile ()
 void MD5Importer::LoadMD5AnimFile ()
 {
     std::string pFile = mFile + "md5anim";
-    boost::scoped_ptr<IOStream> file( pIOHandler->Open( pFile, "rb"));
+    std::unique_ptr<IOStream> file( pIOHandler->Open( pFile, "rb"));
 
     // Check whether we can read from the file
     if( !file.get() || !file->FileSize())   {
@@ -681,7 +681,7 @@ void MD5Importer::LoadMD5AnimFile ()
 void MD5Importer::LoadMD5CameraFile ()
 {
     std::string pFile = mFile + "md5camera";
-    boost::scoped_ptr<IOStream> file( pIOHandler->Open( pFile, "rb"));
+    std::unique_ptr<IOStream> file( pIOHandler->Open( pFile, "rb"));
 
     // Check whether we can read from the file
     if( !file.get() || !file->FileSize())   {
@@ -735,7 +735,7 @@ void MD5Importer::LoadMD5CameraFile ()
     for (std::vector<unsigned int>::const_iterator it = cuts.begin(); it != cuts.end()-1; ++it) {
 
         aiAnimation* anim = *tmp++ = new aiAnimation();
-        anim->mName.length = ::sprintf(anim->mName.data,"anim%u_from_%u_to_%u",(unsigned int)(it-cuts.begin()),(*it),*(it+1));
+        anim->mName.length = ::ai_snprintf(anim->mName.data, MAXLEN, "anim%u_from_%u_to_%u",(unsigned int)(it-cuts.begin()),(*it),*(it+1));
 
         anim->mTicksPerSecond = cameraParser.fFrameRate;
         anim->mChannels = new aiNodeAnim*[anim->mNumChannels = 1];

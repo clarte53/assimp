@@ -46,11 +46,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define AI_3DXMLREPRESENTATION_H_INC
 
 #include "3DXMLStructure.h"
+#include "Optional.h"
 #include "XMLParser.h"
 
 namespace Assimp {
 
-	class _3DXMLRepresentation : boost::noncopyable {
+	class _3DXMLRepresentation : noncopyable {
 
 		protected:
 

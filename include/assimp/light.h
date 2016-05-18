@@ -3,7 +3,7 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2015, assimp team
+Copyright (c) 2006-2016, assimp team
 
 All rights reserved.
 
@@ -76,7 +76,7 @@ enum aiLightSourceType
     aiLightSource_SPOT          = 0x3,
 
     //! The generic light level of the world, including the bounces
-    //! of all other lightsources.
+    //! of all other light sources.
     //! Typically, there's at most one ambient light in a scene.
     //! This light type doesn't have a valid position, direction, or
     //! other properties, just a color.

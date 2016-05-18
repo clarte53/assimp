@@ -2,7 +2,7 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2015, assimp team
+Copyright (c) 2006-2016, assimp team
 All rights reserved.
 
 Redistribution and use of this software in source and binary forms,
@@ -54,7 +54,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <set>
 #include <map>
 #include <list>
-#include <boost/scoped_ptr.hpp>
+#include <memory>
 #include "Exceptional.h"
 #include "../include/assimp/IOSystem.hpp"
 #include "../include/assimp/scene.h"
@@ -102,7 +102,7 @@ void ExportSceneStep(const char* pFile,IOSystem* pIOSystem, const aiScene* pScen
     StepExporter iDoTheExportThing( pScene, pIOSystem, path, file, &props);
 
     // we're still here - export successfully completed. Write result to the given IOSYstem
-    boost::scoped_ptr<IOStream> outfile (pIOSystem->Open(pFile,"wt"));
+    std::unique_ptr<IOStream> outfile (pIOSystem->Open(pFile,"wt"));
     if(outfile == NULL) {
         throw DeadlyExportError("could not open output .stp file: " + std::string(pFile));
     }
@@ -137,10 +137,12 @@ namespace {
 
 // ------------------------------------------------------------------------------------------------
 // Constructor for a specific scene to export
-StepExporter::StepExporter(const aiScene* pScene, IOSystem* pIOSystem, const std::string& path, const std::string& file, const ExportProperties* pProperties) : mProperties(pProperties), mIOSystem(pIOSystem), mFile(file), mPath(path), mScene(pScene), endstr(";\n")
-{
-    CollectTrafos(pScene->mRootNode, trafos);
-    CollectMeshes(pScene->mRootNode, meshes);
+StepExporter::StepExporter(const aiScene* pScene, IOSystem* pIOSystem, const std::string& path,
+		const std::string& file, const ExportProperties* pProperties):
+				 mProperties(pProperties),mIOSystem(pIOSystem),mFile(file), mPath(path),
+				 mScene(pScene), endstr(";\n") {
+	CollectTrafos(pScene->mRootNode, trafos);
+	CollectMeshes(pScene->mRootNode, meshes);
 
     // make sure that all formatting happens using the standard, C locale and not the user's current locale
     mOutput.imbue( std::locale("C") );

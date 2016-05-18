@@ -2,7 +2,7 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2015, assimp team
+Copyright (c) 2006-2016, assimp team
 All rights reserved.
 
 Redistribution and use of this software in source and binary forms,
@@ -49,13 +49,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "BlenderDNA.h"
 #include "BlenderScene.h"
 #include "BlenderSceneGen.h"
-#include <boost/foreach.hpp>
 #include <deque>
 #include "./../include/assimp/material.h"
 
 struct aiTexture;
-
-#define for_each(x,y) BOOST_FOREACH(x,y)
 
 namespace Assimp {
 namespace Blender {
@@ -71,7 +68,7 @@ namespace Blender {
         }
 
         ~TempArray () {
-            for_each(T* elem, arr) {
+            for(T* elem : arr) {
                 delete elem;
             }
         }
@@ -160,7 +157,7 @@ namespace Blender {
         TempArray <std::vector, aiTexture> textures;
 
         // set of all materials referenced by at least one mesh in the scene
-        std::deque< boost::shared_ptr< Material > > materials_raw;
+        std::deque< std::shared_ptr< Material > > materials_raw;
 
         // counter to name sentinel textures inserted as substitutes for procedural textures.
         unsigned int sentinel_cnt;

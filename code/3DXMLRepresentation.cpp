@@ -54,7 +54,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ProcessHelper.h"
 #include "SceneCombiner.h"
 
-#include <boost/format.hpp>
 #include <cctype>
 
 namespace Assimp {
@@ -152,7 +151,7 @@ namespace Assimp {
 	// ------------------------------------------------------------------------------------------------
 	// Aborts the file reading with an exception
 	void _3DXMLRepresentation::ThrowException(const std::string& error) const {
-		throw DeadlyImportError(boost::str(boost::format("3DXML: %s - %s") % mReader.GetFilename() % error));
+		throw DeadlyImportError("3DXML: " + mReader.GetFilename() + " - " + error);
 	}
 
 	// ------------------------------------------------------------------------------------------------

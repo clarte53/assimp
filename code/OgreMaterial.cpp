@@ -2,7 +2,7 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2015, assimp team
+Copyright (c) 2006-2016, assimp team
 All rights reserved.
 
 Redistribution and use of this software in source and binary forms,
@@ -51,7 +51,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <vector>
 #include <sstream>
-#include <boost/scoped_ptr.hpp>
+#include <memory>
 
 using namespace std;
 
@@ -181,7 +181,7 @@ aiMaterial* OgreImporter::ReadMaterial(const std::string &pFile, Assimp::IOSyste
             return 0;
         }
 
-        boost::scoped_ptr<IOStream> stream(materialFile);
+        std::unique_ptr<IOStream> stream(materialFile);
         if (stream->FileSize() == 0)
         {
             DefaultLogger::get()->warn(Formatter::format() << "Source file for material '" << materialName << "' is empty (size is 0 bytes)");
