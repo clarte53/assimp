@@ -971,9 +971,27 @@ namespace Assimp {
 					if(child.node.get() != nullptr && child.instance_of != nullptr) {
 						aiNode* child_node = nullptr;
 
+						// Create metadata holder if necessary
+						if(child.node->mMetaData == NULL)
+						{
+							child.node->mMetaData = new aiMetadata();
+						}
+
 						// Test if the node name is an id to see if we better take the Reference3D instead
-						if((! child.has_name || mUseReferencesNames) && child.instance_of->has_name) {
-							child.node->mName = child.instance_of->name;
+						if(child.instance_of->has_name)
+						{
+							if(! child.has_name || mUseReferencesNames) {
+								if(child.has_name)
+								{
+									child.node->mMetaData->Add("NAME", child.node->mName);
+								}
+
+								child.node->mName = child.instance_of->name;
+							}
+							else
+							{
+								child.node->mMetaData->Add("NAME",  aiString(child.instance_of->name));
+							}
 						}
 
 						// If the counter of references is null, this mean this instance is the last instance of this Reference3D
