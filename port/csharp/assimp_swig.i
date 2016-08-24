@@ -108,6 +108,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 %include "../../include/assimp/Array.hpp"
 
+#define uint64_t unsigned long long
+
 %extend Interface {
 %typemap(cscode) Interface %{
   public interface Unmanagable<T> {
@@ -283,23 +285,6 @@ ADD_UNMANAGED_OPTION(aiColor3D);
 // cf template section
 ADD_UNMANAGED_OPTION_BASE(aiColor4D, aiColor4t<float>);
 %ignore aiColor4t<float>::operator[](unsigned int);
-%extend aiColor4t<float> {
-	float r() {
-		return $self->r;
-	}
-
-	float g() {
-		return $self->g;
-	}
-
-	float b() {
-		return $self->b;
-	}
-
-	float a() {
-		return $self->a;
-	}
-}
 
 /////// aiComponent
 ENUM_FLAGS_DECL(aiComponent);
@@ -439,9 +424,38 @@ ADD_UNMANAGED_OPTION(aiMesh);
 
 /////// aiMetadataEntry
 %ignore aiMetadataEntry::mData;
+%extend aiMetadataEntry {
+	bool GetBool() {
+		return *static_cast<bool*>($self->mData);
+	}
+
+	int GetInt() {
+		return *static_cast<int*>($self->mData);
+	}
+
+	uint64_t GetUInt64() {
+		return *static_cast<uint64_t*>($self->mData);
+	}
+
+	float GetFloat() {
+		return *static_cast<float*>($self->mData);
+	}
+
+	double GetDouble() {
+		return *static_cast<double*>($self->mData);
+	}
+
+	aiString GetString() {
+		return *static_cast<aiString*>($self->mData);
+	}
+
+	aiVector3D GetVector3D() {
+		return *static_cast<aiVector3D*>($self->mData);
+	}
+}
 
 /////// aiMetadataType
-%ignore GetAiType(uint64_t);
+// Done
 
 /////// aiNode 
 ADD_UNMANAGED_OPTION(aiNode);
@@ -587,19 +601,6 @@ ADD_UNMANAGED_OPTION_BASE(aiVector2D, aiVector2t<float>);
 // cf template section
 ADD_UNMANAGED_OPTION_BASE(aiVector3D, aiVector3t<float>);
 %ignore aiVector3t<float>::operator[](unsigned int);
-%extend aiVector3t<float> {
-	float x() {
-		return $self->x;
-	}
-
-	float y() {
-		return $self->y;
-	}
-
-	float z() {
-		return $self->z;
-	}
-}
 
 /////// aiVectorKey 
 // Done
