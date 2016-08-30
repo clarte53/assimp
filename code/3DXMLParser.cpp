@@ -971,29 +971,6 @@ namespace Assimp {
 					if(child.node.get() != nullptr && child.instance_of != nullptr) {
 						aiNode* child_node = nullptr;
 
-						// Create metadata holder if necessary
-						if(child.node->mMetaData == NULL)
-						{
-							child.node->mMetaData = new aiMetadata();
-						}
-
-						// Record instance and reference names in metadata
-						if(child.has_name)
-						{
-							child.node->mMetaData->Add("3DXML_INSTANCE_NAME", child.node->mName);
-						}
-
-						if(child.instance_of->has_name)
-						{
-							child.node->mMetaData->Add("3DXML_REFERENCE_NAME", aiString(child.instance_of->name));
-
-							// Test if the node name is an id to see if we better take the Reference3D instead
-							if(! child.has_name || mUseReferencesNames)
-							{
-								child.node->mName = child.instance_of->name;
-							}
-						}
-
 						// If the counter of references is null, this mean this instance is the last instance of this Reference3D
 						if(ref.total_references == 0) {
 							// Therefore we can copy the child node directly into the children array
@@ -1004,6 +981,29 @@ namespace Assimp {
 							SceneCombiner::Copy(&child_node, child.node.get());
 						} else {
 							ThrowException(parser, "Invalid number of references to Reference3D \"" + parser->ToString(ref.id) + "\".");
+						}
+
+						// Create metadata holder if necessary
+						if(child_node->mMetaData == NULL)
+						{
+							child_node->mMetaData = new aiMetadata();
+						}
+
+						// Record instance and reference names in metadata
+						if(child.has_name)
+						{
+							child_node->mMetaData->Add("3DXML_INSTANCE_NAME", child_node->mName);
+						}
+
+						if(child.instance_of->has_name)
+						{
+							child_node->mMetaData->Add("3DXML_REFERENCE_NAME", aiString(child.instance_of->name));
+
+							// Test if the node name is an id to see if we better take the Reference3D instead
+							if(! child.has_name || mUseReferencesNames)
+							{
+								child_node->mName = child.instance_of->name;
+							}
 						}
 
 						child_node->mParent = node;
