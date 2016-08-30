@@ -977,20 +977,20 @@ namespace Assimp {
 							child.node->mMetaData = new aiMetadata();
 						}
 
-						// Test if the node name is an id to see if we better take the Reference3D instead
+						// Record instance and reference names in metadata
+						if(child.has_name)
+						{
+							child.node->mMetaData->Add("3DXML_INSTANCE_NAME", child.node->mName);
+						}
+
 						if(child.instance_of->has_name)
 						{
-							if(! child.has_name || mUseReferencesNames) {
-								if(child.has_name)
-								{
-									child.node->mMetaData->Add("NAME", child.node->mName);
-								}
+							child.node->mMetaData->Add("3DXML_REFERENCE_NAME", aiString(child.instance_of->name));
 
-								child.node->mName = child.instance_of->name;
-							}
-							else
+							// Test if the node name is an id to see if we better take the Reference3D instead
+							if(! child.has_name || mUseReferencesNames)
 							{
-								child.node->mMetaData->Add("NAME",  aiString(child.instance_of->name));
+								child.node->mName = child.instance_of->name;
 							}
 						}
 
