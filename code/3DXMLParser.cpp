@@ -992,12 +992,12 @@ namespace Assimp {
 						// Record instance and reference names in metadata
 						if(child.has_name)
 						{
-							child_node->mMetaData->Add("3DXML_INSTANCE_NAME", child_node->mName);
+							child_node->mMetaData->Add("3DXML_INSTANCE", child_node->mName);
 						}
 
 						if(child.instance_of->has_name)
 						{
-							child_node->mMetaData->Add("3DXML_REFERENCE_NAME", aiString(child.instance_of->name));
+							child_node->mMetaData->Add("3DXML_REFERENCE", aiString(child.instance_of->name));
 
 							// Test if the node name is an id to see if we better take the Reference3D instead
 							if(! child.has_name || mUseReferencesNames)
