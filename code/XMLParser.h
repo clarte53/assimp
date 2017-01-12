@@ -554,7 +554,11 @@ namespace Assimp {
 
 		// read contents of the element
 		if(! mReader->read() || mReader->getNodeType() != irr::io::EXN_TEXT) {
-			ThrowException("The content of the element \"" + std::string(mReader->getNodeName()) + "\" is not composed of text.");
+			if(mandatory) {
+				ThrowException("The content of the element \"" + std::string(mReader->getNodeName()) + "\" is not composed of text.");
+			} else {
+				return Optional<T>();
+			}
 		}
 
 		// skip leading whitespace

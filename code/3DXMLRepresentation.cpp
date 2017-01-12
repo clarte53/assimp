@@ -849,23 +849,28 @@ namespace Assimp {
 
 			// Parse Positions element
 			map.emplace_back("Positions", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
-				std::string vertices = *(parser->GetContent<std::string>(true));
+				Optional<std::string> vertices = parser->GetContent<std::string>(false);
 
-				params.me->ParseArray(vertices, params.vertex_buffer->Vertices, 0);
+				if(vertices){
+					params.me->ParseArray(*vertices, params.vertex_buffer->Vertices, 0);
+				}
 			}, 1, 1));
 			
 			// Parse Normals element
 			map.emplace_back("Normals", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
-				std::string normals = *(parser->GetContent<std::string>(true));
+				Optional<std::string> normals = parser->GetContent<std::string>(false);
 
-				params.me->ParseArray(normals, params.vertex_buffer->Normals, 0);
+				if(normals)
+				{
+					params.me->ParseArray(*normals, params.vertex_buffer->Normals, 0);
+				}
 			}, 0, 1));
 			
 			// Parse TextureCoordinates element
 			map.emplace_back("TextureCoordinates", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
 				Optional<unsigned int> channel_opt = parser->GetAttribute<unsigned int>("channel");
-				std::string format = *(parser->GetAttribute<std::string>("dimension", true));
-				std::string coordinates = *(parser->GetContent<std::string>(true));
+				Optional<std::string> format = parser->GetAttribute<std::string>("dimension", false);
+				Optional<std::string> coordinates = parser->GetContent<std::string>(false);
 
 				unsigned int channel = 0;
 				if(channel_opt) {
@@ -876,49 +881,55 @@ namespace Assimp {
 					params.me->ThrowException("Invalid out-of-bound channel \"" + parser->ToString(channel) + "\" (max " + parser->ToString(AI_MAX_NUMBER_OF_TEXTURECOORDS) + ").");
 				}
 
-				if(format.size() != 2 || format[1] != 'D' || ! std::isdigit(format[0])) {
-					params.me->ThrowException("Invalid texture coordinate format \"" + format + "\".");
+				if(format && coordinates) {
+					if(format->size() != 2 || (*format)[1] != 'D' || !std::isdigit((*format)[0])) {
+						params.me->ThrowException("Invalid texture coordinate format \"" + *format + "\".");
+					}
+
+					unsigned int dimension = 0;
+					std::string value(1, (*format)[0]);
+
+					dimension = std::atoi(value.c_str());
+
+					if(dimension == 0 || dimension > 3) {
+						params.me->ThrowException("Invalid dimension for texture coordinate format \"" + *format + "\".");
+					}
+
+					params.vertex_buffer->mNumUVComponents[channel] = dimension;
+
+					params.me->ParseMultiArray(*coordinates, params.vertex_buffer->TextureCoords, channel, 0, dimension);
 				}
-
-				unsigned int dimension = 0;
-				std::string value(1, format[0]);
-				
-				dimension = std::atoi(value.c_str());
-
-				if(dimension == 0 || dimension > 3) {
-					params.me->ThrowException("Invalid dimension for texture coordinate format \"" + format + "\".");
-				}
-
-				params.vertex_buffer->mNumUVComponents[channel] = dimension;
-
-				params.me->ParseMultiArray(coordinates, params.vertex_buffer->TextureCoords, channel, 0, dimension);
 			}, 0, XMLParser::XSD::unbounded));
 			
 			// Parse DiffuseColors element
 			map.emplace_back("DiffuseColors", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
-				std::string format = *(parser->GetAttribute<std::string>("format", true));
-				std::string color = *(parser->GetContent<std::string>(true));
+				Optional<std::string> format = parser->GetAttribute<std::string>("format", false);
+				Optional<std::string> color = parser->GetContent<std::string>(false);
 
-				if(format.compare("RGB") == 0) {
-					params.me->ParseMultiArray(color, params.vertex_buffer->Colors, 0, 0, false);
-				} else if(format.compare("RGBA") == 0) {
-					params.me->ParseMultiArray(color, params.vertex_buffer->Colors, 0, 0, true);
-				} else {
-					params.me->ThrowException("Unsupported color format \"" + format + "\".");
+				if(format && color) {
+					if(format->compare("RGB") == 0) {
+						params.me->ParseMultiArray(*color, params.vertex_buffer->Colors, 0, 0, false);
+					} else if(format->compare("RGBA") == 0) {
+						params.me->ParseMultiArray(*color, params.vertex_buffer->Colors, 0, 0, true);
+					} else {
+						params.me->ThrowException("Unsupported color format \"" + *format + "\".");
+					}
 				}
 			}, 0, 1));
 			
 			// Parse SpecularColors element
 			map.emplace_back("SpecularColors", XMLParser::XSD::Element<Params>([](const XMLParser* parser, Params& params){
-				std::string format = *(parser->GetAttribute<std::string>("format", true));
-				std::string color = *(parser->GetContent<std::string>(true));
+				Optional<std::string> format = parser->GetAttribute<std::string>("format", false);
+				Optional<std::string> color = parser->GetContent<std::string>(false);
 
-				if(format.compare("RGB") == 0) {
-					params.me->ParseMultiArray(color, params.vertex_buffer->Colors, 1, 0, false);
-				} else if(format.compare("RGBA") == 0) {
-					params.me->ParseMultiArray(color, params.vertex_buffer->Colors, 1, 0, true);
-				} else {
-					params.me->ThrowException("Unsupported color format \"" + format + "\".");
+				if(format && color) {
+					if(format->compare("RGB") == 0) {
+						params.me->ParseMultiArray(*color, params.vertex_buffer->Colors, 1, 0, false);
+					} else if(format->compare("RGBA") == 0) {
+						params.me->ParseMultiArray(*color, params.vertex_buffer->Colors, 1, 0, true);
+					} else {
+						params.me->ThrowException("Unsupported color format \"" + *format + "\".");
+					}
 				}
 			}, 0, 1));
 			
