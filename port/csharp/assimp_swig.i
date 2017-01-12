@@ -141,7 +141,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 %typemap(cstype) unsigned int*, unsigned int& "uint"
 %typemap(csout, excode=SWIGEXCODE) unsigned int*, unsigned int& {
-	uint ret = (uint) Marshal.ReadInt32($imcall);$excode
+	uint ret = (uint) global::System.Runtime.InteropServices.Marshal.ReadInt32($imcall);$excode
 	return ret;
 }
 
@@ -156,16 +156,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %enddef
 
 %define ENUM_TYPEMAP(TYPE)
-%typemap(imtype, out="IntPtr")       TYPE *INPUT, TYPE &INPUT "TYPE"
-%typemap(cstype, out="$csclassname") TYPE *INPUT, TYPE &INPUT "TYPE"
-%typemap(csin)                       TYPE *INPUT, TYPE &INPUT "$csinput"
-%typemap(imtype, out="IntPtr")       TYPE *OUTPUT, TYPE &OUTPUT "out TYPE"
-%typemap(cstype, out="$csclassname") TYPE *OUTPUT, TYPE &OUTPUT "out TYPE"
-%typemap(csin)                       TYPE *OUTPUT, TYPE &OUTPUT "out $csinput"
+%typemap(imtype, out="global::System.IntPtr")  TYPE *INPUT, TYPE &INPUT "TYPE"
+%typemap(cstype, out="$csclassname")           TYPE *INPUT, TYPE &INPUT "TYPE"
+%typemap(csin)                                 TYPE *INPUT, TYPE &INPUT "$csinput"
+%typemap(imtype, out="global::System.IntPtr")  TYPE *OUTPUT, TYPE &OUTPUT "out TYPE"
+%typemap(cstype, out="$csclassname")           TYPE *OUTPUT, TYPE &OUTPUT "out TYPE"
+%typemap(csin)                                 TYPE *OUTPUT, TYPE &OUTPUT "out $csinput"
 %enddef
 
 %define ADD_UNMANAGED_OPTION_BASE(NAME, CTYPE)
-%typemap(csinterfaces) CTYPE "IDisposable, Interface.Unmanagable<$typemap(cstype, CTYPE)>"
+%typemap(csinterfaces) CTYPE "global::System.IDisposable, Interface.Unmanagable<$typemap(cstype, CTYPE)>"
 %typemap(cscode) CTYPE %{
   public NAME Unmanaged() {
     this.swigCMemOwn = false;
@@ -179,21 +179,21 @@ ADD_UNMANAGED_OPTION_BASE(CTYPE, CTYPE);
 %enddef
 
 %define ARRAY_DECL(NAME, CTYPE)
-%typemap(csinterfaces) Array<CTYPE> "IDisposable, Interface.Array<$typemap(cstype, CTYPE)>"
+%typemap(csinterfaces) Array<CTYPE> "global::System.IDisposable, Interface.Array<$typemap(cstype, CTYPE)>"
 %ignore Array<CTYPE>::Array;
 %ignore Array<CTYPE>::Create;
 %template(NAME##Array) Array<CTYPE>;
 %enddef
 
 %define FIXED_ARRAY_DECL(NAME, CTYPE)
-%typemap(csinterfaces) Array<CTYPE> "IDisposable, Interface.FixedArray<$typemap(cstype, CTYPE)>"
+%typemap(csinterfaces) Array<CTYPE> "global::System.IDisposable, Interface.FixedArray<$typemap(cstype, CTYPE)>"
 %ignore FixedArray<CTYPE>::FixedArray;
 %ignore FixedArray<CTYPE>::Create;
 %template(NAME##FixedArray) FixedArray<CTYPE>;
 %enddef
 
 %define MULTI_ARRAY_DECL(NAME, CTYPE)
-%typemap(csinterfaces) Array<CTYPE> "IDisposable, Interface.MultiArray<$typemap(cstype, CTYPE)>"
+%typemap(csinterfaces) Array<CTYPE> "global::System.IDisposable, Interface.MultiArray<$typemap(cstype, CTYPE)>"
 %ignore MultiArray<CTYPE>::MultiArray;
 %ignore MultiArray<CTYPE>::Create;
 %ignore MultiArray<CTYPE>::Clear;
@@ -550,20 +550,20 @@ ADD_UNMANAGED_OPTION(aiTexture);
 	}
 }
 %typemap(cscode) aiTexture %{
-  [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Ansi)]
+  [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Sequential, CharSet=global::System.Runtime.InteropServices.CharSet.Ansi)]
   private struct Texture {
     public uint mWidth;
     public uint mHeight;
-    [MarshalAs(UnmanagedType.ByValTStr, SizeConst=4)] public string achFormatHint;
-    public IntPtr pcData;
+    [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.ByValTStr, SizeConst=4)] public string achFormatHint;
+    public global::System.IntPtr pcData;
   }
 
   public byte[] data {
     set {
       AllocData((uint) value.Length);
       
-      Texture texture = (Texture) Marshal.PtrToStructure(swigCPtr.Handle, typeof(Texture));
-      Marshal.Copy(value, 0, texture.pcData, value.Length);
+      Texture texture = (Texture) global::System.Runtime.InteropServices.Marshal.PtrToStructure(swigCPtr.Handle, typeof(Texture));
+      global::System.Runtime.InteropServices.Marshal.Copy(value, 0, texture.pcData, value.Length);
     }
     get {
       byte[] data = null;
@@ -571,8 +571,8 @@ ADD_UNMANAGED_OPTION(aiTexture);
       if(mHeight == 0) {
         data = new byte[mWidth];
 
-	    Texture texture = (Texture) Marshal.PtrToStructure(swigCPtr.Handle, typeof(Texture));
-        Marshal.Copy(texture.pcData, data, 0, (int) texture.mWidth);
+	    Texture texture = (Texture) global::System.Runtime.InteropServices.Marshal.PtrToStructure(swigCPtr.Handle, typeof(Texture));
+        global::System.Runtime.InteropServices.Marshal.Copy(texture.pcData, data, 0, (int) texture.mWidth);
       }
 
       return data;
