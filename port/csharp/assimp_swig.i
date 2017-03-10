@@ -42,6 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 %include "typemaps.i"
 %include "std_string.i"
+%include "stdint.i"
 %include "arrays_csharp.i"
 
 %{
@@ -142,6 +143,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %typemap(cstype) unsigned int*, unsigned int& "uint"
 %typemap(csout, excode=SWIGEXCODE) unsigned int*, unsigned int& {
 	uint ret = (uint) global::System.Runtime.InteropServices.Marshal.ReadInt32($imcall);$excode
+	return ret;
+}
+
+%typemap(cstype) double*, double& "double"
+%typemap(csout, excode=SWIGEXCODE) double*, double& {
+	double ret = global::System.BitConverter.Int64BitsToDouble((long) global::System.Runtime.InteropServices.Marshal.ReadInt64($imcall));$excode
 	return ret;
 }
 
@@ -261,6 +268,7 @@ ARRAY_DECL(NAME, CTYPE);
 %ignore aiAnimation::mChannels;
 %ignore aiAnimation::mNumMeshChannels;
 %ignore aiAnimation::mMeshChannels;
+%ignore aiAnimation::mMorphMeshChannels;
 
 /////// aiAnimMesh 
 %ignore aiAnimMesh::mNumVertices;
@@ -391,6 +399,7 @@ ADD_UNMANAGED_OPTION_BASE(aiMatrix3x3, aiMatrix3x3t<float>);
 // cf template section
 ADD_UNMANAGED_OPTION_BASE(aiMatrix4x4, aiMatrix4x4t<float>);
 %ignore aiMatrix4x4t<float>::operator[];
+%ignore aiMatrix4x4t<float>::Decompose(aiVector3t<float>&, aiVector3t<float>&, float&, aiVector3t<float>&) const;
 
 /////// aiMesh 
 DEF_ENUM(aiPrimitiveType, mPrimitiveTypes);
@@ -417,10 +426,18 @@ ADD_UNMANAGED_OPTION(aiMesh);
 /////// aiMeshKey 
 // Done
 
+/////// aiMeshMorphAnim
+%ignore aiMeshMorphAnim::mKeys;
+
+/////// aiMeshMorphKey
+%ignore aiMeshMorphKey::mValues;
+%ignore aiMeshMorphKey::mWeights;
+
 /////// aiMetadata
 %ignore aiMetadata::mNumProperties;
 %ignore aiMetadata::mKeys;
 %ignore aiMetadata::mValues;
+%ignore aiMetadata::Get(size_t, const aiString*&, const aiMetadataEntry*&);
 
 /////// aiMetadataEntry
 %ignore aiMetadataEntry::mData;
@@ -465,6 +482,7 @@ ADD_UNMANAGED_OPTION(aiNode);
 %ignore aiNode::mMeshes;
 %ignore aiNode::FindNode(aiString const &);
 %ignore aiNode::FindNode(char const *);
+%ignore aiNode::addChildren(unsigned int, aiNode **);
 
 /////// aiNodeAnim 
 %ignore aiNodeAnim::mNumPositionKeys;
@@ -615,6 +633,7 @@ DEF_ENUM(Logger.ErrorSeverity, severity);
 /////// Exporter
 DEF_ENUM(aiPostProcessSteps, pPreprocessing);
 %warnfilter(SWIGWARN_PARSE_NAMED_NESTED_CLASS) Assimp::Exporter::ExportFormatEntry;
+%ignore Assimp::Exporter::ExportFormatEntry;
 %ignore Assimp::Exporter::RegisterExporter;
 %ignore Assimp::Exporter::Export(aiScene const *, std::string const &, std::string const &);
 %ignore Assimp::Exporter::Export(aiScene const *, std::string const &, std::string const &, unsigned int);
@@ -726,6 +745,7 @@ CSHARP_ARRAYS(void, byte)
 %template(aiMatrix4x4) aiMatrix4x4t<float>;
 
 ARRAY_DECL(aiUInt, unsigned int);
+ARRAY_DECL(aiDouble, double);
 
 ARRAY_DECL(aiFace, aiFace);
 ARRAY_DECL(aiString, aiString);
@@ -734,6 +754,7 @@ ARRAY_DECL(aiMetadataEntry, aiMetadataEntry);
 ARRAY_DECL(aiQuatKey, aiQuatKey);
 ARRAY_DECL(aiVectorKey, aiVectorKey);
 ARRAY_DECL(aiVertexWeight, aiVertexWeight);
+ARRAY_DECL(aiMeshMorphKey, aiMeshMorphKey);
 
 ARRAY_DECL(aiAnimation, aiAnimation*);
 ARRAY_DECL(aiAnimMesh, aiAnimMesh*);
@@ -743,6 +764,7 @@ ARRAY_DECL(aiLight, aiLight*);
 ARRAY_DECL(aiMaterial, aiMaterial*);
 ARRAY_DECL(aiMesh, aiMesh*);
 ARRAY_DECL(aiMeshAnim, aiMeshAnim*);
+ARRAY_DECL(aiMeshMorphAnim, aiMeshMorphAnim*);
 ARRAY_DECL(aiNode, aiNode*);
 ARRAY_DECL(aiNodeAnim, aiNodeAnim*);
 ARRAY_DECL(aiTexture, aiTexture*);
