@@ -572,7 +572,7 @@ ADD_UNMANAGED_OPTION(aiTexture);
   private struct Texture {
     public uint mWidth;
     public uint mHeight;
-    [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.ByValTStr, SizeConst=4)] public string achFormatHint;
+    [global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.ByValTStr, SizeConst=9)] public string achFormatHint;
     public global::System.IntPtr pcData;
   }
 
