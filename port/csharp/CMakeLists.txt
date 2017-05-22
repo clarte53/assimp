@@ -18,7 +18,7 @@ SET(CMAKE_SWIG_FLAGS "-c++;-namespace;Assimp")
 SET(CMAKE_SWIG_OUTDIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
 SET_SOURCE_FILES_PROPERTIES(assimp_swig.i PROPERTIES CPLUSPLUS ON)
 
-SWIG_ADD_MODULE(assimp_swig csharp assimp_swig.i)
+SWIG_ADD_LIBRARY(assimp_swig LANGUAGE csharp SOURCES assimp_swig.i)
 SWIG_LINK_LIBRARIES(assimp_swig assimp)
 
 SET_TARGET_PROPERTIES(assimp_swig PROPERTIES PREFIX "")
