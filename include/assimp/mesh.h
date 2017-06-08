@@ -3,7 +3,7 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2016, assimp team
+Copyright (c) 2006-2017, assimp team
 
 All rights reserved.
 
@@ -389,8 +389,10 @@ struct aiAnimMesh
      * from language bindings.
      */
     unsigned int mNumVertices;
-
-/** Weight of the AnimMesh. */
+    
+    /** 
+     * Weight of the AnimMesh. 
+     */
     float mWeight;
 
 #ifdef __cplusplus
@@ -413,6 +415,7 @@ struct aiAnimMesh
         , mTangents( NULL )
         , mBitangents( NULL )
         , mNumVertices( 0 )
+		, mWeight( 0.0f )
 		, Vertices(&mVertices, &mNumVertices)
 		, Normals(&mNormals, &mNumVertices)
 		, Tangents(&mTangents, &mNumVertices)
@@ -665,7 +668,9 @@ struct aiMesh
      *  Note! Currently only works with Collada loader.*/
     C_STRUCT aiAnimMesh** mAnimMeshes;
 
-    /** Method of morphing when animeshes are specified. */
+    /** 
+     *  Method of morphing when animeshes are specified. 
+     */
     unsigned int mMethod;
 	
 #ifdef __cplusplus
@@ -705,6 +710,7 @@ struct aiMesh
         , mMaterialIndex( 0 )
         , mNumAnimMeshes( 0 )
         , mAnimMeshes( NULL )
+		, mMethod( 0 )
 		, Vertices(&mVertices, &mNumVertices)
 		, Normals(&mNormals, &mNumVertices)
 		, Tangents(&mTangents, &mNumVertices)
