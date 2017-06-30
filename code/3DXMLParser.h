@@ -45,7 +45,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef AI_3DXMLPARSER_H_INC
 #define AI_3DXMLPARSER_H_INC
 
-#include "../include/assimp/Logger.hpp"
+#include <assimp/Logger.hpp>
 #include "3DXMLStructure.h"
 #include "XMLParser.h"
 

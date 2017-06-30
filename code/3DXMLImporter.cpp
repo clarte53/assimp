@@ -47,7 +47,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "3DXMLImporter.h"
 
-#include "../include/assimp/Importer.hpp"
+#include <assimp/Importer.hpp>
 #include "3DXMLParser.h"
 
 static const aiImporterDesc desc = {

@@ -45,10 +45,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef AI_3DXMLSTRUCTURE_H_INC
 #define AI_3DXMLSTRUCTURE_H_INC
 
-#include "../include/assimp/color4.h"
-#include "../include/assimp/material.h"
-#include "../include/assimp/mesh.h"
-#include "../include/assimp/scene.h"
+#include <assimp/color4.h>
+#include <assimp/material.h>
+#include <assimp/mesh.h>
+#include <assimp/scene.h>
 #include "Optional.h"
 
 #include <condition_variable>

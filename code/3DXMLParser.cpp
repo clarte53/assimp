@@ -47,13 +47,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "3DXMLParser.h"
 
-#include "../include/assimp/DefaultLogger.hpp"
+#include <assimp/DefaultLogger.hpp>
+#include <assimp/SceneCombiner.h>
 #include "3DXMLMaterial.h"
 #include "3DXMLRepresentation.h"
 #include "fast_atof.h"
 #include "HighResProfiler.h"
 #include "Q3BSPZipArchive.h"
-#include "SceneCombiner.h"
 
 #include <sstream>
 

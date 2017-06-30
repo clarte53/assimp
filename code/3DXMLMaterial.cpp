@@ -47,7 +47,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "3DXMLMaterial.h"
 
-#include "../include/assimp/Logger.hpp"
+#include <assimp/Logger.hpp>
 #include "3DXMLParser.h"
 #include "HighResProfiler.h"
 
