@@ -82,12 +82,10 @@ OPTION ( ASSIMP_BUILD_ASSIMP_PORTAGES
 	"If the supplementary portages for Assimp are built in addition to the library. Needs static lib."
 	OFF
 )
-
 option ( SYSTEM_IRRXML
     "Use system installed Irrlicht/IrrXML library."
     OFF
 )
-
 OPTION ( BUILD_DOCS
    "Build documentation using Doxygen."
    OFF
@@ -172,7 +170,7 @@ include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}/include
 )
 
-SET(CMAKE_MODULE_PATH       "${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules" )
+LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules" )
 SET(LIBASSIMP_COMPONENT     "libassimp${ASSIMP_VERSION_MAJOR}.${ASSIMP_VERSION_MINOR}.${ASSIMP_VERSION_PATCH}" )
 SET(LIBASSIMP-DEV_COMPONENT "libassimp${ASSIMP_VERSION_MAJOR}.${ASSIMP_VERSION_MINOR}.${ASSIMP_VERSION_PATCH}-dev" )
 SET(CPACK_COMPONENTS_ALL assimp-bin ${LIBASSIMP_COMPONENT} ${LIBASSIMP-DEV_COMPONENT} assimp-dev)
