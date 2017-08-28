@@ -1,15 +1,14 @@
 /*
----------------------------------------------------------------------------
 Open Asset Import Library (assimp)
----------------------------------------------------------------------------
+----------------------------------------------------------------------
 
 Copyright (c) 2006-2017, assimp team
 
 All rights reserved.
 
 Redistribution and use of this software in source and binary forms,
-with or without modification, are permitted provided that the following
-conditions are met:
+with or without modification, are permitted provided that the
+following conditions are met:
 
 * Redistributions of source code must retain the above
 copyright notice, this list of conditions and the
@@ -36,17 +35,61 @@ DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
 THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
----------------------------------------------------------------------------
+
+----------------------------------------------------------------------
 */
-#pragma once
 
-// We need to be sure to have the same STL settings as Assimp
+/** @file glTFWriter.h
+ * Declares a class to write gltf/glb files
+ *
+ * glTF Extensions Support:
+ *   KHR_binary_glTF: full
+ *   KHR_materials_common: full
+ */
+#ifndef GLTF2ASSETWRITER_H_INC
+#define GLTF2ASSETWRITER_H_INC
 
-#include <assimp/cimport.h>
-#include <gtest/gtest.h>
-#include <memory>
-#include <math.h>
-#include "UTLogStream.h"
+#ifndef ASSIMP_BUILD_NO_GLTF_IMPORTER
 
-#undef min
-#undef max
+#include "glTF2Asset.h"
+
+namespace glTF2
+{
+
+using rapidjson::MemoryPoolAllocator;
+
+class AssetWriter
+{
+    template<class T>
+    friend void WriteLazyDict(LazyDict<T>& d, AssetWriter& w);
+
+private:
+
+    void WriteBinaryData(IOStream* outfile, size_t sceneLength);
+
+    void WriteMetadata();
+    void WriteExtensionsUsed();
+
+    template<class T>
+    void WriteObjects(LazyDict<T>& d);
+
+public:
+    Document mDoc;
+    Asset& mAsset;
+
+    MemoryPoolAllocator<>& mAl;
+
+    AssetWriter(Asset& asset);
+
+    void WriteFile(const char* path);
+    void WriteGLBFile(const char* path);
+};
+
+}
+
+// Include the implementation of the methods
+#include "glTF2AssetWriter.inl"
+
+#endif // ASSIMP_BUILD_NO_GLTF_IMPORTER
+
+#endif // GLTF2ASSETWRITER_H_INC

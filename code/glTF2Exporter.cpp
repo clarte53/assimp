@@ -41,7 +41,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef ASSIMP_BUILD_NO_EXPORT
 #ifndef ASSIMP_BUILD_NO_GLTF_EXPORTER
 
-#include "glTFExporter.h"
+#include "glTF2Exporter.h"
 
 #include "Exceptional.h"
 #include "StringComparison.h"
@@ -60,7 +60,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <memory>
 #include <inttypes.h>
 
-#include "glTFAssetWriter.h"
+#include "glTF2AssetWriter.h"
 
 #ifdef ASSIMP_IMPORTER_GLTF_USE_OPEN3DGC
 	// Header files, Open3DGC.
@@ -70,29 +70,21 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 using namespace rapidjson;
 
 using namespace Assimp;
-using namespace glTF;
+using namespace glTF2;
 
 namespace Assimp {
 
     // ------------------------------------------------------------------------------------------------
     // Worker function for exporting a scene to GLTF. Prototyped and registered in Exporter.cpp
-    void ExportSceneGLTF(const char* pFile, IOSystem* pIOSystem, const aiScene* pScene, const ExportProperties* pProperties)
+    void ExportSceneGLTF2(const char* pFile, IOSystem* pIOSystem, const aiScene* pScene, const ExportProperties* pProperties)
     {
         // invoke the exporter
-        glTFExporter exporter(pFile, pIOSystem, pScene, pProperties, false);
-    }
-
-    // ------------------------------------------------------------------------------------------------
-    // Worker function for exporting a scene to GLB. Prototyped and registered in Exporter.cpp
-    void ExportSceneGLB(const char* pFile, IOSystem* pIOSystem, const aiScene* pScene, const ExportProperties* pProperties)
-    {
-        // invoke the exporter
-        glTFExporter exporter(pFile, pIOSystem, pScene, pProperties, true);
+        glTF2Exporter exporter(pFile, pIOSystem, pScene, pProperties, false);
     }
 
 } // end of namespace Assimp
 
-glTFExporter::glTFExporter(const char* filename, IOSystem* pIOSystem, const aiScene* pScene,
+glTF2Exporter::glTF2Exporter(const char* filename, IOSystem* pIOSystem, const aiScene* pScene,
                            const ExportProperties* pProperties, bool isBinary)
     : mFilename(filename)
     , mIOSystem(pIOSystem)
@@ -112,7 +104,7 @@ glTFExporter::glTFExporter(const char* filename, IOSystem* pIOSystem, const aiSc
 
     mScene = sceneCopy.get();
 
-    mAsset.reset( new glTF::Asset( pIOSystem ) );
+    mAsset.reset( new Asset( pIOSystem ) );
 
     if (isBinary) {
         mAsset->SetAsBinary();
@@ -138,7 +130,7 @@ glTFExporter::glTFExporter(const char* filename, IOSystem* pIOSystem, const aiSc
 
     ExportAnimations();
 
-    glTF::AssetWriter writer(*mAsset);
+    AssetWriter writer(*mAsset);
 
     if (isBinary) {
         writer.WriteGLBFile(filename);
@@ -151,7 +143,7 @@ glTFExporter::glTFExporter(const char* filename, IOSystem* pIOSystem, const aiSc
  * Copy a 4x4 matrix from struct aiMatrix to typedef mat4.
  * Also converts from row-major to column-major storage.
  */
-static void CopyValue(const aiMatrix4x4& v, glTF::mat4& o)
+static void CopyValue(const aiMatrix4x4& v, mat4& o)
 {
     o[ 0] = v.a1; o[ 1] = v.b1; o[ 2] = v.c1; o[ 3] = v.d1;
     o[ 4] = v.a2; o[ 5] = v.b2; o[ 6] = v.c2; o[ 7] = v.d2;
@@ -167,7 +159,7 @@ static void CopyValue(const aiMatrix4x4& v, aiMatrix4x4& o)
     o.d1 = v.d1; o.d2 = v.d2; o.d3 = v.d3; o.d4 = v.d4;
 }
 
-static void IdentityMatrix4(glTF::mat4& o)
+static void IdentityMatrix4(mat4& o)
 {
     o[ 0] = 1; o[ 1] = 0; o[ 2] = 0; o[ 3] = 0;
     o[ 4] = 0; o[ 5] = 1; o[ 6] = 0; o[ 7] = 0;
@@ -248,10 +240,10 @@ namespace {
     }
 }
 
-void glTFExporter::GetTexSampler(const aiMaterial* mat, glTF::TexProperty& prop)
+void glTF2Exporter::GetTexSampler(const aiMaterial* mat, Ref<Texture> texture)
 {
     std::string samplerId = mAsset->FindUniqueID("", "sampler");
-    prop.texture->sampler = mAsset->samplers.Create(samplerId);
+    texture->sampler = mAsset->samplers.Create(samplerId);
 
     aiTextureMapMode mapU, mapV;
     aiGetMaterialInteger(mat,AI_MATKEY_MAPPINGMODE_U_DIFFUSE(0),(int*)&mapU);
@@ -259,45 +251,44 @@ void glTFExporter::GetTexSampler(const aiMaterial* mat, glTF::TexProperty& prop)
 
     switch (mapU) {
         case aiTextureMapMode_Wrap:
-            prop.texture->sampler->wrapS = SamplerWrap_Repeat;
+            texture->sampler->wrapS = SamplerWrap_Repeat;
             break;
         case aiTextureMapMode_Clamp:
-            prop.texture->sampler->wrapS = SamplerWrap_Clamp_To_Edge;
+            texture->sampler->wrapS = SamplerWrap_Clamp_To_Edge;
             break;
         case aiTextureMapMode_Mirror:
-            prop.texture->sampler->wrapS = SamplerWrap_Mirrored_Repeat;
+            texture->sampler->wrapS = SamplerWrap_Mirrored_Repeat;
             break;
         case aiTextureMapMode_Decal:
         default:
-            prop.texture->sampler->wrapS = SamplerWrap_Repeat;
+            texture->sampler->wrapS = SamplerWrap_Repeat;
             break;
     };
 
     switch (mapV) {
         case aiTextureMapMode_Wrap:
-            prop.texture->sampler->wrapT = SamplerWrap_Repeat;
+            texture->sampler->wrapT = SamplerWrap_Repeat;
             break;
         case aiTextureMapMode_Clamp:
-            prop.texture->sampler->wrapT = SamplerWrap_Clamp_To_Edge;
+            texture->sampler->wrapT = SamplerWrap_Clamp_To_Edge;
             break;
         case aiTextureMapMode_Mirror:
-            prop.texture->sampler->wrapT = SamplerWrap_Mirrored_Repeat;
+            texture->sampler->wrapT = SamplerWrap_Mirrored_Repeat;
             break;
         case aiTextureMapMode_Decal:
         default:
-            prop.texture->sampler->wrapT = SamplerWrap_Repeat;
+            texture->sampler->wrapT = SamplerWrap_Repeat;
             break;
     };
 
     // Hard coded Texture filtering options because I do not know where to find them in the aiMaterial.
-    prop.texture->sampler->magFilter = SamplerMagFilter_Linear;
-    prop.texture->sampler->minFilter = SamplerMinFilter_Linear;
+    texture->sampler->magFilter = SamplerMagFilter_Linear;
+    texture->sampler->minFilter = SamplerMinFilter_Linear_Mipmap_Linear;
 }
 
-void glTFExporter::GetMatColorOrTex(const aiMaterial* mat, glTF::TexProperty& prop, const char* propName, int type, int idx, aiTextureType tt)
+void glTF2Exporter::GetMatTex(const aiMaterial* mat, Ref<Texture>& texture, aiTextureType tt)
 {
     aiString tex;
-    aiColor4D col;
     if (mat->GetTextureCount(tt) > 0) {
         if (mat->Get(AI_MATKEY_TEXTURE(tt, 0), tex) == AI_SUCCESS) {
             std::string path = tex.C_Str();
@@ -306,47 +297,52 @@ void glTFExporter::GetMatColorOrTex(const aiMaterial* mat, glTF::TexProperty& pr
                 if (path[0] != '*') {
                     std::map<std::string, unsigned int>::iterator it = mTexturesByPath.find(path);
                     if (it != mTexturesByPath.end()) {
-                        prop.texture = mAsset->textures.Get(it->second);
+                        texture = mAsset->textures.Get(it->second);
                     }
                 }
 
-                if (!prop.texture) {
+                if (!texture) {
                     std::string texId = mAsset->FindUniqueID("", "texture");
-                    prop.texture = mAsset->textures.Create(texId);
-                    mTexturesByPath[path] = prop.texture.GetIndex();
+                    texture = mAsset->textures.Create(texId);
+                    mTexturesByPath[path] = texture.GetIndex();
 
                     std::string imgId = mAsset->FindUniqueID("", "image");
-                    prop.texture->source = mAsset->images.Create(imgId);
+                    texture->source = mAsset->images.Create(imgId);
 
                     if (path[0] == '*') { // embedded
                         aiTexture* tex = mScene->mTextures[atoi(&path[1])];
 
                         uint8_t* data = reinterpret_cast<uint8_t*>(tex->pcData);
-                        prop.texture->source->SetData(data, tex->mWidth, *mAsset);
+                        texture->source->SetData(data, tex->mWidth, *mAsset);
 
                         if (tex->achFormatHint[0]) {
                             std::string mimeType = "image/";
                             mimeType += (memcmp(tex->achFormatHint, "jpg", 3) == 0) ? "jpeg" : tex->achFormatHint;
-                            prop.texture->source->mimeType = mimeType;
+                            texture->source->mimeType = mimeType;
                         }
                     }
                     else {
-                        prop.texture->source->uri = path;
+                        texture->source->uri = path;
                     }
 
-                    GetTexSampler(mat, prop);
+                    GetTexSampler(mat, texture);
                 }
             }
         }
     }
+}
 
+void glTF2Exporter::GetMatColorOrTex(const aiMaterial* mat, TexProperty& prop, const char* propName, int type, int idx, aiTextureType tt)
+{
+    aiColor4D col;
     if (mat->Get(propName, type, idx, col) == AI_SUCCESS) {
         prop.color[0] = col.r; prop.color[1] = col.g; prop.color[2] = col.b; prop.color[3] = col.a;
     }
+    GetMatTex(mat, prop.texture, tt);
 }
 
 
-void glTFExporter::ExportMaterials()
+void glTF2Exporter::ExportMaterials()
 {
     aiString aiName;
     for (unsigned int i = 0; i < mScene->mNumMaterials; ++i) {
@@ -365,6 +361,7 @@ void glTFExporter::ExportMaterials()
         GetMatColorOrTex(mat, m->diffuse, AI_MATKEY_COLOR_DIFFUSE, aiTextureType_DIFFUSE);
         GetMatColorOrTex(mat, m->specular, AI_MATKEY_COLOR_SPECULAR, aiTextureType_SPECULAR);
         GetMatColorOrTex(mat, m->emission, AI_MATKEY_COLOR_EMISSIVE, aiTextureType_EMISSIVE);
+        GetMatTex(mat, m->normal, aiTextureType_NORMALS);
 
         m->transparent = mat->Get(AI_MATKEY_OPACITY, m->transparency) == aiReturn_SUCCESS && m->transparency != 1.0;
 
@@ -442,7 +439,7 @@ void ExportSkin(Asset& mAsset, const aiMesh* aimesh, Ref<Mesh>& meshRef, Ref<Buf
         // aib->mName   =====>  skinRef->jointNames
         // Find the node with id = mName.
         Ref<Node> nodeRef = mAsset.nodes.Get(aib->mName.C_Str());
-        nodeRef->jointName = nodeRef->id;
+        nodeRef->jointName = nodeRef->name;
 
         unsigned int jointNamesIndex;
         bool addJointToJointNames = true;
@@ -496,7 +493,7 @@ void ExportSkin(Asset& mAsset, const aiMesh* aimesh, Ref<Mesh>& meshRef, Ref<Buf
     delete[] vertexJointData;
 }
 
-void glTFExporter::ExportMeshes()
+void glTF2Exporter::ExportMeshes()
 {
     // Not for
     //     using IndicesType = decltype(aiFace::mNumIndices);
@@ -752,15 +749,27 @@ void glTFExporter::ExportMeshes()
         skinRef->bindShapeMatrix.isPresent = true;
         IdentityMatrix4(skinRef->bindShapeMatrix.value);
 
-        // Find node that contains this mesh and add "skeletons" and "skin" attributes to that node.
+        // Find nodes that contain a mesh with bones and add "skeletons" and "skin" attributes to those nodes.
         Ref<Node> rootNode = mAsset->nodes.Get(unsigned(0));
         Ref<Node> meshNode;
-        std::string meshID = mAsset->meshes.Get(unsigned(0))->id;
-        FindMeshNode(rootNode, meshNode, meshID);
-
-        Ref<Node> rootJoint = FindSkeletonRootJoint(skinRef);
-        meshNode->skeletons.push_back(rootJoint);
-        meshNode->skin = skinRef;
+        for (unsigned int meshIndex = 0; meshIndex < mAsset->meshes.Size(); ++meshIndex) {
+            Ref<Mesh> mesh = mAsset->meshes.Get(meshIndex);
+            bool hasBones = false;
+            for (unsigned int i = 0; i < mesh->primitives.size(); ++i) {
+                if (!mesh->primitives[i].attributes.weight.empty()) {
+                    hasBones = true;
+                    break;
+                }
+            }
+            if (!hasBones) {
+                continue;
+            }
+            std::string meshID = mesh->id;
+            FindMeshNode(rootNode, meshNode, meshID);
+            Ref<Node> rootJoint = FindSkeletonRootJoint(skinRef);
+            meshNode->skeletons.push_back(rootJoint);
+            meshNode->skin = skinRef;
+        }
     }
 }
 
@@ -768,7 +777,7 @@ void glTFExporter::ExportMeshes()
  * Export the root node of the node hierarchy.
  * Calls ExportNode for all children.
  */
-unsigned int glTFExporter::ExportNodeHierarchy(const aiNode* n)
+unsigned int glTF2Exporter::ExportNodeHierarchy(const aiNode* n)
 {
     Ref<Node> node = mAsset->nodes.Create(mAsset->FindUniqueID(n->mName.C_Str(), "node"));
 
@@ -793,11 +802,13 @@ unsigned int glTFExporter::ExportNodeHierarchy(const aiNode* n)
  * Export node and recursively calls ExportNode for all children.
  * Since these nodes are not the root node, we also export the parent Ref<Node>
  */
-unsigned int glTFExporter::ExportNode(const aiNode* n, Ref<Node>& parent)
+unsigned int glTF2Exporter::ExportNode(const aiNode* n, Ref<Node>& parent)
 {
-    Ref<Node> node = mAsset->nodes.Create(mAsset->FindUniqueID(n->mName.C_Str(), "node"));
+    std::string name = mAsset->FindUniqueID(n->mName.C_Str(), "node");
+    Ref<Node> node = mAsset->nodes.Create(name);
 
     node->parent = parent;
+    node->name = name;
 
     if (!n->mTransformation.IsIdentity()) {
         node->matrix.isPresent = true;
@@ -817,7 +828,7 @@ unsigned int glTFExporter::ExportNode(const aiNode* n, Ref<Node>& parent)
 }
 
 
-void glTFExporter::ExportScene()
+void glTF2Exporter::ExportScene()
 {
     const char* sceneName = "defaultScene";
     Ref<Scene> scene = mAsset->scenes.Create(sceneName);
@@ -831,10 +842,10 @@ void glTFExporter::ExportScene()
     mAsset->scene = scene;
 }
 
-void glTFExporter::ExportMetadata()
+void glTF2Exporter::ExportMetadata()
 {
-    glTF::AssetMetadata& asset = mAsset->asset;
-    asset.version = 1;
+    AssetMetadata& asset = mAsset->asset;
+    asset.version = 2;
 
     char buffer[256];
     ai_snprintf(buffer, 256, "Open Asset Import Library (assimp v%d.%d.%d)",
@@ -931,7 +942,7 @@ inline void ExtractAnimationData(Asset& mAsset, std::string& animId, Ref<Animati
     }
 }
 
-void glTFExporter::ExportAnimations()
+void glTF2Exporter::ExportAnimations()
 {
     Ref<Buffer> bufferRef = mAsset->buffers.Get(unsigned (0));
 
@@ -978,12 +989,12 @@ void glTFExporter::ExportAnimations()
                 Animation::AnimChannel tmpAnimChannel;
                 Animation::AnimSampler tmpAnimSampler;
 
-                tmpAnimChannel.sampler = name + "_" + channelType;
+                tmpAnimChannel.sampler = animRef->Samplers.size();
                 tmpAnimChannel.target.path = channelType;
                 tmpAnimSampler.output = channelType;
                 tmpAnimSampler.id = name + "_" + channelType;
 
-                tmpAnimChannel.target.id = mAsset->nodes.Get(nodeChannel->mNodeName.C_Str());
+                tmpAnimChannel.target.node = mAsset->nodes.Get(nodeChannel->mNodeName.C_Str());
 
                 tmpAnimSampler.input = "TIME";
                 tmpAnimSampler.interpolation = "LINEAR";

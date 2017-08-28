@@ -51,7 +51,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace Assimp;
 
-namespace glTF {
+namespace glTF2 {
 
 namespace {
 
@@ -242,6 +242,7 @@ Ref<T> LazyDict<T>::Create(const char* id)
     }
     T* inst = new T();
     inst->id = id;
+    inst->index = mObjs.size();
     return Add(inst);
 }
 
@@ -1243,14 +1244,15 @@ inline void AssetMetadata::Read(Document& doc)
     }
 
     version = std::max(statedVersion, version);
+
     if (version == 0) {
-        // if missing version, we'll assume version 1...
+        // if missing version, we'll assume version 1.0...
         version = 1;
     }
 
     if (version != 1) {
         char msg[128];
-        ai_snprintf(msg, 128, "GLTF: Unsupported glTF version: %.0f", version);
+        ai_snprintf(msg, 128, "GLTF: Unsupported glTF version: %.1f", version);
         throw DeadlyImportError(msg);
     }
 }

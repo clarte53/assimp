@@ -43,7 +43,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <rapidjson/writer.h>
 #include <rapidjson/prettywriter.h>
 
-namespace glTF {
+namespace glTF2 {
 
     using rapidjson::StringBuffer;
     using rapidjson::PrettyWriter;
@@ -79,7 +79,7 @@ namespace glTF {
             lst.SetArray();
             lst.Reserve(unsigned(v.size()), al);
             for (size_t i = 0; i < v.size(); ++i) {
-                lst.PushBack(StringRef(v[i]->id), al);
+                lst.PushBack(v[i]->index, al);
             }
             obj.AddMember(StringRef(fieldId), lst, al);
         }
@@ -89,7 +89,7 @@ namespace glTF {
 
     inline void Write(Value& obj, Accessor& a, AssetWriter& w)
     {
-        obj.AddMember("bufferView", Value(a.bufferView->id, w.mAl).Move(), w.mAl);
+        obj.AddMember("bufferView", a.bufferView->index, w.mAl);
         obj.AddMember("byteOffset", a.byteOffset, w.mAl);
         obj.AddMember("byteStride", a.byteStride, w.mAl);
         obj.AddMember("componentType", int(a.componentType), w.mAl);
@@ -118,7 +118,7 @@ namespace glTF {
                 Value valTarget;
                 valTarget.SetObject();
                 {
-                    valTarget.AddMember("id", StringRef(c.target.id->id), w.mAl);
+                    valTarget.AddMember("node", c.target.node->index, w.mAl);
                     valTarget.AddMember("path", c.target.path, w.mAl);
                 }
                 valChannel.AddMember("target", valTarget, w.mAl);
@@ -127,61 +127,35 @@ namespace glTF {
         }
         obj.AddMember("channels", channels, w.mAl);
 
-        /****************** Parameters *******************/
-        Value valParameters;
-        valParameters.SetObject();
-        {
-            if (a.Parameters.TIME) {
-                valParameters.AddMember("TIME", StringRef(a.Parameters.TIME->id), w.mAl);
-            }
-            if (a.Parameters.rotation) {
-                valParameters.AddMember("rotation", StringRef(a.Parameters.rotation->id), w.mAl);
-            }
-            if (a.Parameters.scale) {
-                valParameters.AddMember("scale", StringRef(a.Parameters.scale->id), w.mAl);
-            }
-            if (a.Parameters.translation) {
-                valParameters.AddMember("translation", StringRef(a.Parameters.translation->id), w.mAl);
-            }
-        }
-        obj.AddMember("parameters", valParameters, w.mAl);
-
         /****************** Samplers *******************/
         Value valSamplers;
-        valSamplers.SetObject();
+        valSamplers.SetArray();
 
         for (size_t i = 0; i < unsigned(a.Samplers.size()); ++i) {
             Animation::AnimSampler& s = a.Samplers[i];
             Value valSampler;
             valSampler.SetObject();
             {
-                valSampler.AddMember("input", s.input, w.mAl);
+                Ref<Accessor> inputAccessor = a.GetAccessor(s.input);
+                Ref<Accessor> outputAccessor = a.GetAccessor(s.output);
+                valSampler.AddMember("input", inputAccessor->index, w.mAl);
                 valSampler.AddMember("interpolation", s.interpolation, w.mAl);
-                valSampler.AddMember("output", s.output, w.mAl);
+                valSampler.AddMember("output", outputAccessor->index, w.mAl);
             }
-            valSamplers.AddMember(StringRef(s.id), valSampler, w.mAl);
+            valSamplers.PushBack(valSampler, w.mAl);
         }
         obj.AddMember("samplers", valSamplers, w.mAl);
     }
 
     inline void Write(Value& obj, Buffer& b, AssetWriter& w)
     {
-        const char* type;
-        switch (b.type) {
-            case Buffer::Type_text:
-                type = "text"; break;
-            default:
-                type = "arraybuffer";
-        }
-
         obj.AddMember("byteLength", static_cast<uint64_t>(b.byteLength), w.mAl);
-        obj.AddMember("type", StringRef(type), w.mAl);
         obj.AddMember("uri", Value(b.GetURI(), w.mAl).Move(), w.mAl);
     }
 
     inline void Write(Value& obj, BufferView& bv, AssetWriter& w)
     {
-        obj.AddMember("buffer", Value(bv.buffer->id, w.mAl).Move(), w.mAl);
+        obj.AddMember("buffer", bv.buffer->index, w.mAl);
         obj.AddMember("byteOffset", static_cast<uint64_t>(bv.byteOffset), w.mAl);
         obj.AddMember("byteLength", static_cast<uint64_t>(bv.byteLength), w.mAl);
         obj.AddMember("target", int(bv.target), w.mAl);
@@ -200,7 +174,7 @@ namespace glTF {
             exts.SetObject();
             ext.SetObject();
 
-            ext.AddMember("bufferView", StringRef(img.bufferView->id), w.mAl);
+            ext.AddMember("bufferView", img.bufferView->index, w.mAl);
 
             if (!img.mimeType.empty())
                 ext.AddMember("mimeType", StringRef(img.mimeType), w.mAl);
@@ -222,11 +196,20 @@ namespace glTF {
     }
 
     namespace {
+        inline void WriteTex(Value& obj, Ref<Texture> texture, const char* propName, MemoryPoolAllocator<>& al)
+        {
+            if (texture) {
+                Value tex;
+                tex.SetObject();
+                tex.AddMember("index", texture->index, al);
+                obj.AddMember(StringRef(propName), tex, al);
+            }
+        }
+
         inline void WriteColorOrTex(Value& obj, TexProperty& prop, const char* propName, MemoryPoolAllocator<>& al)
         {
-            if (prop.texture)
-                obj.AddMember(StringRef(propName), Value(prop.texture->id, al).Move(), al);
-            else {
+            WriteTex(obj, prop.texture, propName, al);
+            if (!prop.texture) {
                 Value col;
                 obj.AddMember(StringRef(propName), MakeValue(col, prop.color, al), al);
             }
@@ -235,20 +218,29 @@ namespace glTF {
 
     inline void Write(Value& obj, Material& m, AssetWriter& w)
     {
+        if (m.transparent) {
+            obj.AddMember("alphaMode", "BLEND", w.mAl);
+        }
+
         Value v;
         v.SetObject();
         {
-            WriteColorOrTex(v, m.ambient, "ambient", w.mAl);
-            WriteColorOrTex(v, m.diffuse, "diffuse", w.mAl);
-            WriteColorOrTex(v, m.specular, "specular", w.mAl);
-            WriteColorOrTex(v, m.emission, "emission", w.mAl);
-
-            if (m.transparent)
-                v.AddMember("transparency", m.transparency, w.mAl);
-
-            v.AddMember("shininess", m.shininess, w.mAl);
+            if (m.transparent && !m.diffuse.texture) {
+                m.diffuse.color[3] = m.transparency;
+            }
+            WriteColorOrTex(v, m.ambient, m.ambient.texture ? "ambientTexture" : "ambientFactor", w.mAl);
+            WriteColorOrTex(v, m.diffuse, m.diffuse.texture ? "diffuseTexture" : "diffuseFactor", w.mAl);
+            WriteColorOrTex(v, m.specular, m.specular.texture ? "specularTexture" : "specularFactor", w.mAl);
+            WriteColorOrTex(v, m.emission, m.emission.texture ? "emissionTexture" : "emissionFactor", w.mAl);
+            v.AddMember("shininessFactor", m.shininess, w.mAl);
         }
-        obj.AddMember("values", v, w.mAl);
+        v.AddMember("type", "commonPhong", w.mAl);
+        Value ext;
+        ext.SetObject();
+        ext.AddMember("KHR_materials_common", v, w.mAl);
+        obj.AddMember("extensions", ext, w.mAl);
+
+        WriteTex(obj, m.normal, "normalTexture", w.mAl);
     }
 
     namespace {
@@ -257,13 +249,13 @@ namespace glTF {
         {
             if (lst.empty()) return;
             if (lst.size() == 1 && !forceNumber) {
-                attrs.AddMember(StringRef(semantic), Value(lst[0]->id, w.mAl).Move(), w.mAl);
+                attrs.AddMember(StringRef(semantic), lst[0]->index, w.mAl);
             }
             else {
                 for (size_t i = 0; i < lst.size(); ++i) {
                     char buffer[32];
                     ai_snprintf(buffer, 32, "%s_%d", semantic, int(i));
-                    attrs.AddMember(Value(buffer, w.mAl).Move(), Value(lst[i]->id, w.mAl).Move(), w.mAl);
+                    attrs.AddMember(Value(buffer, w.mAl).Move(), lst[i]->index, w.mAl);
                 }
             }
         }
@@ -337,10 +329,10 @@ namespace glTF {
                 prim.AddMember("mode", Value(int(p.mode)).Move(), w.mAl);
 
                 if (p.material)
-                    prim.AddMember("material", p.material->id, w.mAl);
+                    prim.AddMember("material", p.material->index, w.mAl);
 
                 if (p.indices)
-                    prim.AddMember("indices", Value(p.indices->id, w.mAl).Move(), w.mAl);
+                    prim.AddMember("indices", p.indices->index, w.mAl);
 
                 Value attrs;
                 attrs.SetObject();
@@ -390,7 +382,7 @@ namespace glTF {
         AddRefsVector(obj, "skeletons", n.skeletons, w.mAl);
 
         if (n.skin) {
-            obj.AddMember("skin", Value(n.skin->id, w.mAl).Move(), w.mAl);
+            obj.AddMember("skin", n.skin->index, w.mAl);
         }
 
         if (!n.jointName.empty()) {
@@ -437,9 +429,9 @@ namespace glTF {
         vJointNames.Reserve(unsigned(b.jointNames.size()), w.mAl);
 
         for (size_t i = 0; i < unsigned(b.jointNames.size()); ++i) {
-            vJointNames.PushBack(StringRef(b.jointNames[i]->jointName), w.mAl);
+            vJointNames.PushBack(b.jointNames[i]->index, w.mAl);
         }
-        obj.AddMember("jointNames", vJointNames, w.mAl);
+        obj.AddMember("joints", vJointNames, w.mAl);
 
         if (b.bindShapeMatrix.isPresent) {
             Value val;
@@ -447,7 +439,7 @@ namespace glTF {
         }
 
         if (b.inverseBindMatrices) {
-            obj.AddMember("inverseBindMatrices", Value(b.inverseBindMatrices->id, w.mAl).Move(), w.mAl);
+            obj.AddMember("inverseBindMatrices", b.inverseBindMatrices->index, w.mAl);
         }
 
     }
@@ -460,10 +452,10 @@ namespace glTF {
     inline void Write(Value& obj, Texture& tex, AssetWriter& w)
     {
         if (tex.source) {
-            obj.AddMember("source", Value(tex.source->id, w.mAl).Move(), w.mAl);
+            obj.AddMember("source", tex.source->index, w.mAl);
         }
         if (tex.sampler) {
-            obj.AddMember("sampler", Value(tex.sampler->id, w.mAl).Move(), w.mAl);
+            obj.AddMember("sampler", tex.sampler->index, w.mAl);
         }
     }
 
@@ -490,7 +482,7 @@ namespace glTF {
 
         // Add the target scene field
         if (mAsset.scene) {
-            mDoc.AddMember("scene", StringRef(mAsset.scene->id), mAl);
+            mDoc.AddMember("scene", mAsset.scene->index, mAl);
         }
     }
 
@@ -582,7 +574,7 @@ namespace glTF {
         GLB_Header header;
         memcpy(header.magic, AI_GLB_MAGIC_NUMBER, sizeof(header.magic));
 
-        header.version = 1;
+        header.version = 2;
         AI_SWAP4(header.version);
 
         header.length = uint32_t(sizeof(header) + sceneLength + bodyLength);
@@ -608,7 +600,7 @@ namespace glTF {
         asset.SetObject();
         {
             char versionChar[10];
-            ai_snprintf(versionChar, sizeof(versionChar), "%.0f", mAsset.asset.version);
+            ai_snprintf(versionChar, sizeof(versionChar), "%.1f", mAsset.asset.version);
             asset.AddMember("version", Value(versionChar, mAl).Move(), mAl);
 
             asset.AddMember("generator", Value(mAsset.asset.generator, mAl).Move(), mAl);
@@ -624,8 +616,8 @@ namespace glTF {
             if (false)
                 exts.PushBack(StringRef("KHR_binary_glTF"), mAl);
 
-            if (false)
-                exts.PushBack(StringRef("KHR_materials_common"), mAl);
+            // This is used to export common materials with GLTF 2.
+            exts.PushBack(StringRef("KHR_materials_common"), mAl);
         }
 
         if (!exts.Empty())
@@ -653,9 +645,9 @@ namespace glTF {
         }
 
         Value* dict;
-        if (!(dict = FindObject(*container, d.mDictId))) {
-            container->AddMember(StringRef(d.mDictId), Value().SetObject().Move(), mDoc.GetAllocator());
-            dict = FindObject(*container, d.mDictId);
+        if (!(dict = FindArray(*container, d.mDictId))) {
+            container->AddMember(StringRef(d.mDictId), Value().SetArray().Move(), mDoc.GetAllocator());
+            dict = FindArray(*container, d.mDictId);
         }
 
         for (size_t i = 0; i < d.mObjs.size(); ++i) {
@@ -670,7 +662,7 @@ namespace glTF {
 
             Write(obj, *d.mObjs[i], *this);
 
-            dict->AddMember(StringRef(d.mObjs[i]->id), obj, mAl);
+            dict->PushBack(obj, mAl);
         }
     }
 
