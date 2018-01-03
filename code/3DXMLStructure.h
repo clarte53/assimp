@@ -312,7 +312,7 @@ namespace Assimp {
 					
 			std::string name;
 
-			int nb_references;
+			size_t nb_references;
 
 			std::map<unsigned int, std::list<unsigned int>> indexes;
 

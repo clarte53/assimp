@@ -1811,7 +1811,7 @@ namespace Assimp {
 							// Assume compressed textures are used, even if it is not the case.
 							// Therefore, the user can load the data directly in whichever way he needs.
 							texture->mHeight = 0;
-							texture->mWidth = stream->FileSize();
+							texture->mWidth = (unsigned int) stream->FileSize();
 
 							std::string extension = uri.extension;
 							std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);

@@ -346,7 +346,7 @@ namespace Assimp {
 				// Compute the number of faces we will add to the mesh and allocate the necessary memory in one pass
 				unsigned int size = 0;
 				for(std::list<std::vector<unsigned int>>::iterator it(data.begin()), end(data.end()); it != end; ++it) {
-					size += (it->size() / 3);
+					size += (unsigned int) (it->size() / 3);
 				}
 				mesh->Faces.Reserve(mesh->mNumFaces + size);
 
@@ -374,7 +374,7 @@ namespace Assimp {
 				// Compute the number of faces we will add to the mesh and allocate the necessary memory in one pass
 				unsigned int size = 0;
 				for(std::list<std::vector<unsigned int>>::iterator it(data.begin()), end(data.end()); it != end; ++it) {
-					size += it->size() - 2;
+					size += (unsigned int) (it->size() - 2);
 				}
 				mesh->Faces.Reserve(mesh->mNumFaces + size);
 
@@ -410,7 +410,7 @@ namespace Assimp {
 				// Compute the number of faces we will add to the mesh and allocate the necessary memory in one pass
 				unsigned int size = 0;
 				for(std::list<std::vector<unsigned int>>::iterator it(data.begin()), end(data.end()); it != end; ++it) {
-					size += it->size() - 2;
+					size += (unsigned int) (it->size() - 2);
 				}
 				mesh->Faces.Reserve(mesh->mNumFaces + size);
 
@@ -469,7 +469,7 @@ namespace Assimp {
 
 				aiMesh* mesh = it->second.mesh.get();
 
-				const unsigned int nb_faces = lines.size() - 1;
+				const unsigned int nb_faces = (unsigned int) (lines.size() - 1);
 				unsigned int index = mesh->mNumVertices;
 
 				// Compute the number of faces and vertices we will add to the mesh and allocate the necessary memory in one pass
