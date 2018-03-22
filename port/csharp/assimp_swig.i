@@ -434,6 +434,7 @@ ADD_UNMANAGED_OPTION(aiMesh);
 %ignore aiMeshMorphKey::mWeights;
 
 /////// aiMetadata
+ADD_UNMANAGED_OPTION(aiMetadata)
 %ignore aiMetadata::mNumProperties;
 %ignore aiMetadata::mKeys;
 %ignore aiMetadata::mValues;
