@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -41,7 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /** @file Default implementation of IOSystem using the standard C file functions */
 
-#include "StringComparison.h"
+#include <assimp/StringComparison.h>
 
 #include <assimp/DefaultIOSystem.h>
 #include <assimp/DefaultIOStream.h>
@@ -75,7 +76,7 @@ bool DefaultIOSystem::Exists( const char* pFile) const
 #ifdef _WIN32
     wchar_t fileName16[PATHLIMIT];
 
-    bool isUnicode = IsTextUnicode(pFile, strlen(pFile), NULL);
+    bool isUnicode = IsTextUnicode(pFile, static_cast<int>(strlen(pFile)), NULL);
     if (isUnicode) {
 
         MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, pFile, -1, fileName16, PATHLIMIT);
@@ -109,7 +110,7 @@ IOStream* DefaultIOSystem::Open( const char* strFile, const char* strMode)
     FILE* file;
 #ifdef _WIN32
     wchar_t fileName16[PATHLIMIT];
-    bool isUnicode = IsTextUnicode(strFile, strlen(strFile), NULL );
+    bool isUnicode = IsTextUnicode(strFile, static_cast<int>(strlen(strFile)), NULL );
     if (isUnicode) {
         MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, strFile, -1, fileName16, PATHLIMIT);
         std::string mode8(strMode);
@@ -157,7 +158,7 @@ inline static void MakeAbsolutePath (const char* in, char* _out)
 {
     ai_assert(in && _out);
 #if defined( _MSC_VER ) || defined( __MINGW32__ )
-    bool isUnicode = IsTextUnicode(in, strlen(in), NULL);
+    bool isUnicode = IsTextUnicode(in, static_cast<int>(strlen(in)), NULL);
     if (isUnicode) {
         wchar_t out16[PATHLIMIT];
         wchar_t in16[PATHLIMIT];

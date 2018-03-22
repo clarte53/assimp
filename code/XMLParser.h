@@ -45,10 +45,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef AI_XMLPARSER_H_INC
 #define AI_XMLPARSER_H_INC
 
-#include "irrXMLWrapper.h"
+#include <assimp/irrXMLWrapper.h>
+#include <assimp/ParsingUtils.h>
 #include "HighResProfiler.h"
 #include "Optional.h"
-#include "ParsingUtils.h"
 
 #include <functional>
 #include <memory>

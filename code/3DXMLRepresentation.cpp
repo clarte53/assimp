@@ -47,11 +47,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "3DXMLRepresentation.h"
 
+#include <assimp/fast_atof.h>
+#include <assimp/ParsingUtils.h>
 #include <assimp/SceneCombiner.h>
 #include "3DXMLParser.h"
-#include "fast_atof.h"
 #include "HighResProfiler.h"
-#include "ParsingUtils.h"
 #include "ProcessHelper.h"
 
 #include <cctype>

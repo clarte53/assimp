@@ -32,8 +32,8 @@ Please check our Wiki as well: https://github.com/assimp/assimp/wiki
 
 #### Supported file formats ####
 
-A full list [is here](http://assimp.org/main_features_formats.html).
 __Importers__:
+
 - 3D
 - 3DS
 - 3MF
@@ -43,7 +43,7 @@ __Importers__:
 - AMJ
 - ASE
 - ASK
-- B3D;
+- B3D
 - BLEND (Blender)
 - BVH
 - COB
@@ -109,6 +109,8 @@ __Exporters__:
 - STEP
 - glTF 1.0 (partial)
 - glTF 2.0 (partial)
+- 3MF ( experimental )
+- FBX ( experimental )
 
 ### Building ###
 Take a look into the `INSTALL` file. Our build system is CMake, if you used CMake before there is a good chance you know what to do.
@@ -120,7 +122,7 @@ Take a look into the `INSTALL` file. Our build system is CMake, if you used CMak
 * [Pascal](port/AssimpPascal/Readme.md)
 * [Javascript (Alpha)](https://github.com/makc/assimp2json)
 * [Unity 3d Plugin](https://www.assetstore.unity3d.com/en/#!/content/91777)
-* [JVM](https://github.com/kotlin-graphics/assimp) Full jvm port (currently supported obj, ply, stl, collada, md2)
+* [JVM](https://github.com/kotlin-graphics/assimp) Full jvm port (current [status](https://github.com/kotlin-graphics/assimp/wiki/Status))
 
 ### Other tools ###
 [open3mod](https://github.com/acgessler/open3mod) is a powerful 3D model viewer based on Assimp's import and export abilities.

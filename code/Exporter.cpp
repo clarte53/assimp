@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -53,7 +54,7 @@ Here we implement only the C++ interface (Assimp::Exporter).
 
 #ifndef ASSIMP_BUILD_NO_EXPORT
 
-#include "BlobIOSystem.h"
+#include <assimp/BlobIOSystem.h>
 #include <assimp/SceneCombiner.h>
 #include "BaseProcess.h"
 #include "Importer.h" // need this for GetPostProcessingStepInstanceList()
@@ -61,7 +62,7 @@ Here we implement only the C++ interface (Assimp::Exporter).
 #include "JoinVerticesProcess.h"
 #include "MakeVerboseFormat.h"
 #include "ConvertToLHProcess.h"
-#include "Exceptional.h"
+#include <assimp/Exceptional.h>
 #include "ScenePrivate.h"
 #include <memory>
 
@@ -96,6 +97,8 @@ void ExportSceneGLB2(const char*, IOSystem*, const aiScene*, const ExportPropert
 void ExportSceneAssbin(const char*, IOSystem*, const aiScene*, const ExportProperties*);
 void ExportSceneAssxml(const char*, IOSystem*, const aiScene*, const ExportProperties*);
 void ExportSceneX3D(const char*, IOSystem*, const aiScene*, const ExportProperties*);
+void ExportSceneFBX(const char*, IOSystem*, const aiScene*, const ExportProperties*);
+//void ExportSceneFBXA(const char*, IOSystem*, const aiScene*, const ExportProperties*);
 void ExportScene3MF( const char*, IOSystem*, const aiScene*, const ExportProperties* );
 
 // ------------------------------------------------------------------------------------------------
@@ -166,6 +169,11 @@ Exporter::ExportFormatEntry gExporters[] =
 
 #ifndef ASSIMP_BUILD_NO_X3D_EXPORTER
     Exporter::ExportFormatEntry( "x3d", "Extensible 3D", "x3d" , &ExportSceneX3D, 0 ),
+#endif
+
+#ifndef ASSIMP_BUILD_NO_FBX_EXPORTER
+    Exporter::ExportFormatEntry( "fbx", "Autodesk FBX (binary)", "fbx", &ExportSceneFBX, 0 ),
+    //Exporter::ExportFormatEntry( "fbxa", "Autodesk FBX (ascii)", "fbx", &ExportSceneFBXA, 0 ),
 #endif
 
 #ifndef ASSIMP_BUILD_NO_3MF_EXPORTER
@@ -300,7 +308,8 @@ bool IsVerboseFormat(const aiScene* pScene) {
 }
 
 // ------------------------------------------------------------------------------------------------
-aiReturn Exporter::Export( const aiScene* pScene, const char* pFormatId, const char* pPath, unsigned int pPreprocessing, const ExportProperties* pProperties) {
+aiReturn Exporter::Export( const aiScene* pScene, const char* pFormatId, const char* pPath,
+        unsigned int pPreprocessing, const ExportProperties* pProperties) {
     ASSIMP_BEGIN_EXCEPTION_REGION();
 
     // when they create scenes from scratch, users will likely create them not in verbose
