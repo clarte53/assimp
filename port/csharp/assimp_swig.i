@@ -263,6 +263,38 @@ ARRAY_DECL(NAME, CTYPE);
 }
 %enddef
 
+%define METADATA(TYPE, NAME)
+%newobject aiMetadata::Add##NAME;
+%newobject aiMetadata::Set##NAME;
+%extend aiMetadata {
+	void Add##NAME(const std::string& key, const TYPE& value) {
+		$self->Add(key, value);
+	}
+	void Set##NAME(unsigned int index, const std::string& key, const TYPE& value) {
+		$self->Set(index, key, value);
+	}
+	bool Get##NAME(unsigned int index, TYPE& OUTPUT) {
+		return $self->Get(index, OUTPUT);
+	}
+	bool Get##NAME(const std::string& key, TYPE& OUTPUT) {
+		return $self->Get(key, OUTPUT);
+	}
+}
+%enddef
+
+%define META_ENTRY(TYPE, NAME)
+%newobject aiMetadataEntry::Get##NAME;
+%newobject aiMetadataEntry::Set##NAME;
+%extend aiMetadataEntry {
+	TYPE Get##NAME() {
+		return *static_cast<TYPE*>($self->mData);
+	}
+	void Set##NAME(const TYPE& value) {
+		$self->mData = new TYPE(value);
+	}
+}
+%enddef
+
 /////// aiAnimation 
 %ignore aiAnimation::mNumChannels;
 %ignore aiAnimation::mChannels;
@@ -438,39 +470,24 @@ ADD_UNMANAGED_OPTION(aiMetadata)
 %ignore aiMetadata::mNumProperties;
 %ignore aiMetadata::mKeys;
 %ignore aiMetadata::mValues;
-%ignore aiMetadata::Get(size_t, const aiString*&, const aiMetadataEntry*&);
+%ignore aiMetadata::Get(size_t, const aiString*&, const aiMetadataEntry*&) const;
+METADATA(bool, Bool);
+METADATA(int, Int32);
+METADATA(uint64_t, UInt64);
+METADATA(float, Float);
+METADATA(double, Double);
+METADATA(aiString, String);
+METADATA(aiVector3D, Vector3D);
 
 /////// aiMetadataEntry
 %ignore aiMetadataEntry::mData;
-%extend aiMetadataEntry {
-	bool GetBool() {
-		return *static_cast<bool*>($self->mData);
-	}
-
-	int GetInt() {
-		return *static_cast<int*>($self->mData);
-	}
-
-	uint64_t GetUInt64() {
-		return *static_cast<uint64_t*>($self->mData);
-	}
-
-	float GetFloat() {
-		return *static_cast<float*>($self->mData);
-	}
-
-	double GetDouble() {
-		return *static_cast<double*>($self->mData);
-	}
-
-	aiString GetString() {
-		return *static_cast<aiString*>($self->mData);
-	}
-
-	aiVector3D GetVector3D() {
-		return *static_cast<aiVector3D*>($self->mData);
-	}
-}
+META_ENTRY(bool, Bool);
+META_ENTRY(int, Int32);
+META_ENTRY(uint64_t, UInt64);
+META_ENTRY(float, Float);
+META_ENTRY(double, Double);
+META_ENTRY(aiString, String);
+META_ENTRY(aiVector3D, Vector3D);
 
 /////// aiMetadataType
 // Done
