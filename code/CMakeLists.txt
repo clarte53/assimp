@@ -192,6 +192,14 @@ SET( Common_SRCS
 )
 SOURCE_GROUP(Common FILES ${Common_SRCS})
 
+SET( STEPParser_SRCS
+  Importer/STEPParser/STEPFileReader.h
+  Importer/STEPParser/STEPFileReader.cpp
+  Importer/STEPParser/STEPFileEncoding.cpp
+  Importer/STEPParser/STEPFileEncoding.h
+)
+SOURCE_GROUP(STEPParser FILES ${STEPParser_SRCS})
+
 IF ( ASSIMP_BUILD_NONFREE_C4D_IMPORTER )
   SET( C4D_SRCS
     C4DImporter.cpp
@@ -506,11 +514,8 @@ ADD_ASSIMP_IMPORTER( IFC
   Importer/IFC/IFCCurve.cpp
   Importer/IFC/IFCBoolean.cpp
   Importer/IFC/IFCOpenings.cpp
-  Importer/IFC/STEPFileReader.h
-  Importer/IFC/STEPFileReader.cpp
-  Importer/IFC/STEPFileEncoding.cpp
-  Importer/IFC/STEPFileEncoding.h
 )
+
 if (ASSIMP_BUILD_IFC_IMPORTER)
   if (MSVC)
     set_source_files_properties(Importer/IFC/IFCReaderGen1_2x3.cpp Importer/IFC/IFCReaderGen2_2x3.cpp PROPERTIES COMPILE_FLAGS "/bigobj")
@@ -523,7 +528,6 @@ ADD_ASSIMP_IMPORTER( XGL
   XGLLoader.cpp
   XGLLoader.h
 )
-
 
 ADD_ASSIMP_IMPORTER( FBX
   FBXImporter.cpp
@@ -577,6 +581,8 @@ SET( PostProcessing_SRCS
   FindInvalidDataProcess.h
   FixNormalsStep.cpp
   FixNormalsStep.h
+  DropFaceNormalsProcess.cpp
+  DropFaceNormalsProcess.h
   GenFaceNormalsProcess.cpp
   GenFaceNormalsProcess.h
   GenVertexNormalsProcess.cpp
@@ -741,12 +747,17 @@ ADD_ASSIMP_IMPORTER( MMD
   MMDVmdParser.h
 )
 
-SET( Step_SRCS
-  STEPFile.h
-  StepExporter.h
-  StepExporter.cpp
+ADD_ASSIMP_IMPORTER( STEP
+    STEPFile.h
+    Importer/StepFile/StepFileImporter.h
+    Importer/StepFile/StepFileImporter.cpp
+    Importer/StepFile/StepFileGen1.cpp
+    Importer/StepFile/StepFileGen2.cpp
+    Importer/StepFile/StepFileGen3.cpp
+    Importer/StepFile/StepReaderGen.h
+    StepExporter.h
+    StepExporter.cpp
 )
-SOURCE_GROUP( Step FILES ${Step_SRCS})
 
 SET( Exporter_SRCS
   Exporter.cpp
@@ -898,6 +909,7 @@ SET( assimp_src
   ${Exporter_SRCS}
   ${PostProcessing_SRCS}
   ${MaterialSystem_SRCS}
+  ${STEPParser_SRCS}
   ${Step_SRCS}
 
   # Model Support
@@ -930,6 +942,7 @@ IF (ASSIMP_BUILD_NONFREE_C4D_IMPORTER)
 ENDIF (ASSIMP_BUILD_NONFREE_C4D_IMPORTER)
 
 ADD_LIBRARY( assimp ${assimp_src} )
+ADD_LIBRARY(assimp::assimp ALIAS assimp)
 
 TARGET_INCLUDE_DIRECTORIES ( assimp PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
