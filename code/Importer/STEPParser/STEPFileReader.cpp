@@ -182,10 +182,24 @@ void STEP::ReadFile(DB& db,const EXPRESS::ConversionSchema& scheme,
     while (splitter) {
         bool has_next = false;
         std::string s = *splitter;
-        if (s == "ENDSEC;") {
+
+        bool escaped_sequence = false;
+
+        // Remove space characters, except in string litterals
+        s.erase(std::remove_if(s.begin(), s.end(), [&escaped_sequence](char x) {
+            if(x == '\'')
+            {
+                escaped_sequence = !escaped_sequence;
+            }
+
+            return (x == ' ' && !escaped_sequence);
+        }), s.end());
+
+
+        if(s == "ENDSEC;")
+        {
             break;
         }
-        s.erase(std::remove(s.begin(), s.end(), ' '), s.end());
 
         // want one-based line numbers for human readers, so +1
         const uint64_t line = splitter.get_index()+1;
