@@ -313,21 +313,21 @@ ADD_ASSIMP_EXPORTER( 3DS
 )
 
 ADD_ASSIMP_IMPORTER(3DXML
-    3DXMLImporter.h
-    3DXMLImporter.cpp
-    3DXMLMaterial.h
-    3DXMLMaterial.cpp
-    3DXMLParser.h
-    3DXMLParser.cpp
-    3DXMLRepresentation.h
-    3DXMLRepresentation.cpp
-    3DXMLStructure.h
-    3DXMLStructure.cpp
-    HighResProfiler.h
-    HighResProfiler.cpp
-    Optional.h
-    XMLParser.h
-    XMLParser.cpp
+    3DXML/3DXMLImporter.h
+    3DXML/3DXMLImporter.cpp
+    3DXML/3DXMLMaterial.h
+    3DXML/3DXMLMaterial.cpp
+    3DXML/3DXMLParser.h
+    3DXML/3DXMLParser.cpp
+    3DXML/3DXMLRepresentation.h
+    3DXML/3DXMLRepresentation.cpp
+    3DXML/3DXMLStructure.h
+    3DXML/3DXMLStructure.cpp
+    3DXML/HighResProfiler.h
+    3DXML/HighResProfiler.cpp
+    3DXML/Optional.h
+    3DXML/XMLParser.cpp
+    3DXML/XMLParser.h
 )
 
 ADD_ASSIMP_IMPORTER( AC

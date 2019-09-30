@@ -179,7 +179,7 @@ corresponding preprocessor flag to selectively disable formats.
 #   include "FBX/FBXImporter.h"
 #endif
 #ifndef ASSIMP_BUILD_NO_3DXML_IMPORTER
-#   include "3DXMLImporter.h"
+#   include "3DXML/3DXMLImporter.h"
 #endif
 #ifndef ASSIMP_BUILD_NO_ASSBIN_IMPORTER
 #   include "Assbin/AssbinLoader.h"
