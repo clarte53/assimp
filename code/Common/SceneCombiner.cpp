@@ -1141,8 +1141,24 @@ void SceneCombiner::Copy(aiAnimMesh** _dest, const aiAnimMesh* src) {
 
     aiAnimMesh* dest = *_dest = new aiAnimMesh();
 
+    // release allocated memory
+    dest->Vertices.Clear();
+    dest->Normals.Clear();
+    dest->Tangents.Clear();
+    dest->Bitangents.Clear();
+    dest->Colors.Clear();
+    dest->TextureCoords.Clear();
+
     // get a flat copy
     ::memcpy(dest, src, sizeof(aiAnimMesh));
+
+    // restore the array references
+    dest->Vertices.Create(&dest->mVertices, &dest->mNumVertices);
+    dest->Normals.Create(&dest->mNormals, &dest->mNumVertices);
+    dest->Tangents.Create(&dest->mTangents, &dest->mNumVertices);
+    dest->Bitangents.Create(&dest->mBitangents, &dest->mNumVertices);
+    dest->Colors.Create(AI_MAX_NUMBER_OF_COLOR_SETS, false);
+    dest->TextureCoords.Create(AI_MAX_NUMBER_OF_TEXTURECOORDS, false);
 
     // and reallocate all arrays
     GetArrayCopy(dest->mVertices, dest->mNumVertices);
@@ -1150,13 +1166,25 @@ void SceneCombiner::Copy(aiAnimMesh** _dest, const aiAnimMesh* src) {
     GetArrayCopy(dest->mTangents, dest->mNumVertices);
     GetArrayCopy(dest->mBitangents, dest->mNumVertices);
 
-    unsigned int n = 0;
-    while (dest->HasTextureCoords(n))
-        GetArrayCopy(dest->mTextureCoords[n++], dest->mNumVertices);
+    for(unsigned int n = 0; n < AI_MAX_NUMBER_OF_TEXTURECOORDS; ++n)
+    {
+        dest->TextureCoords.Set(n, new Array<aiVector3D>(&dest->mTextureCoords[n], &dest->mNumVertices));
 
-    n = 0;
-    while (dest->HasVertexColors(n))
-        GetArrayCopy(dest->mColors[n++], dest->mNumVertices);
+        if(dest->HasTextureCoords(n))
+        {
+            GetArrayCopy(dest->mTextureCoords[n], dest->mNumVertices);
+        }
+    }
+
+    for(unsigned int n = 0; n < AI_MAX_NUMBER_OF_COLOR_SETS; ++n)
+    {
+        dest->Colors.Set(n, new Array<aiColor4D>(&dest->mColors[n], &dest->mNumVertices));
+
+        if(dest->HasVertexColors(n))
+        {
+            GetArrayCopy(dest->mColors[n], dest->mNumVertices);
+        }
+    }
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -1334,55 +1362,6 @@ void SceneCombiner::Copy(aiBone** _dest, const aiBone* src) {
 
     // and reallocate all arrays
     GetArrayCopy( dest->mWeights, dest->mNumWeights );
-}
-
-// ------------------------------------------------------------------------------------------------
-void SceneCombiner::Copy     (aiAnimMesh** _dest, const aiAnimMesh* src)
-{
-	ai_assert(NULL != _dest && NULL != src);
-
-	aiAnimMesh* dest = *_dest = new aiAnimMesh();
-
-	// release allocated memory
-	dest->Vertices.Clear();
-	dest->Normals.Clear();
-	dest->Tangents.Clear();
-	dest->Bitangents.Clear();
-	dest->Colors.Clear();
-	dest->TextureCoords.Clear();
-
-	// get a flat copy
-	::memcpy(dest,src,sizeof(aiAnimMesh));
-
-	// restore the array references
-	dest->Vertices.Create(&dest->mVertices, &dest->mNumVertices);
-	dest->Normals.Create(&dest->mNormals, &dest->mNumVertices);
-	dest->Tangents.Create(&dest->mTangents, &dest->mNumVertices);
-	dest->Bitangents.Create(&dest->mBitangents, &dest->mNumVertices);
-	dest->Colors.Create(AI_MAX_NUMBER_OF_COLOR_SETS, false);
-	dest->TextureCoords.Create(AI_MAX_NUMBER_OF_TEXTURECOORDS, false);
-
-	// and reallocate all arrays
-	GetArrayCopy( dest->mVertices,   dest->mNumVertices );
-	GetArrayCopy( dest->mNormals ,   dest->mNumVertices );
-	GetArrayCopy( dest->mTangents,   dest->mNumVertices );
-	GetArrayCopy( dest->mBitangents, dest->mNumVertices );
-
-	for(unsigned int n = 0; n < AI_MAX_NUMBER_OF_TEXTURECOORDS; ++n) {
-		dest->TextureCoords.Set(n, new Array<aiVector3D>(&dest->mTextureCoords[n], &dest->mNumVertices));
-
-		if (dest->HasTextureCoords(n)) {
-			GetArrayCopy( dest->mTextureCoords[n],   dest->mNumVertices );
-		}
-	}
-
-	for(unsigned int n = 0; n < AI_MAX_NUMBER_OF_COLOR_SETS; ++n) {
-		dest->Colors.Set(n, new Array<aiColor4D>(&dest->mColors[n], &dest->mNumVertices));
-
-		if (dest->HasVertexColors(n)) {
-			GetArrayCopy( dest->mColors[n],   dest->mNumVertices );
-		}
-	}
 }
 
 // ------------------------------------------------------------------------------------------------

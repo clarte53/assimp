@@ -43,7 +43,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ASSIMP_BUILD_NO_3DXML_IMPORTER
-#ifndef ASSIMP_BUILD_NO_Q3BSP_IMPORTER
 
 #include "3DXMLMaterial.h"
 
@@ -56,7 +55,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLMaterial::_3DXMLMaterial(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, aiMaterial* material, _3DXMLStructure::Dependencies& dependencies) : mReader(archive, filename), mMaterial(material), mDependencies(dependencies) {
+	_3DXMLMaterial::_3DXMLMaterial(std::shared_ptr<ZipArchiveIOSystem> archive, const std::string& filename, aiMaterial* material, _3DXMLStructure::Dependencies& dependencies) : mReader(archive, filename), mMaterial(material), mDependencies(dependencies) {
 		struct Params {
 			_3DXMLMaterial* me;
 			GlobalData data;
@@ -512,5 +511,4 @@ namespace Assimp {
 
 } // Namespace Assimp
 
-#endif // ASSIMP_BUILD_NO_Q3BSP_IMPORTER
 #endif // ASSIMP_BUILD_NO_3DXML_IMPORTER

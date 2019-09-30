@@ -43,17 +43,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ASSIMP_BUILD_NO_3DXML_IMPORTER
-#ifndef ASSIMP_BUILD_NO_Q3BSP_IMPORTER
 
 #include "3DXMLParser.h"
 
 #include <assimp/DefaultLogger.hpp>
 #include <assimp/fast_atof.h>
 #include <assimp/SceneCombiner.h>
+#include <assimp/ZipArchiveIOSystem.h>
 #include "3DXMLMaterial.h"
 #include "3DXMLRepresentation.h"
 #include "HighResProfiler.h"
-#include "Q3BSPZipArchive.h"
 
 #include <sstream>
 
@@ -63,7 +62,7 @@ namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
 	// Constructor to be privately used by Importer
-	_3DXMLParser::_3DXMLParser(IOSystem* io_handler, const std::string& file, aiScene* scene, bool use_complex_materials, bool use_node_materials, bool use_references_names) : mWorkers(), mTasks(), mCondition(), mMutex(), mError(""), mUseComplexMaterials(use_complex_materials), mUseNodeMaterials(use_node_materials), mUseReferencesNames(use_references_names), mFinished(false), mArchive(new Q3BSP::Q3BSPZipArchive(io_handler, file)), mContent(scene, &mCondition), mHasUVR(false) {
+	_3DXMLParser::_3DXMLParser(IOSystem* io_handler, const std::string& file, aiScene* scene, bool use_complex_materials, bool use_node_materials, bool use_references_names) : mWorkers(), mTasks(), mCondition(), mMutex(), mError(""), mUseComplexMaterials(use_complex_materials), mUseNodeMaterials(use_node_materials), mUseReferencesNames(use_references_names), mFinished(false), mArchive(new ZipArchiveIOSystem(io_handler, file)), mContent(scene, &mCondition), mHasUVR(false) {
 		// Load the compressed archive
 		if (! mArchive->isOpen()) {
 			ThrowException(nullptr, "Failed to open file " + file + ". The 3DXML schema must be >= 4.0." );
@@ -2021,5 +2020,4 @@ namespace Assimp {
 
 } // Namespace Assimp
 
-#endif // ASSIMP_BUILD_NO_Q3BSP_IMPORTER
 #endif // ASSIMP_BUILD_NO_3DXML_IMPORTER

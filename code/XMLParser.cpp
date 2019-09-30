@@ -43,11 +43,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ASSIMP_BUILD_NO_3DXML_IMPORTER
-#ifndef ASSIMP_BUILD_NO_Q3BSP_IMPORTER
 
 #include "XMLParser.h"
 
-#include "Q3BSPZipArchive.h"
+#include <assimp/ZipArchiveIOSystem.h>
 
 namespace Assimp {
 
@@ -82,7 +81,7 @@ namespace Assimp {
 	}
 
 	// ------------------------------------------------------------------------------------------------
-	XMLParser::XMLParser(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& file) : mFileName(""), mArchive(archive), mStream(nullptr), mReader(nullptr) {
+	XMLParser::XMLParser(std::shared_ptr<ZipArchiveIOSystem> archive, const std::string& file) : mFileName(""), mArchive(archive), mStream(nullptr), mReader(nullptr) {
 		Open(file);
 	}
 
@@ -198,5 +197,4 @@ namespace Assimp {
 
 } // Namespace Assimp
 
-#endif // ASSIMP_BUILD_NO_Q3BSP_IMPORTER
 #endif // ASSIMP_BUILD_NO_3DXML_IMPORTER

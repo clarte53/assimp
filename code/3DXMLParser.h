@@ -82,7 +82,7 @@ namespace Assimp {
 			bool mFinished;
 
 			/** The archive containing the 3DXML files */ 
-			std::shared_ptr<Q3BSP::Q3BSPZipArchive> mArchive;
+			std::shared_ptr<ZipArchiveIOSystem> mArchive;
 
 			/** Content of the 3DXML file */
 			_3DXMLStructure mContent;

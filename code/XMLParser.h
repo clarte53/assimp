@@ -56,11 +56,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace Assimp {
 
-	namespace Q3BSP {
-
-		class Q3BSPZipArchive;
-
-	} // end of namespace Q3BSP
+	class ZipArchiveIOSystem;
 
 	class XMLParser {
 
@@ -148,7 +144,7 @@ namespace Assimp {
 			std::string mFileName;
 
 			/** Zip archive containing the data */
-			std::shared_ptr<Q3BSP::Q3BSPZipArchive> mArchive;
+			std::shared_ptr<ZipArchiveIOSystem> mArchive;
 
 			/** Stream to the content of a file in the zip archive */
 			IOStream* mStream;
@@ -160,7 +156,7 @@ namespace Assimp {
 
 		public:
 
-			XMLParser(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& file);
+			XMLParser(std::shared_ptr<ZipArchiveIOSystem> archive, const std::string& file);
 
 			virtual ~XMLParser();
 

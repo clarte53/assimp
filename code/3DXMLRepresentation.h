@@ -122,7 +122,7 @@ namespace Assimp {
 
 		public: 
 
-			_3DXMLRepresentation(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, _3DXMLStructure::ReferenceRep::Meshes& meshes, _3DXMLStructure::Dependencies& dependencies);
+			_3DXMLRepresentation(std::shared_ptr<ZipArchiveIOSystem> archive, const std::string& filename, _3DXMLStructure::ReferenceRep::Meshes& meshes, _3DXMLStructure::Dependencies& dependencies);
 
 			virtual ~_3DXMLRepresentation();
 

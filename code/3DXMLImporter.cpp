@@ -43,7 +43,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ASSIMP_BUILD_NO_3DXML_IMPORTER
-#ifndef ASSIMP_BUILD_NO_Q3BSP_IMPORTER
 
 #include "3DXMLImporter.h"
 
@@ -108,5 +107,4 @@ namespace Assimp {
 
 } // end of namespace Assimp
 
-#endif // ASSIMP_BUILD_NO_Q3BSP_IMPORTER
 #endif // ASSIMP_BUILD_NO_3DXML_IMPORTER

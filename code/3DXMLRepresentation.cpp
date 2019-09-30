@@ -43,7 +43,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef ASSIMP_BUILD_NO_3DXML_IMPORTER
-#ifndef ASSIMP_BUILD_NO_Q3BSP_IMPORTER
 
 #include "3DXMLRepresentation.h"
 
@@ -52,14 +51,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <assimp/SceneCombiner.h>
 #include "3DXMLParser.h"
 #include "HighResProfiler.h"
-#include "ProcessHelper.h"
+#include "PostProcessing/ProcessHelper.h"
 
 #include <cctype>
 
 namespace Assimp {
 
 	// ------------------------------------------------------------------------------------------------
-	_3DXMLRepresentation::_3DXMLRepresentation(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, _3DXMLStructure::ReferenceRep::Meshes& meshes, _3DXMLStructure::Dependencies& dependencies) : mReader(archive, filename), mCurrentRep(nullptr), mMeshes(meshes), mDependencies(dependencies) {
+	_3DXMLRepresentation::_3DXMLRepresentation(std::shared_ptr<ZipArchiveIOSystem> archive, const std::string& filename, _3DXMLStructure::ReferenceRep::Meshes& meshes, _3DXMLStructure::Dependencies& dependencies) : mReader(archive, filename), mCurrentRep(nullptr), mMeshes(meshes), mDependencies(dependencies) {
 		struct Params {
 			_3DXMLRepresentation* me;
 		} params;
@@ -1166,5 +1165,4 @@ namespace Assimp {
 
 } // Namespace Assimp
 
-#endif // ASSIMP_BUILD_NO_Q3BSP_IMPORTER
 #endif // ASSIMP_BUILD_NO_3DXML_IMPORTER

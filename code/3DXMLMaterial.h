@@ -88,7 +88,7 @@ namespace Assimp {
 
 		public:
 
-			_3DXMLMaterial(std::shared_ptr<Q3BSP::Q3BSPZipArchive> archive, const std::string& filename, aiMaterial* material, _3DXMLStructure::Dependencies& dependencies);
+			_3DXMLMaterial(std::shared_ptr<ZipArchiveIOSystem> archive, const std::string& filename, aiMaterial* material, _3DXMLStructure::Dependencies& dependencies);
 
 			virtual ~_3DXMLMaterial();
 
