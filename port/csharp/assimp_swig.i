@@ -155,6 +155,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 %define ENUM_FLAGS_DECL(TYPE)
 %typemap(csclassmodifiers) TYPE %{[System.Flags, System.Serializable] public enum%}
+%typemap(csbase) TYPE "uint"
 %enddef
 
 %define DEF_ENUM(TYPE, NAME)
