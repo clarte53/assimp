@@ -46,6 +46,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 %include "arrays_csharp.i"
 
 %{
+#include "../../include/assimp/aabb.h"
 #include "../../include/assimp/defs.h"
 #include "../../include/assimp/config.h"
 #include "../../include/assimp/version.h"
@@ -721,6 +722,7 @@ CSHARP_ARRAYS(void, byte)
 %ignore ::aiGetMaterialTextureCount;
 %ignore ::aiGetMaterialTexture;
 
+%include "../../include/assimp/aabb.h"
 %include "../../include/assimp/defs.h"
 %include "../../include/assimp/config.h"
 %include "../../include/assimp/version.h"
