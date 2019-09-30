@@ -3,7 +3,7 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2018, assimp team
+Copyright (c) 2006-2019, assimp team
 
 
 
@@ -58,8 +58,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "metadata.h"
 
 #ifdef __cplusplus
+#  include <cstdlib>
 #include "Array.hpp"
-
 extern "C" {
 #endif
 
@@ -133,9 +133,9 @@ struct ASSIMP_API aiNode
 
 #ifdef __cplusplus
     Array<aiNode*> Children;
-	
+    
     Array<unsigned int> Meshes;
-	
+    
     /** Constructor */
     aiNode();
 
@@ -345,17 +345,17 @@ struct aiScene
 
 #ifdef __cplusplus
 
-	Array<aiMesh*> Meshes;
-	
-	Array<aiMaterial*> Materials;
-	
-	Array<aiAnimation*> Animations;
-	
-	Array<aiTexture*> Textures;
-	
-	Array<aiLight*> Lights;
-	
-	Array<aiCamera*> Cameras;
+    Array<aiMesh*> Meshes;
+    
+    Array<aiMaterial*> Materials;
+    
+    Array<aiAnimation*> Animations;
+    
+    Array<aiTexture*> Textures;
+    
+    Array<aiLight*> Lights;
+    
+    Array<aiCamera*> Cameras;
 
     //! Default constructor - set everything to 0/NULL
     ASSIMP_API aiScene();
@@ -407,6 +407,14 @@ struct aiScene
 
     //! Returns an embedded texture
     const aiTexture* GetEmbeddedTexture(const char* filename) const {
+        // lookup using texture ID (if referenced like: "*1", "*2", etc.)
+        if ('*' == *filename) {
+            int index = std::atoi(filename + 1);
+            if (0 > index || mNumTextures <= static_cast<unsigned>(index))
+                return nullptr;
+            return mTextures[index];
+        }
+        // lookup using filename
         const char* shortFilename = GetShortFilename(filename);
         for (unsigned int i = 0; i < mNumTextures; i++) {
             const char* shortTextureFilename = GetShortFilename(mTextures[i]->mFilename.C_Str());

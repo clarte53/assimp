@@ -3,7 +3,7 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2018, assimp team
+Copyright (c) 2006-2019, assimp team
 
 
 All rights reserved.
@@ -48,7 +48,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef AI_MESH_H_INC
 #define AI_MESH_H_INC
 
-#include "types.h"
+#include <assimp/types.h>
+#include <assimp/aabb.h>
 
 #ifdef __cplusplus
 #include "Array.hpp"
@@ -137,14 +138,14 @@ struct aiFace
 
 #ifdef __cplusplus
 
-	Array<unsigned int> Indices;
+    Array<unsigned int> Indices;
 
     //! Default constructor
     aiFace() AI_NO_EXCEPT
     : mNumIndices( 0 )
     , mIndices( nullptr )
-	, Indices(&mIndices, &mNumIndices)
-	{
+    , Indices(&mIndices, &mNumIndices)
+    {
         // empty
     }
 
@@ -158,8 +159,8 @@ struct aiFace
     aiFace( const aiFace& o)
     : mNumIndices(0)
     , mIndices( nullptr )
-	, Indices(&mIndices, &mNumIndices)
-	{
+    , Indices(&mIndices, &mNumIndices)
+    {
         *this = o;
     }
 
@@ -289,14 +290,14 @@ struct aiBone {
 
 #ifdef __cplusplus
 
-	Array<aiVertexWeight> Weights;
+    Array<aiVertexWeight> Weights;
 
     //! Default constructor
     aiBone() AI_NO_EXCEPT
     : mName()
     , mNumWeights( 0 )
     , mWeights( nullptr )
-	, mOffsetMatrix()
+    , mOffsetMatrix()
     , Weights(&mWeights, &mNumWeights)
     {
         // empty
@@ -308,8 +309,8 @@ struct aiBone {
     , mNumWeights( other.mNumWeights )
     , mWeights(nullptr)
     , mOffsetMatrix( other.mOffsetMatrix )
-	, Weights(&mWeights, &mNumWeights)
-	{
+    , Weights(&mWeights, &mNumWeights)
+    {
         if (other.mWeights && other.mNumWeights) {
             mWeights = new aiVertexWeight[mNumWeights];
             ::memcpy(mWeights,other.mWeights,mNumWeights * sizeof(aiVertexWeight));
@@ -416,7 +417,7 @@ enum aiPrimitiveType
 
 
 // ---------------------------------------------------------------------------
-/** @brief NOT CURRENTLY IN USE. An AnimMesh is an attachment to an #aiMesh stores per-vertex
+/** @brief An AnimMesh is an attachment to an #aiMesh stores per-vertex
  *  animations for a particular frame.
  *
  *  You may think of an #aiAnimMesh as a `patch` for the host mesh, which
@@ -428,6 +429,9 @@ enum aiPrimitiveType
 */
 struct aiAnimMesh
 {
+    /**Anim Mesh name */
+    C_STRUCT aiString mName;
+
     /** Replacement for aiMesh::mVertices. If this array is non-NULL,
      *  it *must* contain mNumVertices entries. The corresponding
      *  array in the host mesh must be non-NULL as well - animation
@@ -468,17 +472,17 @@ struct aiAnimMesh
 
 #ifdef __cplusplus
 
-	Array<aiVector3D> Vertices;
-	
-	Array<aiVector3D> Normals;
-	
-	Array<aiVector3D> Tangents;
-	
-	Array<aiVector3D> Bitangents;
-	
-	MultiArray<aiColor4D> Colors;
-	
-	MultiArray<aiVector3D> TextureCoords;
+    Array<aiVector3D> Vertices;
+    
+    Array<aiVector3D> Normals;
+    
+    Array<aiVector3D> Tangents;
+    
+    Array<aiVector3D> Bitangents;
+    
+    MultiArray<aiColor4D> Colors;
+    
+    MultiArray<aiVector3D> TextureCoords;
 
     aiAnimMesh() AI_NO_EXCEPT
         : mVertices( nullptr )
@@ -488,22 +492,22 @@ struct aiAnimMesh
         , mColors()
         , mTextureCoords()
         , mNumVertices( 0 )
-		, mWeight( 0.0f )
-		, Vertices(&mVertices, &mNumVertices)
-		, Normals(&mNormals, &mNumVertices)
-		, Tangents(&mTangents, &mNumVertices)
-		, Bitangents(&mBitangents, &mNumVertices)
-		, Colors(AI_MAX_NUMBER_OF_COLOR_SETS)
-		, TextureCoords(AI_MAX_NUMBER_OF_TEXTURECOORDS)
+        , mWeight( 0.0f )
+        , Vertices(&mVertices, &mNumVertices)
+        , Normals(&mNormals, &mNumVertices)
+        , Tangents(&mTangents, &mNumVertices)
+        , Bitangents(&mBitangents, &mNumVertices)
+        , Colors(AI_MAX_NUMBER_OF_COLOR_SETS)
+        , TextureCoords(AI_MAX_NUMBER_OF_TEXTURECOORDS)
     {
         // fixme consider moving this to the ctor initializer list as well
         for( unsigned int a = 0; a < AI_MAX_NUMBER_OF_TEXTURECOORDS; a++){
-            mTextureCoords[a] = NULL;
-			TextureCoords.Set(a, new Array<aiVector3D>(&mTextureCoords[a], &mNumVertices));
+            mTextureCoords[a] = nullptr;
+            TextureCoords.Set(a, new Array<aiVector3D>(&mTextureCoords[a], &mNumVertices));
         }
         for( unsigned int a = 0; a < AI_MAX_NUMBER_OF_COLOR_SETS; a++) {
-            mColors[a] = NULL;
-			Colors.Set(a, new Array<aiColor4D>(&mColors[a], &mNumVertices));
+            mColors[a] = nullptr;
+            Colors.Set(a, new Array<aiColor4D>(&mColors[a], &mNumVertices));
         }
     }
 
@@ -524,34 +528,34 @@ struct aiAnimMesh
     /** Check whether the anim mesh overrides the vertex positions
      *  of its host mesh*/
     bool HasPositions() const {
-        return mVertices != NULL;
+        return mVertices != nullptr;
     }
 
     /** Check whether the anim mesh overrides the vertex normals
      *  of its host mesh*/
     bool HasNormals() const {
-        return mNormals != NULL;
+        return mNormals != nullptr;
     }
 
     /** Check whether the anim mesh overrides the vertex tangents
      *  and bitangents of its host mesh. As for aiMesh,
      *  tangents and bitangents always go together. */
     bool HasTangentsAndBitangents() const {
-        return mTangents != NULL;
+        return mTangents != nullptr;
     }
 
     /** Check whether the anim mesh overrides a particular
      * set of vertex colors on his host mesh.
      *  @param pIndex 0<index<AI_MAX_NUMBER_OF_COLOR_SETS */
     bool HasVertexColors( unsigned int pIndex) const    {
-        return pIndex >= AI_MAX_NUMBER_OF_COLOR_SETS ? false : mColors[pIndex] != NULL;
+        return pIndex >= AI_MAX_NUMBER_OF_COLOR_SETS ? false : mColors[pIndex] != nullptr;
     }
 
     /** Check whether the anim mesh overrides a particular
      * set of texture coordinates on his host mesh.
      *  @param pIndex 0<index<AI_MAX_NUMBER_OF_TEXTURECOORDS */
     bool HasTextureCoords( unsigned int pIndex) const   {
-        return pIndex >= AI_MAX_NUMBER_OF_TEXTURECOORDS ? false : mTextureCoords[pIndex] != NULL;
+        return pIndex >= AI_MAX_NUMBER_OF_TEXTURECOORDS ? false : mTextureCoords[pIndex] != nullptr;
     }
 
 #endif
@@ -745,28 +749,33 @@ struct aiMesh
      *  Method of morphing when animeshes are specified. 
      */
     unsigned int mMethod;
-	
+
+    /**
+     *
+     */
+    C_STRUCT aiAABB mAABB;
+    
 #ifdef __cplusplus
 
-	Array<aiVector3D> Vertices;
-	
-	Array<aiVector3D> Normals;
-	
-	Array<aiVector3D> Tangents;
-	
-	Array<aiVector3D> Bitangents;
-	
-	MultiArray<aiColor4D> Colors;
-	
-	MultiArray<aiVector3D> TextureCoords;
-	
-	FixedArray<unsigned int> NumUVComponents;
-	
-	Array<aiFace> Faces;
-	
-	Array<aiBone*> Bones;
-	
-	Array<aiAnimMesh*> AnimMeshes;
+    Array<aiVector3D> Vertices;
+    
+    Array<aiVector3D> Normals;
+    
+    Array<aiVector3D> Tangents;
+    
+    Array<aiVector3D> Bitangents;
+    
+    MultiArray<aiColor4D> Colors;
+    
+    MultiArray<aiVector3D> TextureCoords;
+    
+    FixedArray<unsigned int> NumUVComponents;
+    
+    Array<aiFace> Faces;
+    
+    Array<aiBone*> Bones;
+    
+    Array<aiAnimMesh*> AnimMeshes;
 
     //! Default constructor. Initializes all members to 0
     aiMesh() AI_NO_EXCEPT
@@ -787,26 +796,27 @@ struct aiMesh
     , mNumAnimMeshes( 0 )
     , mAnimMeshes(nullptr)
     , mMethod( 0 )
-	, Vertices(&mVertices, &mNumVertices)
-	, Normals(&mNormals, &mNumVertices)
-	, Tangents(&mTangents, &mNumVertices)
-	, Bitangents(&mBitangents, &mNumVertices)
-	, Colors(AI_MAX_NUMBER_OF_COLOR_SETS)
-	, TextureCoords(AI_MAX_NUMBER_OF_TEXTURECOORDS)
-	, NumUVComponents(&mNumUVComponents[0], AI_MAX_NUMBER_OF_TEXTURECOORDS)
-	, Faces(&mFaces, &mNumFaces)
-	, Bones(&mBones, &mNumBones)
-	, AnimMeshes(&mAnimMeshes, &mNumAnimMeshes)
-	{
+    , mAABB()
+    , Vertices(&mVertices, &mNumVertices)
+    , Normals(&mNormals, &mNumVertices)
+    , Tangents(&mTangents, &mNumVertices)
+    , Bitangents(&mBitangents, &mNumVertices)
+    , Colors(AI_MAX_NUMBER_OF_COLOR_SETS)
+    , TextureCoords(AI_MAX_NUMBER_OF_TEXTURECOORDS)
+    , NumUVComponents(&mNumUVComponents[0], AI_MAX_NUMBER_OF_TEXTURECOORDS)
+    , Faces(&mFaces, &mNumFaces)
+    , Bones(&mBones, &mNumBones)
+    , AnimMeshes(&mAnimMeshes, &mNumAnimMeshes)
+    {
         for( unsigned int a = 0; a < AI_MAX_NUMBER_OF_TEXTURECOORDS; ++a ) {
             mNumUVComponents[a] = 0;
             mTextureCoords[a] = nullptr;
-			TextureCoords.Set(a, new Array<aiVector3D>(&mTextureCoords[a], &mNumVertices));
+            TextureCoords.Set(a, new Array<aiVector3D>(&mTextureCoords[a], &mNumVertices));
         }
 
         for (unsigned int a = 0; a < AI_MAX_NUMBER_OF_COLOR_SETS; ++a) {
             mColors[a] = nullptr;
-			Colors.Set(a, new Array<aiColor4D>(&mColors[a], &mNumVertices));
+            Colors.Set(a, new Array<aiColor4D>(&mColors[a], &mNumVertices));
         }
     }
 
